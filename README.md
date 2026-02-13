@@ -13,7 +13,7 @@ VisionParking is an intelligent parking management system that combines:
 🔄 Automated reservation & exit processing
 
 The system serves Drivers and Parking Lot Owners with separate dashboards and secure role-based access control (RBAC).
-#Project Objectives
+# Project Objectives
 Reduce time spent searching for parking
 
 Automate parking lot management
@@ -25,7 +25,7 @@ Enable real-time revenue tracking
 Integrate AI for vehicle verification
 
 
-#System Architecture
+# System Architecture
 
 VisionParking consists of three main modules:
 frontend
@@ -33,7 +33,7 @@ backend
 ai_model
 
 
-User Roles
+# User Roles
 🚘 Driver
 
 Register with license plate & car type
@@ -52,7 +52,7 @@ Auto duration & payment calculation
 
 Exit with automatic balance payment
 
-🏢 Owner
+# 🏢 Owner
 
 Add & manage parking lots
 
@@ -68,7 +68,7 @@ Generate reports (Daily / Monthly)
 
 Receive notifications for all parking events
 
-🔄 Core Workflow
+# 🔄 Core Workflow
 Driver Journey
 
 Register / Login
@@ -137,7 +137,7 @@ Payment
 
 Telebirr API Integration
 
-🔐 Security & System Rules
+# 🔐 Security & System Rules
 
 Role-Based Access Control (RBAC)
 
@@ -154,7 +154,7 @@ Payment logic automated
 Reservation auto-expiry (15 min)
 
 
-🚀 Getting Started
+# 🚀 Getting Started
 Clone the repository
 git clone https://github.com/winnerJd/VisionParking.git
 cd VisionParking
@@ -169,7 +169,7 @@ cd backend
 npm install
 npm run dev
 
-📈 Future Improvements
+# 📈 Future Improvements
 
 Mobile app version
 
@@ -181,17 +181,17 @@ Dynamic pricing
 
 Multi-location support
 
-👨‍💻 Team
+# 👨‍💻 Team
 
 Developed as a collaborative Agile-based project.
 
 Each module is managed via GitHub Issues and Pull Requests.
 
-📄 License
+# 📄 License
 
 This project is developed for educational and research purposes.
 
-🌟 Vision
+# 🌟 Vision
 
 To create a fully automated, AI-powered parking ecosystem that reduces congestion, improves revenue transparency, and enhances user experience.
 
