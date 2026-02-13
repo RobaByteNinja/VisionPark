@@ -69,7 +69,7 @@ Generate reports (Daily / Monthly)
 Receive notifications for all parking events
 
 # 🔄 Core Workflow
-Driver Journey
+# Driver Journey
 
 Register / Login
 
@@ -93,7 +93,7 @@ Pay remaining balance
 
 Spot becomes FREE
 
-Owner Journey
+ # Owner Journey
 
 Login to Owner Dashboard
 
