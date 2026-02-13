@@ -108,7 +108,7 @@ Track revenue in real-time
 View reports & analytics
 
 
-🧠 Technologies Used
+# 🧠 Technologies Used
 Frontend
 
 React
