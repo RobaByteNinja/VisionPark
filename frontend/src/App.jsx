@@ -1,35 +1,107 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import React, { useEffect } from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
-function App() {
-  const [count, setCount] = useState(0)
+// 1. Import the ThemeProvider (and ScrollProvider if you have it)
+import { ThemeProvider } from "./context/ThemeContext"; 
+import { ScrollProvider } from "./context/ScrollContext"; // Added to prevent scrolling errors on Driver pages
 
+// 2. Import Layouts
+import DriverLayout from "./components/layout/DriverLayout";
+import OwnerLayout from "./owner/components/OwnerLayout"; 
+
+// 3. Import Auth & Public Pages
+import Login from "./shared/auth/Login";
+import DriverSignUp from "./shared/auth/DriverSignUp"; 
+import ForgotPassword from "./shared/auth/ForgotPassword"; 
+import PrivacyPolicy from "./shared/pages/PrivacyPolicy"; // ✅ ADDED PRIVACY POLICY
+
+// 4. Import Driver Domain Pages
+import DriverMap from "./driver/pages/DriverMap";
+import ActiveSession from "./driver/pages/ActiveSession";
+import DriverHistory from "./driver/pages/DriverHistory";
+import DriverProfile from "./driver/pages/DriverProfile"; 
+
+// 5. Import Owner Domain Pages
+import Dashboard from "./owner/pages/Dashboard";
+import ParkingManagement from "./owner/pages/ParkingManagement"; 
+import AttendantManagement from "./owner/pages/AttendantManagement"; 
+import Operations from "./owner/pages/Operations"; 
+import Analytics from "./owner/pages/Analytics"; 
+import FinancialReports from "./owner/pages/FinancialReports";
+import PricingSettings from "./owner/pages/PricingSettings"; 
+import PayoutSettings from "./owner/pages/PayoutSettings"; 
+import OwnerProfile from "./owner/pages/OwnerProfile"; 
+
+export default function App() {
+  // 🚨 DEBUGGING: Catch any anchor clicks or form submissions globally
+  useEffect(() => {
+    const handleClick = (e) => {
+      const anchor = e.target.closest('a');
+      if (anchor && anchor.getAttribute('href')) {
+        console.warn('🚨 Anchor clicked:', {
+          href: anchor.getAttribute('href'),
+          target: anchor.target,
+          element: anchor
+        });
+      }
+    };
+
+    const handleSubmit = (e) => {
+      if (e.target.tagName === 'FORM') {
+        console.warn('📝 Form submitted:', e.target);
+        // e.preventDefault(); 
+      }
+    };
+
+    document.addEventListener('click', handleClick);
+    document.addEventListener('submit', handleSubmit);
+    return () => {
+      document.removeEventListener('click', handleClick);
+      document.removeEventListener('submit', handleSubmit);
+    };
+  }, []);
+  
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
-}
+    <ThemeProvider>
+      <ScrollProvider>
+        <BrowserRouter>
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<DriverSignUp />} /> 
+            <Route path="/forgot-password" element={<ForgotPassword />} /> 
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} /> {/* ✅ HOOKED UP ROUTE */}
 
-export default App
+            {/* Driver Domain Routing */}
+            <Route path="/driver" element={<DriverLayout />}>
+              <Route index element={<Navigate to="map" replace />} />
+              <Route path="map" element={<DriverMap />} />
+              <Route path="session" element={<ActiveSession />} />
+              <Route path="history" element={<DriverHistory />} />
+              <Route path="profile" element={<DriverProfile />} />
+            </Route>
+
+            {/* Owner Domain Routing */}
+            <Route path="/owner" element={<OwnerLayout />}>
+              {/* Default redirect to dashboard */}
+              <Route index element={<Navigate to="dashboard" replace />} />
+              
+              {/* Connected Owner Modules */}
+              <Route path="dashboard" element={<Dashboard />} />
+              <Route path="parking" element={<ParkingManagement />} /> 
+              <Route path="attendants" element={<AttendantManagement />} /> 
+              <Route path="operations" element={<Operations />} /> 
+              <Route path="analytics" element={<Analytics />} /> 
+              <Route path="finance" element={<FinancialReports />} /> 
+              <Route path="pricing" element={<PricingSettings />} /> 
+              <Route path="payout" element={<PayoutSettings />} /> 
+              <Route path="profile" element={<OwnerProfile />} /> 
+            </Route>
+
+          </Routes>
+        </BrowserRouter>
+      </ScrollProvider>
+    </ThemeProvider>
+  );
+}
