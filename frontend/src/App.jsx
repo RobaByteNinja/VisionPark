@@ -6,7 +6,7 @@ import { ThemeProvider } from "./context/ThemeContext";
 import { ScrollProvider } from "./context/ScrollContext"; // Added to prevent scrolling errors on Driver pages
 
 // 2. Import Layouts
-import DriverLayout from "./components/layout/DriverLayout";
+import DriverLayout from "./driver/components/DriverLayout";
 import OwnerLayout from "./owner/components/OwnerLayout"; 
 
 // 3. Import Auth & Public Pages

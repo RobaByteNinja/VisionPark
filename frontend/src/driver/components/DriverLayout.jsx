@@ -1,7 +1,7 @@
 import React from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { Map, Timer, Clock, User } from "lucide-react";
-import { Header } from "./Header";
+import { Header } from "../../components/layout/Header";
 import { ScrollProvider } from "../../context/ScrollContext";
 
 function LayoutContent() {

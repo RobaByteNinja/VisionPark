@@ -1,6 +1,6 @@
 import { Outlet, Link } from "react-router-dom"
 import { LogOut, ShieldAlert } from "lucide-react"
-import { ThemeToggle } from "../ui/theme-toggle"
+import { ThemeToggle } from "../../components/ui/theme-toggle"
 
 export default function AttendantLayout() {
   return (
