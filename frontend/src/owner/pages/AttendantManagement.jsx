@@ -1,13 +1,14 @@
 /**
  * COMPONENT: AttendantManagement
- * PURPOSE: Manage parking attendants, enforcing Fayda ID formatting, Ethio Telecom numbers, strong passwords, and branch assignment.
+ * PURPOSE: Manage parking attendants, enforcing Fayda ID formatting, Ethio Telecom numbers, strong passwords, branch assignment, and premium custom shift timings.
+ * UX: Validates inputs on blur to avoid annoying the user while they are actively typing.
  */
 
 import React, { useState, useRef } from "react";
 import { 
   Users, Plus, Trash2, Edit2, Mail, Lock, 
   Phone, MapPin, X, Key, ShieldCheck, AlertCircle, 
-  RefreshCw, Eye, EyeOff, UploadCloud, Check, ChevronDown
+  RefreshCw, Eye, EyeOff, UploadCloud, Check, ChevronDown, Clock, Sun, Moon, Sunrise
 } from "lucide-react";
 
 // --- REQUIRED DATA STRUCTURES FOR DROPDOWNS ---
@@ -37,11 +38,11 @@ const INITIAL_ATTENDANTS = [
   {
     id: "att_01", name: "Kebede Alemu", email: "kebede.visionpark@gmail.com", phone: "+251 911 234 567",
     faydaId: "1234 5678 9012 3456", address: "Bole, Addis Ababa", branch: "Bole Airport Parking",
+    shiftStart: "06:00 AM", shiftEnd: "02:00 PM", 
     status: "Active", avatar: "https://i.pravatar.cc/150?u=kebede"
   }
 ];
 
-// ✅ FIXED: Moved OUTSIDE the main component so it doesn't cause re-renders/flashing
 const DropdownTrigger = ({ label, value, onClick, disabled }) => (
   <div className="space-y-1.5 w-full min-w-0">
     <label className="text-xs md:text-sm font-bold uppercase tracking-wider text-zinc-500">{label}</label>
@@ -57,6 +58,65 @@ const DropdownTrigger = ({ label, value, onClick, disabled }) => (
   </div>
 );
 
+// --- CUSTOM PREMIUM TIME PICKER ---
+const PremiumTimePicker = ({ label, value, onChange }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const parts = value?.split(/[: ]/) || ["06", "00", "AM"];
+  const currentHour = parts[0] || "06";
+  const currentMin = parts[1] || "00";
+  const currentPeriod = parts[2] || "AM";
+
+  const hours = Array.from({ length: 12 }, (_, i) => (i + 1).toString().padStart(2, '0'));
+  const minutes = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0'));
+  const periods = ["AM", "PM"];
+
+  const handleUpdate = (type, val) => {
+    let newH = currentHour, newM = currentMin, newP = currentPeriod;
+    if (type === 'h') newH = val;
+    if (type === 'm') newM = val;
+    if (type === 'p') newP = val;
+    onChange(`${newH}:${newM} ${newP}`);
+  };
+
+  return (
+    <div className="space-y-1.5 relative w-full min-w-0">
+      <label className="text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-500">{label}</label>
+      <button 
+        type="button" onClick={() => setIsOpen(!isOpen)}
+        className={`w-full flex items-center justify-between bg-white dark:bg-[#121214] border border-emerald-200 dark:border-emerald-500/30 text-zinc-900 dark:text-white text-sm md:text-base rounded-xl px-4 py-3 outline-none transition-all ${isOpen ? 'border-emerald-500 ring-1 ring-emerald-500' : 'hover:border-emerald-500'}`}
+      >
+        <span className="truncate pr-4 font-mono font-bold tracking-wide">{value}</span>
+        <Clock className={`h-4 w-4 shrink-0 ${isOpen ? 'text-emerald-500' : 'text-zinc-400'}`} />
+      </button>
+
+      {isOpen && (
+        <>
+          <div className="fixed inset-0 z-[9998]" onClick={() => setIsOpen(false)}></div>
+          <div className="absolute z-[9999] bottom-[calc(100%+8px)] left-0 p-2 bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/10 rounded-2xl shadow-2xl flex gap-1 sm:gap-2 animate-in fade-in slide-in-from-bottom-2 w-[calc(100vw-32px)] sm:w-[260px] max-w-[280px]">
+            <div className="flex-1 h-40 overflow-y-auto overscroll-contain custom-scrollbar pr-1 flex flex-col gap-1">
+              {hours.map(h => (<button key={h} type="button" onClick={() => handleUpdate('h', h)} className={`w-full py-2.5 rounded-lg text-sm font-bold transition-all outline-none shrink-0 ${currentHour === h ? 'bg-emerald-500 text-white shadow-md' : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/5'}`}>{h}</button>))}
+            </div>
+            <div className="flex-1 h-40 overflow-y-auto overscroll-contain custom-scrollbar pr-1 flex flex-col gap-1">
+              {minutes.map(m => (<button key={m} type="button" onClick={() => handleUpdate('m', m)} className={`w-full py-2.5 rounded-lg text-sm font-bold transition-all outline-none shrink-0 ${currentMin === m ? 'bg-emerald-500 text-white shadow-md' : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/5'}`}>{m}</button>))}
+            </div>
+            <div className="flex-1 h-40 overflow-y-auto overscroll-contain custom-scrollbar flex flex-col gap-1">
+              {periods.map(p => (<button key={p} type="button" onClick={() => handleUpdate('p', p)} className={`w-full py-2.5 rounded-lg text-sm font-bold transition-all outline-none shrink-0 ${currentPeriod === p ? 'bg-emerald-500 text-white shadow-md' : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/5'}`}>{p}</button>))}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
+const getShiftLabel = (start, end) => {
+  if (start === "06:00 AM" && end === "02:00 PM") return "Morning";
+  if (start === "02:00 PM" && end === "10:00 PM") return "Afternoon";
+  if (start === "10:00 PM" && end === "06:00 AM") return "Night";
+  if (start === "08:00 AM" && end === "06:00 PM") return "Full Day";
+  return null; 
+};
+
 export default function AttendantManagement() {
   const [attendants, setAttendants] = useState(INITIAL_ATTENDANTS);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -64,8 +124,9 @@ export default function AttendantManagement() {
   const [activeDropdown, setActiveDropdown] = useState(null); 
 
   const [formData, setFormData] = useState({
-    name: "", email: "", phone: "+251 ", faydaId: "", address: "", password: "",
-    region: "Addis Ababa", city: "Addis Ababa", branch: "Bole Airport Parking"
+    name: "", email: "", phone: "", faydaId: "", address: "", password: "",
+    region: "Addis Ababa", city: "Addis Ababa", branch: "Bole Airport Parking",
+    shiftStart: "06:00 AM", shiftEnd: "02:00 PM"
   });
 
   const [errors, setErrors] = useState({});
@@ -83,49 +144,55 @@ export default function AttendantManagement() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  // --- FAYDA ID LOGIC ---
   const handleFaydaChange = (e) => {
     let val = e.target.value.replace(/\D/g, '');
     if (val.length > 16) val = val.slice(0, 16);
     const formatted = val.match(/.{1,4}/g)?.join(' ') || val;
     setFormData({ ...formData, faydaId: formatted });
-    if (val.length === 16) setErrors((prev) => ({ ...prev, faydaId: null }));
-    else setErrors((prev) => ({ ...prev, faydaId: "Fayda ID must be exactly 16 digits." }));
+    setErrors((prev) => ({ ...prev, faydaId: null })); // Clear error while typing
   };
 
+  const handleFaydaBlur = () => {
+    const val = formData.faydaId.replace(/\D/g, '');
+    if (val && val.length !== 16) {
+      setErrors((prev) => ({ ...prev, faydaId: "Fayda ID must be exactly 16 digits." }));
+    }
+  };
+
+  // --- EMAIL LOGIC ---
   const handleEmailChange = (e) => {
-    const val = e.target.value;
-    setFormData({ ...formData, email: val });
-    if (val && !val.toLowerCase().endsWith("@gmail.com")) setErrors((prev) => ({ ...prev, email: "Only @gmail.com addresses are allowed." }));
-    else setErrors((prev) => ({ ...prev, email: null }));
+    setFormData({ ...formData, email: e.target.value });
+    setErrors((prev) => ({ ...prev, email: null })); // Clear error while typing
   };
 
+  const handleEmailBlur = () => {
+    const val = formData.email;
+    if (val && !val.toLowerCase().endsWith("@gmail.com")) {
+      setErrors((prev) => ({ ...prev, email: "Only @gmail.com addresses are allowed." }));
+    }
+  };
+
+  // --- PHONE LOGIC ---
   const handlePhoneChange = (e) => {
     let val = e.target.value.replace(/\D/g, ''); 
-    if (val.startsWith('0')) val = '251' + val.substring(1);
-    else if (!val.startsWith('251') && val.length > 0) {
-      if (val.startsWith('9') || val.startsWith('7')) val = '251' + val;
-      else val = '251';
-    }
-    if (val.length > 12) val = val.slice(0, 12);
-
-    let formatted = '';
-    if (val.length > 0) {
-      formatted = '+' + val.substring(0, 3);
-      if (val.length > 3) formatted += ' ' + val.substring(3, 6);
-      if (val.length > 6) formatted += ' ' + val.substring(6, 9);
-      if (val.length > 9) formatted += ' ' + val.substring(9, 12);
-    }
-
-    setFormData({ ...formData, phone: formatted });
-
-    if (val.length > 3 && val.length < 12) setErrors((prev) => ({ ...prev, phone: "Incomplete phone number." }));
-    else if (val.length === 12) {
-      const networkCode = val.substring(3, 4);
-      if (networkCode !== '9' && networkCode !== '7') setErrors((prev) => ({ ...prev, phone: "Must be a valid Ethio Telecom (9) or Safaricom (7) number." }));
-      else setErrors((prev) => ({ ...prev, phone: null }));
-    } else setErrors((prev) => ({ ...prev, phone: null }));
+    if (val.length > 9) val = val.slice(0, 9);
+    setFormData({ ...formData, phone: val });
+    setErrors((prev) => ({ ...prev, phone: null })); // Clear error while typing
   };
 
+  const handlePhoneBlur = () => {
+    const val = formData.phone;
+    if (val) {
+      if (val.length > 0 && val[0] !== '9' && val[0] !== '7') {
+        setErrors((prev) => ({ ...prev, phone: "Number must start with 9 or 7." }));
+      } else if (val.length < 9) {
+        setErrors((prev) => ({ ...prev, phone: "Incomplete phone number. Must be 9 digits." }));
+      }
+    }
+  };
+
+  // --- PASSWORD LOGIC ---
   const checkPasswordStrength = (pass) => {
     if (!pass) return null;
     if (pass.length < 8 || !/[A-Z]/.test(pass) || !/[a-z]/.test(pass) || !/[0-9]/.test(pass) || !/[!@#$%^&*]/.test(pass)) {
@@ -135,9 +202,14 @@ export default function AttendantManagement() {
   };
 
   const handlePasswordChange = (e) => {
-    const val = e.target.value;
-    setFormData({ ...formData, password: val });
-    setErrors((prev) => ({ ...prev, password: checkPasswordStrength(val) }));
+    setFormData({ ...formData, password: e.target.value });
+    setErrors((prev) => ({ ...prev, password: null })); // Clear error while typing
+  };
+
+  const handlePasswordBlur = () => {
+    if (formData.password) {
+      setErrors((prev) => ({ ...prev, password: checkPasswordStrength(formData.password) }));
+    }
   };
 
   const generatePassword = (e) => {
@@ -157,17 +229,42 @@ export default function AttendantManagement() {
     setShowPassword(true); 
   };
 
+  const setQuickShift = (start, end) => {
+    setFormData(prev => ({ ...prev, shiftStart: start, shiftEnd: end }));
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (formData.faydaId.replace(/\s/g, '').length !== 16 || errors.email || errors.password || errors.phone || !formData.branch) {
-      alert("Please fix the errors and ensure a branch is assigned before submitting.");
+    
+    // Manually run all validations on submit just in case they bypassed the blur events
+    const fVal = formData.faydaId.replace(/\D/g, '');
+    const eVal = formData.email;
+    const pVal = formData.phone;
+    const passVal = formData.password;
+
+    let hasErrors = false;
+    if (fVal.length !== 16) hasErrors = true;
+    if (!eVal.toLowerCase().endsWith("@gmail.com")) hasErrors = true;
+    if (pVal.length !== 9 || (pVal[0] !== '9' && pVal[0] !== '7')) hasErrors = true;
+    if (checkPasswordStrength(passVal)) hasErrors = true;
+    if (!formData.branch || !formData.shiftStart || !formData.shiftEnd) hasErrors = true;
+
+    if (hasErrors) {
+      handleFaydaBlur();
+      handleEmailBlur();
+      handlePhoneBlur();
+      handlePasswordBlur();
+      alert("Please fix the errors and ensure a branch and shift time are assigned before submitting.");
       return;
     }
 
+    const formattedPhone = `+251 ${formData.phone.substring(0,3)} ${formData.phone.substring(3,6)} ${formData.phone.substring(6,9)}`;
+
     const newAttendant = {
       id: `att_${Date.now()}`,
-      name: formData.name, email: formData.email, phone: formData.phone,
+      name: formData.name, email: formData.email, phone: formattedPhone,
       faydaId: formData.faydaId, address: formData.address, branch: formData.branch,
+      shiftStart: formData.shiftStart, shiftEnd: formData.shiftEnd, 
       status: "Active", avatar: avatarPreview || `https://i.pravatar.cc/150?u=${formData.name.replace(/\s/g, '')}`
     };
 
@@ -177,19 +274,27 @@ export default function AttendantManagement() {
 
   const closeModal = () => {
     setIsModalOpen(false);
-    setFormData({ name: "", email: "", phone: "+251 ", faydaId: "", address: "", password: "", region: "Addis Ababa", city: "Addis Ababa", branch: "Bole Airport Parking" });
+    setFormData({ name: "", email: "", phone: "", faydaId: "", address: "", password: "", region: "Addis Ababa", city: "Addis Ababa", branch: "Bole Airport Parking", shiftStart: "06:00 AM", shiftEnd: "02:00 PM" });
     setAvatarPreview(null);
+    setErrors({});
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   return (
     <div className="w-full flex flex-col gap-6 animate-in fade-in duration-500 relative">
+      <style>{`
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 10px; }
+        .custom-scrollbar { scrollbar-width: thin; scrollbar-color: #3f3f46 transparent; }
+      `}</style>
+
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-zinc-900 dark:text-white tracking-tight">Attendant Management</h1>
-          <p className="text-sm md:text-base text-zinc-500 dark:text-zinc-400 mt-1">Manage personnel, Fayda IDs, and branch assignments.</p>
+          <p className="text-sm md:text-base text-zinc-500 dark:text-zinc-400 mt-1">Manage personnel, Fayda IDs, custom shift timings, and branch assignments.</p>
         </div>
-        <button type="button" onClick={() => setIsModalOpen(true)} className="flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 px-5 py-2.5 rounded-xl font-bold shadow-lg shadow-emerald-500/20 outline-none">
+        <button type="button" onClick={() => setIsModalOpen(true)} className="flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 px-5 py-2.5 rounded-xl font-bold shadow-lg shadow-emerald-500/20 outline-none transition-transform active:scale-95">
           <Plus className="h-5 w-5" /> Add Attendant
         </button>
       </div>
@@ -201,48 +306,73 @@ export default function AttendantManagement() {
         </div>
         
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[1000px]">
+          <table className="w-full text-left border-collapse min-w-[1100px]">
             <thead>
               <tr className="border-b border-zinc-200 dark:border-white/10 text-[10px] md:text-xs uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
                 <th className="px-4 md:px-6 py-4 font-semibold">Attendant</th>
                 <th className="px-4 md:px-6 py-4 font-semibold">Contact Info</th>
                 <th className="px-4 md:px-6 py-4 font-semibold">Fayda ID (FAN)</th>
                 <th className="px-4 md:px-6 py-4 font-semibold">Assigned Branch</th>
+                <th className="px-4 md:px-6 py-4 font-semibold">Shift Time</th>
                 <th className="px-4 md:px-6 py-4 font-semibold">Status</th>
                 <th className="px-4 md:px-6 py-4 font-semibold text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="text-xs md:text-sm">
-              {attendants.map((att) => (
-                <tr key={att.id} className="border-b border-zinc-100 dark:border-white/5 last:border-0 hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors">
-                  <td className="px-4 md:px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <img src={att.avatar} alt={att.name} className="h-8 w-8 md:h-10 md:w-10 rounded-full border border-zinc-200 dark:border-white/10 object-cover" />
-                      <span className="font-bold text-zinc-900 dark:text-white">{att.name}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 md:px-6 py-4">
-                    <div className="flex flex-col gap-1">
-                      <span className="text-zinc-900 dark:text-white flex items-center gap-1.5"><Mail className="h-3.5 w-3.5 text-zinc-400" /> {att.email}</span>
-                      <span className="text-zinc-500 flex items-center gap-1.5"><Phone className="h-3.5 w-3.5 text-zinc-400" /> {att.phone}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 md:px-6 py-4 font-mono font-medium text-zinc-600 dark:text-zinc-300">{att.faydaId}</td>
-                  <td className="px-4 md:px-6 py-4 font-medium text-zinc-700 dark:text-zinc-300">{att.branch}</td>
-                  <td className="px-4 md:px-6 py-4">
-                    <span className="inline-flex items-center px-2 py-1 md:px-2.5 md:py-1 rounded-md bg-emerald-100 dark:bg-emerald-500/20 text-[10px] md:text-xs font-bold text-emerald-700 dark:text-emerald-400">
-                      <ShieldCheck className="h-3 w-3 mr-1" /> {att.status}
-                    </span>
-                  </td>
-                  <td className="px-4 md:px-6 py-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <button title="Reset Password" type="button" className="p-2 text-zinc-400 hover:text-blue-500 bg-zinc-100 dark:bg-white/5 rounded-lg transition-colors outline-none"><Key className="h-4 w-4" /></button>
-                      <button title="Edit" type="button" className="p-2 text-zinc-400 hover:text-emerald-500 bg-zinc-100 dark:bg-white/5 rounded-lg transition-colors outline-none"><Edit2 className="h-4 w-4" /></button>
-                      <button title="Delete" type="button" className="p-2 text-zinc-400 hover:text-red-500 bg-zinc-100 dark:bg-white/5 rounded-lg transition-colors outline-none"><Trash2 className="h-4 w-4" /></button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {attendants.map((att) => {
+                const shiftLabel = getShiftLabel(att.shiftStart, att.shiftEnd);
+
+                return (
+                  <tr key={att.id} className="border-b border-zinc-100 dark:border-white/5 last:border-0 hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors">
+                    <td className="px-4 md:px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <img src={att.avatar} alt={att.name} className="h-8 w-8 md:h-10 md:w-10 rounded-full border border-zinc-200 dark:border-white/10 object-cover" />
+                        <span className="font-bold text-zinc-900 dark:text-white">{att.name}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 md:px-6 py-4">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-zinc-900 dark:text-white flex items-center gap-1.5"><Mail className="h-3.5 w-3.5 text-zinc-400" /> {att.email}</span>
+                        <span className="text-zinc-500 flex items-center gap-1.5"><Phone className="h-3.5 w-3.5 text-zinc-400" /> {att.phone}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 md:px-6 py-4 font-mono font-medium text-zinc-600 dark:text-zinc-300">{att.faydaId}</td>
+                    <td className="px-4 md:px-6 py-4 font-medium text-zinc-700 dark:text-zinc-300">{att.branch}</td>
+                    
+                    <td className="px-4 md:px-6 py-4 font-medium text-zinc-700 dark:text-zinc-300">
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-emerald-500 shrink-0" />
+                        <div className="flex flex-col min-w-0">
+                          {shiftLabel ? (
+                            <>
+                              <span className="font-bold text-sm text-zinc-900 dark:text-white">{shiftLabel}</span>
+                              <span className="text-[10px] text-zinc-500 truncate">{att.shiftStart} - {att.shiftEnd}</span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="font-bold text-xs sm:text-sm text-zinc-900 dark:text-white">{att.shiftStart}</span>
+                              <span className="text-[10px] sm:text-xs text-zinc-500 truncate">to {att.shiftEnd}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+
+                    <td className="px-4 md:px-6 py-4">
+                      <span className="inline-flex items-center px-2 py-1 md:px-2.5 md:py-1 rounded-md bg-emerald-100 dark:bg-emerald-500/20 text-[10px] md:text-xs font-bold text-emerald-700 dark:text-emerald-400">
+                        <ShieldCheck className="h-3 w-3 mr-1" /> {att.status}
+                      </span>
+                    </td>
+                    <td className="px-4 md:px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button title="Reset Password" type="button" className="p-2 text-zinc-400 hover:text-blue-500 bg-zinc-100 dark:bg-white/5 rounded-lg transition-colors outline-none"><Key className="h-4 w-4" /></button>
+                        <button title="Edit" type="button" className="p-2 text-zinc-400 hover:text-emerald-500 bg-zinc-100 dark:bg-white/5 rounded-lg transition-colors outline-none"><Edit2 className="h-4 w-4" /></button>
+                        <button title="Delete" type="button" className="p-2 text-zinc-400 hover:text-red-500 bg-zinc-100 dark:bg-white/5 rounded-lg transition-colors outline-none"><Trash2 className="h-4 w-4" /></button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -257,7 +387,7 @@ export default function AttendantManagement() {
               <button type="button" onClick={closeModal} className="p-1.5 text-zinc-400 hover:text-zinc-900 dark:hover:text-white rounded-md transition-colors outline-none"><X className="h-5 w-5" /></button>
             </div>
 
-            <div className="p-4 md:p-6 overflow-y-auto flex-1">
+            <div className="p-4 md:p-6 overflow-y-auto flex-1 custom-scrollbar">
               <form id="attendantForm" onSubmit={handleSubmit} className="flex flex-col gap-4 md:gap-5">
                 
                 <div className="flex justify-center mb-2">
@@ -282,8 +412,16 @@ export default function AttendantManagement() {
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-xs md:text-sm font-bold uppercase tracking-wider text-zinc-500">Fayda ID (FAN)</label>
-                    <input required type="text" value={formData.faydaId} onChange={handleFaydaChange} placeholder="XXXX XXXX XXXX XXXX" className={`w-full bg-zinc-50 dark:bg-white/5 border ${errors.faydaId ? 'border-red-500' : 'border-zinc-200 dark:border-white/10'} text-sm md:text-base font-mono tracking-widest rounded-xl px-4 py-3 outline-none focus:ring-1 transition-all ${errors.faydaId ? 'focus:ring-red-500' : 'focus:border-emerald-500 focus:ring-emerald-500'}`} />
-                    {errors.faydaId && <p className="text-[10px] md:text-xs text-red-500 font-medium flex items-center gap-1 mt-1"><AlertCircle className="h-3 w-3" /> {errors.faydaId}</p>}
+                    <input 
+                      required 
+                      type="text" 
+                      value={formData.faydaId} 
+                      onChange={handleFaydaChange} 
+                      onBlur={handleFaydaBlur}
+                      placeholder="XXXX XXXX XXXX XXXX" 
+                      className={`w-full bg-zinc-50 dark:bg-white/5 border ${errors.faydaId ? 'border-red-500' : 'border-zinc-200 dark:border-white/10'} text-sm md:text-base font-mono tracking-widest rounded-xl px-4 py-3 outline-none focus:ring-1 transition-all ${errors.faydaId ? 'focus:ring-red-500' : 'focus:border-emerald-500 focus:ring-emerald-500'}`} 
+                    />
+                    {errors.faydaId && <p className="text-[10px] md:text-xs text-red-500 font-medium flex items-center gap-1 mt-1 animate-in fade-in"><AlertCircle className="h-3 w-3" /> {errors.faydaId}</p>}
                   </div>
                 </div>
 
@@ -292,17 +430,36 @@ export default function AttendantManagement() {
                     <label className="text-xs md:text-sm font-bold uppercase tracking-wider text-zinc-500">Gmail Address</label>
                     <div className="relative">
                       <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
-                      <input required type="email" value={formData.email} onChange={handleEmailChange} placeholder="attendant@gmail.com" className={`w-full bg-zinc-50 dark:bg-white/5 border ${errors.email ? 'border-red-500' : 'border-zinc-200 dark:border-white/10'} text-sm md:text-base rounded-xl pl-10 pr-4 py-3 outline-none focus:ring-1 transition-all ${errors.email ? 'focus:ring-red-500' : 'focus:border-emerald-500 focus:ring-emerald-500'}`} />
+                      <input 
+                        required 
+                        type="email" 
+                        value={formData.email} 
+                        onChange={handleEmailChange} 
+                        onBlur={handleEmailBlur}
+                        placeholder="attendant@gmail.com" 
+                        className={`w-full bg-zinc-50 dark:bg-white/5 border ${errors.email ? 'border-red-500' : 'border-zinc-200 dark:border-white/10'} text-sm md:text-base rounded-xl pl-10 pr-4 py-3 outline-none focus:ring-1 transition-all ${errors.email ? 'focus:ring-red-500' : 'focus:border-emerald-500 focus:ring-emerald-500'}`} 
+                      />
                     </div>
-                    {errors.email && <p className="text-[10px] md:text-xs text-red-500 font-medium flex items-center gap-1 mt-1"><AlertCircle className="h-3 w-3" /> {errors.email}</p>}
+                    {errors.email && <p className="text-[10px] md:text-xs text-red-500 font-medium flex items-center gap-1 mt-1 animate-in fade-in"><AlertCircle className="h-3 w-3" /> {errors.email}</p>}
                   </div>
+                  
                   <div className="space-y-1.5">
                     <label className="text-xs md:text-sm font-bold uppercase tracking-wider text-zinc-500">Phone Number</label>
-                    <div className="relative">
-                      <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
-                      <input required type="tel" value={formData.phone} onChange={handlePhoneChange} placeholder="+251 9..." className={`w-full bg-zinc-50 dark:bg-white/5 border ${errors.phone ? 'border-red-500' : 'border-zinc-200 dark:border-white/10'} text-sm md:text-base font-mono rounded-xl pl-10 pr-4 py-3 outline-none focus:ring-1 transition-all ${errors.phone ? 'focus:ring-red-500' : 'focus:border-emerald-500 focus:ring-emerald-500'}`} />
+                    <div className="relative flex items-center">
+                      <div className="absolute left-0 top-0 bottom-0 flex items-center justify-center bg-zinc-100 dark:bg-white/5 border-r border-zinc-200 dark:border-white/10 px-3 rounded-l-xl z-10">
+                        <span className="text-sm md:text-base font-mono font-bold text-zinc-500">+251</span>
+                      </div>
+                      <input 
+                        required 
+                        type="tel" 
+                        value={formData.phone} 
+                        onChange={handlePhoneChange} 
+                        onBlur={handlePhoneBlur}
+                        placeholder="9XX XXX XXX" 
+                        className={`w-full bg-zinc-50 dark:bg-white/5 border ${errors.phone ? 'border-red-500' : 'border-zinc-200 dark:border-white/10'} text-sm md:text-base font-mono tracking-widest rounded-xl pl-16 pr-4 py-3 outline-none focus:ring-1 transition-all ${errors.phone ? 'focus:ring-red-500' : 'focus:border-emerald-500 focus:ring-emerald-500'}`} 
+                      />
                     </div>
-                    {errors.phone && <p className="text-[10px] md:text-xs text-red-500 font-medium flex items-center gap-1 mt-1"><AlertCircle className="h-3 w-3" /> {errors.phone}</p>}
+                    {errors.phone && <p className="text-[10px] md:text-xs text-red-500 font-medium flex items-center gap-1 mt-1 animate-in fade-in"><AlertCircle className="h-3 w-3" /> {errors.phone}</p>}
                   </div>
                 </div>
 
@@ -315,13 +472,31 @@ export default function AttendantManagement() {
                 </div>
 
                 <div className="p-4 rounded-xl border border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-500/5 mt-2">
-                  <h3 className="text-xs md:text-sm font-bold text-emerald-700 dark:text-emerald-400 mb-3 flex items-center gap-2">
-                    <MapPin className="h-4 w-4" /> Assignment Details
+                  <h3 className="text-xs md:text-sm font-bold text-emerald-700 dark:text-emerald-400 mb-4 flex items-center gap-2">
+                    <MapPin className="h-4 w-4" /> Assignment & Custom Shift Details
                   </h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full min-w-0">
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full min-w-0 mb-5">
                     <DropdownTrigger label="Region" value={formData.region} onClick={() => setActiveDropdown('region')} />
                     <DropdownTrigger label="City" value={formData.city} onClick={() => setActiveDropdown('city')} disabled={!formData.region} />
                     <DropdownTrigger label="Assigned Branch" value={formData.branch} onClick={() => setActiveDropdown('branch')} disabled={!formData.city} />
+                  </div>
+
+                  <div className="border-t border-emerald-200 dark:border-emerald-500/20 pt-5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
+                      <label className="text-xs md:text-sm font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-500">Custom Shift Timing</label>
+                      <div className="flex flex-wrap gap-2">
+                        <button type="button" onClick={() => setQuickShift("06:00 AM", "02:00 PM")} className="px-2 py-1 rounded border border-emerald-300 dark:border-emerald-500/30 text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition flex items-center gap-1 active:scale-95"><Sunrise className="h-3 w-3" /> Morning</button>
+                        <button type="button" onClick={() => setQuickShift("02:00 PM", "10:00 PM")} className="px-2 py-1 rounded border border-amber-300 dark:border-amber-500/30 text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-500/20 transition flex items-center gap-1 active:scale-95"><Sun className="h-3 w-3" /> Afternoon</button>
+                        <button type="button" onClick={() => setQuickShift("10:00 PM", "06:00 AM")} className="px-2 py-1 rounded border border-indigo-300 dark:border-indigo-500/30 text-[10px] font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition flex items-center gap-1 active:scale-95"><Moon className="h-3 w-3" /> Night</button>
+                        <button type="button" onClick={() => setQuickShift("08:00 AM", "06:00 PM")} className="px-2 py-1 rounded bg-zinc-800 text-white dark:bg-white dark:text-zinc-900 text-[10px] font-bold uppercase tracking-wider hover:opacity-80 transition active:scale-95">Full Day</button>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <PremiumTimePicker label="Shift Start Time" value={formData.shiftStart} onChange={(val) => setFormData({...formData, shiftStart: val})} />
+                      <PremiumTimePicker label="Shift End Time" value={formData.shiftEnd} onChange={(val) => setFormData({...formData, shiftEnd: val})} />
+                    </div>
                   </div>
                 </div>
 
@@ -336,20 +511,28 @@ export default function AttendantManagement() {
                   </div>
                   
                   <div className="relative">
-                    <input required type={showPassword ? "text" : "password"} value={formData.password} onChange={handlePasswordChange} placeholder="Enter or generate password" className={`w-full bg-white dark:bg-[#121214] border ${errors.password ? 'border-red-500' : 'border-zinc-200 dark:border-white/10'} text-sm md:text-base font-mono tracking-wider rounded-xl px-4 py-3 pr-10 outline-none focus:ring-1 transition-all ${errors.password ? 'focus:ring-red-500' : 'focus:border-emerald-500 focus:ring-emerald-500'}`} />
+                    <input 
+                      required 
+                      type={showPassword ? "text" : "password"} 
+                      value={formData.password} 
+                      onChange={handlePasswordChange} 
+                      onBlur={handlePasswordBlur}
+                      placeholder="Enter or generate password" 
+                      className={`w-full bg-white dark:bg-[#121214] border ${errors.password ? 'border-red-500' : 'border-zinc-200 dark:border-white/10'} text-sm md:text-base font-mono tracking-wider rounded-xl px-4 py-3 pr-10 outline-none focus:ring-1 transition-all ${errors.password ? 'focus:ring-red-500' : 'focus:border-emerald-500 focus:ring-emerald-500'}`} 
+                    />
                     <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-900 dark:hover:text-white outline-none">
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
-                  {errors.password && <p className="text-[10px] md:text-xs text-red-500 font-medium flex items-center gap-1 mt-2"><AlertCircle className="h-3 w-3" /> {errors.password}</p>}
-                  {!errors.password && (formData.password?.length || 0) > 0 && <p className="text-[10px] md:text-xs text-emerald-500 font-bold flex items-center gap-1 mt-2"><Check className="h-3 w-3" /> Password meets security requirements.</p>}
+                  {errors.password && <p className="text-[10px] md:text-xs text-red-500 font-medium flex items-center gap-1 mt-2 animate-in fade-in"><AlertCircle className="h-3 w-3" /> {errors.password}</p>}
+                  {!errors.password && (formData.password?.length || 0) > 0 && <p className="text-[10px] md:text-xs text-emerald-500 font-bold flex items-center gap-1 mt-2 animate-in fade-in"><Check className="h-3 w-3" /> Password meets security requirements.</p>}
                 </div>
 
               </form>
             </div>
             
             <div className="p-4 md:p-6 border-t border-zinc-100 dark:border-white/5 shrink-0 bg-white dark:bg-[#18181b]">
-              <button form="attendantForm" type="submit" className="w-full bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold py-3 md:py-3.5 text-sm md:text-base rounded-xl shadow-lg shadow-emerald-500/20 transition-all outline-none">
+              <button form="attendantForm" type="submit" className="w-full bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold py-3 md:py-3.5 text-sm md:text-base rounded-xl shadow-lg shadow-emerald-500/20 transition-transform active:scale-95 outline-none">
                 Register Attendant
               </button>
             </div>
@@ -361,21 +544,21 @@ export default function AttendantManagement() {
         <div className="fixed inset-0 z-[8000] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-zinc-900/60 dark:bg-black/80 backdrop-blur-sm" onClick={() => setActiveDropdown(null)}></div>
           
-          <div className="relative w-full max-w-md bg-white dark:bg-[#18181b] rounded-2xl shadow-2xl flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-200 overflow-hidden">
+          <div className="relative w-full max-w-md bg-white dark:bg-[#18181b] rounded-2xl shadow-2xl flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-200 overflow-hidden border border-zinc-200 dark:border-white/10">
             <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-100 dark:border-white/5 shrink-0">
               <h2 className="text-lg font-bold text-zinc-900 dark:text-white">
                 Select {activeDropdown === 'region' ? 'Region' : activeDropdown === 'city' ? 'City' : 'Branch'}
               </h2>
-              <button type="button" onClick={() => setActiveDropdown(null)} className="p-1.5 text-zinc-400 hover:text-zinc-900 dark:hover:text-white rounded-md transition-colors"><X className="h-5 w-5" /></button>
+              <button type="button" onClick={() => setActiveDropdown(null)} className="p-1.5 text-zinc-400 hover:text-zinc-900 dark:hover:text-white rounded-md transition-colors outline-none"><X className="h-5 w-5" /></button>
             </div>
 
-            <div className="p-2 overflow-y-auto flex-1">
+            <div className="p-2 overflow-y-auto flex-1 custom-scrollbar">
               {activeDropdown === 'region' && REGION_GROUPS.map((group) => (
                 <div key={group.group} className="mb-2">
                   <div className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-zinc-500">{group.group}</div>
                   <div className="flex flex-col gap-1">
                     {group.options.map(opt => (
-                      <button type="button" key={opt} onClick={() => { setFormData({...formData, region: opt, city: CITIES_BY_REGION[opt][0], branch: BRANCHES_BY_CITY[CITIES_BY_REGION[opt][0]]?.[0] || "" }); setActiveDropdown(null); }} className="flex w-full px-4 py-3 rounded-xl text-sm font-medium justify-between hover:bg-zinc-50 dark:hover:bg-white/5 outline-none">
+                      <button type="button" key={opt} onClick={() => { setFormData({...formData, region: opt, city: CITIES_BY_REGION[opt][0], branch: BRANCHES_BY_CITY[CITIES_BY_REGION[opt][0]]?.[0] || "" }); setActiveDropdown(null); }} className="flex w-full px-4 py-3 rounded-xl text-sm font-medium justify-between hover:bg-zinc-50 dark:hover:bg-white/5 outline-none transition-colors">
                         {opt} {formData.region === opt && <Check className="h-4 w-4 text-emerald-500" />}
                       </button>
                     ))}
@@ -384,7 +567,7 @@ export default function AttendantManagement() {
               ))}
 
               {activeDropdown === 'city' && CITIES_BY_REGION[formData.region]?.map(opt => (
-                <button type="button" key={opt} onClick={() => { setFormData({...formData, city: opt, branch: BRANCHES_BY_CITY[opt]?.[0] || "" }); setActiveDropdown(null); }} className="flex w-full px-4 py-3 rounded-xl text-sm font-medium justify-between hover:bg-zinc-50 dark:hover:bg-white/5 outline-none mt-1">
+                <button type="button" key={opt} onClick={() => { setFormData({...formData, city: opt, branch: BRANCHES_BY_CITY[opt]?.[0] || "" }); setActiveDropdown(null); }} className="flex w-full px-4 py-3 rounded-xl text-sm font-medium justify-between hover:bg-zinc-50 dark:hover:bg-white/5 outline-none mt-1 transition-colors">
                   {opt} {formData.city === opt && <Check className="h-4 w-4 text-emerald-500" />}
                 </button>
               ))}
@@ -392,7 +575,7 @@ export default function AttendantManagement() {
               {activeDropdown === 'branch' && (
                 BRANCHES_BY_CITY[formData.city]?.length > 0 ? (
                   BRANCHES_BY_CITY[formData.city].map(opt => (
-                    <button type="button" key={opt} onClick={() => { setFormData({...formData, branch: opt}); setActiveDropdown(null); }} className="flex w-full px-4 py-3 rounded-xl text-sm font-medium justify-between hover:bg-zinc-50 dark:hover:bg-white/5 outline-none mt-1">
+                    <button type="button" key={opt} onClick={() => { setFormData({...formData, branch: opt}); setActiveDropdown(null); }} className="flex w-full px-4 py-3 rounded-xl text-sm font-medium justify-between hover:bg-zinc-50 dark:hover:bg-white/5 outline-none mt-1 transition-colors">
                       {opt} {formData.branch === opt && <Check className="h-4 w-4 text-emerald-500" />}
                     </button>
                   ))
