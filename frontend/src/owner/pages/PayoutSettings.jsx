@@ -4,15 +4,15 @@
  */
 
 import React, { useState } from "react";
-import { 
-  Building, Smartphone, Plus, Trash2, CheckCircle, 
+import {
+  Building, Smartphone, Plus, Trash2, CheckCircle,
   Wallet, ChevronDown, Check, X, ShieldCheck, AlertTriangle, ArrowUpRight
 } from "lucide-react";
 
 // --- CHAPA SUPPORTED PAYOUT PROVIDERS ---
 const PAYOUT_PROVIDERS = [
-  { 
-    category: "Primary Payment Gateways", 
+  {
+    category: "Primary Payment Gateways",
     options: [
       { name: "Telebirr", type: "mobile" },
       { name: "Commercial Bank of Ethiopia (CBE)", type: "bank" },
@@ -20,8 +20,8 @@ const PAYOUT_PROVIDERS = [
       { name: "Cooperative Bank of Oromia (COOP)", type: "bank" }
     ]
   },
-  { 
-    category: "Other Supported Banks", 
+  {
+    category: "Other Supported Banks",
     options: [
       { name: "Awash Bank", type: "bank" },
       { name: "Addis International Bank", type: "bank" },
@@ -32,8 +32,8 @@ const PAYOUT_PROVIDERS = [
       { name: "Amhara Bank", type: "bank" }
     ]
   },
-  { 
-    category: "Microfinance & Wallets", 
+  {
+    category: "Microfinance & Wallets",
     options: [
       { name: "CBE Birr", type: "mobile" },
       { name: "AwashBirr", type: "mobile" },
@@ -72,8 +72,8 @@ const INITIAL_ACCOUNTS = [
 const DropdownTrigger = ({ label, value, onClick }) => (
   <div className="space-y-1.5 w-full">
     <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">{label}</label>
-    <button 
-      type="button" onClick={onClick} 
+    <button
+      type="button" onClick={onClick}
       className="w-full flex items-center justify-between bg-zinc-50 dark:bg-[#1a1a1c] border border-zinc-200 dark:border-white/10 text-zinc-900 dark:text-white text-base font-bold rounded-xl px-4 py-3 outline-none hover:border-emerald-500 transition-all"
     >
       <span className="truncate">{value || "Select Provider"}</span>
@@ -86,9 +86,9 @@ export default function PayoutSettings() {
   const [accounts, setAccounts] = useState(INITIAL_ACCOUNTS);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState(false);
-  
+
   const [accountToDelete, setAccountToDelete] = useState(null);
-  
+
   const [newProvider, setNewProvider] = useState("");
   const [newHolderName, setNewHolderName] = useState("");
   const [newAccountNumber, setNewAccountNumber] = useState("");
@@ -114,7 +114,7 @@ export default function PayoutSettings() {
     }
 
     setAccounts(updatedAccounts);
-    setAccountToDelete(null); 
+    setAccountToDelete(null);
   };
 
   const handleAddAccount = (e) => {
@@ -123,15 +123,15 @@ export default function PayoutSettings() {
 
     const allProviders = PAYOUT_PROVIDERS.flatMap(g => g.options);
     const providerData = allProviders.find(p => p.name === newProvider);
-    
+
     const newAcc = {
       id: `acc_${Date.now()}`,
       provider: newProvider,
       type: providerData.type,
       holderName: newHolderName,
       accountNumber: newAccountNumber,
-      isPrimary: accounts.length === 0, 
-      status: "Pending Verification" 
+      isPrimary: accounts.length === 0,
+      status: "Pending Verification"
     };
 
     setAccounts([...accounts, newAcc]);
@@ -148,18 +148,18 @@ export default function PayoutSettings() {
   // Helper functions for dynamic input UI
   const getProviderInputType = (provider) => {
     if (!provider) return { label: "Account Number", placeholder: "1000..." };
-    
+
     // Safaricom specific prefix
     if (provider === "M‑PESA Ethiopia") {
       return { label: "Mobile Number", placeholder: "+251 7..." };
     }
-    
+
     const p = provider.toLowerCase();
     // Ethio Telecom & Mobile Wallet prefix
     if (p.includes("birr") || p.includes("cash") || p.includes("amole") || p.includes("telebirr")) {
       return { label: "Mobile Number", placeholder: "+251 9..." };
     }
-    
+
     // Standard Bank
     return { label: "Account Number", placeholder: "1000..." };
   };
@@ -168,14 +168,14 @@ export default function PayoutSettings() {
 
   return (
     <div className="w-full flex flex-col gap-6 animate-in fade-in duration-500 pb-10 relative">
-      
+
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-zinc-900 dark:text-white tracking-tight">Payout Settings</h1>
           <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">Manage Chapa-supported accounts for your net earnings.</p>
         </div>
-        <button 
+        <button
           type="button" onClick={() => setIsModalOpen(true)}
           className="flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 px-5 py-2.5 rounded-xl font-bold shadow-lg shadow-emerald-500/20 outline-none transition-all active:scale-[0.98]"
         >
@@ -233,13 +233,13 @@ export default function PayoutSettings() {
                   <span className="px-2.5 py-1 bg-emerald-500 text-zinc-950 text-[10px] font-black uppercase tracking-wider rounded-lg">Primary</span>
                 )}
               </div>
-              
+
               <div className="flex flex-col sm:flex-row sm:items-center justify-between pt-4 border-t border-zinc-200 dark:border-white/10 gap-4">
                 <div>
                   <p className="text-[10px] uppercase tracking-widest text-zinc-400 font-bold mb-0.5">Account Holder</p>
                   <p className="text-sm font-bold text-zinc-900 dark:text-white">{acc.holderName}</p>
                 </div>
-                
+
                 <div className="flex items-center gap-2">
                   {!acc.isPrimary && acc.status === "Verified" && (
                     <button type="button" onClick={() => handleSetPrimary(acc.id)} className="px-3 py-1.5 text-xs font-bold text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-white/5 hover:bg-zinc-200 dark:hover:bg-white/10 rounded-lg transition-colors outline-none">
@@ -262,7 +262,7 @@ export default function PayoutSettings() {
               </div>
             </div>
           ))}
-          
+
           <button type="button" onClick={() => setIsModalOpen(true)} className="p-5 rounded-2xl border-2 border-dashed border-zinc-200 dark:border-white/10 bg-transparent hover:bg-zinc-50 dark:hover:bg-white/5 flex flex-col items-center justify-center gap-2 text-zinc-400 hover:text-emerald-500 transition-colors min-h-[160px] outline-none group">
             <div className="p-3 rounded-full bg-zinc-100 dark:bg-white/5 group-hover:bg-emerald-500/10 group-hover:scale-110 transition-all duration-300">
               <Plus className="h-6 w-6" />
@@ -277,7 +277,7 @@ export default function PayoutSettings() {
         <div className="fixed inset-0 z-[7000] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={closeModal}></div>
           <div className="relative w-full max-w-md bg-white dark:bg-[#18181b] rounded-3xl shadow-2xl border border-zinc-200 dark:border-white/10 overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col">
-            
+
             <div className="flex items-center justify-between px-6 py-5 border-b border-zinc-100 dark:border-white/5">
               <h2 className="text-xl font-bold text-zinc-900 dark:text-white">Add Payout Method</h2>
               <button type="button" onClick={closeModal} className="p-2 text-zinc-400 hover:text-zinc-900 dark:hover:text-white outline-none rounded-lg transition-colors"><X className="h-5 w-5" /></button>
@@ -285,16 +285,16 @@ export default function PayoutSettings() {
 
             <div className="p-6 overflow-y-auto">
               <form id="addAccountForm" onSubmit={handleAddAccount} className="flex flex-col gap-5">
-                
-                <DropdownTrigger 
-                  label="Select Bank / Provider" 
-                  value={newProvider} 
-                  onClick={() => setActiveDropdown(true)} 
+
+                <DropdownTrigger
+                  label="Select Bank / Provider"
+                  value={newProvider}
+                  onClick={() => setActiveDropdown(true)}
                 />
 
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Account Holder Name</label>
-                  <input 
+                  <input
                     required type="text" placeholder="As it appears on your ID"
                     value={newHolderName} onChange={(e) => setNewHolderName(e.target.value)}
                     className="w-full bg-zinc-50 dark:bg-[#1a1a1c] border border-zinc-200 dark:border-white/10 text-zinc-900 dark:text-white text-base font-bold rounded-xl px-4 py-3 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
@@ -305,7 +305,7 @@ export default function PayoutSettings() {
                   <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
                     {inputConfig.label}
                   </label>
-                  <input 
+                  <input
                     required type="text" placeholder={inputConfig.placeholder}
                     value={newAccountNumber} onChange={(e) => setNewAccountNumber(e.target.value)}
                     className="w-full bg-zinc-50 dark:bg-[#1a1a1c] border border-zinc-200 dark:border-white/10 text-zinc-900 dark:text-white text-base font-mono tracking-wider font-bold rounded-xl px-4 py-3 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
@@ -341,16 +341,16 @@ export default function PayoutSettings() {
               <h2 className="text-xl font-bold dark:text-white">Select Provider</h2>
               <button type="button" onClick={() => setActiveDropdown(false)} className="p-2 dark:text-zinc-400 hover:dark:text-white outline-none"><X className="h-5 w-5" /></button>
             </div>
-            
+
             <div className="p-2 overflow-y-auto flex-1 overscroll-contain">
               {PAYOUT_PROVIDERS.map((group, gIndex) => (
                 <div key={gIndex} className="mb-4 last:mb-0">
                   <p className="px-4 py-2 text-[10px] font-black text-zinc-400 uppercase tracking-widest">{group.category}</p>
                   <div className="flex flex-col gap-1">
                     {group.options.map(p => (
-                      <button 
-                        key={p.name} type="button" 
-                        onClick={() => { setNewProvider(p.name); setActiveDropdown(false); }} 
+                      <button
+                        key={p.name} type="button"
+                        onClick={() => { setNewProvider(p.name); setActiveDropdown(false); }}
                         className={`flex items-center justify-between w-full px-4 py-3.5 rounded-2xl text-sm font-bold transition-all outline-none ${newProvider === p.name ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-500' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-white/5'}`}
                       >
                         <div className="flex items-center gap-3">
@@ -373,7 +373,7 @@ export default function PayoutSettings() {
         <div className="fixed inset-0 z-[9000] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setAccountToDelete(null)}></div>
           <div className="relative w-full max-w-sm bg-white dark:bg-[#18181b] rounded-3xl shadow-2xl border border-zinc-200 dark:border-white/10 p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200">
-            
+
             <div className="flex flex-col items-center text-center gap-3">
               <div className="h-14 w-14 rounded-full bg-red-50 dark:bg-red-500/10 flex items-center justify-center text-red-500 mb-2">
                 <Trash2 className="h-6 w-6" />
@@ -390,14 +390,14 @@ export default function PayoutSettings() {
             </div>
 
             <div className="flex items-center gap-3 mt-4">
-              <button 
-                type="button" onClick={() => setAccountToDelete(null)} 
+              <button
+                type="button" onClick={() => setAccountToDelete(null)}
                 className="flex-1 px-4 py-3 bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-900 dark:text-white font-bold rounded-xl transition-colors outline-none"
               >
                 Cancel
               </button>
-              <button 
-                type="button" onClick={confirmDelete} 
+              <button
+                type="button" onClick={confirmDelete}
                 className="flex-1 px-4 py-3 bg-red-500 hover:bg-red-400 text-white font-bold rounded-xl transition-colors shadow-lg shadow-red-500/20 outline-none"
               >
                 Yes, Delete

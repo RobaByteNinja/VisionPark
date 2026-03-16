@@ -1,66 +1,60 @@
 import React, { useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
-// 1. Import the ThemeProvider (and ScrollProvider if you have it)
-import { ThemeProvider } from "./context/ThemeContext"; 
-import { ScrollProvider } from "./context/ScrollContext"; // Added to prevent scrolling errors on Driver pages
+import { ThemeProvider } from "./context/ThemeContext";
+import { ScrollProvider } from "./context/ScrollContext";
 
-// 2. Import Layouts
+// --- 1. LAYOUTS ---
 import DriverLayout from "./driver/components/DriverLayout";
-import OwnerLayout from "./owner/components/OwnerLayout"; 
+import OwnerLayout from "./owner/components/OwnerLayout";
+import AttendantLayout from "./attendant/components/AttendantLayout"; // ✅ NEW
 
-// 3. Import Auth & Public Pages
+// --- 2. AUTH & PUBLIC ---
 import Login from "./shared/auth/Login";
-import DriverSignUp from "./shared/auth/DriverSignUp"; 
-import ForgotPassword from "./shared/auth/ForgotPassword"; 
-import PrivacyPolicy from "./shared/pages/PrivacyPolicy"; // ✅ ADDED PRIVACY POLICY
+import DriverSignUp from "./shared/auth/DriverSignUp";
+import ForgotPassword from "./shared/auth/ForgotPassword";
+import PrivacyPolicy from "./shared/pages/PrivacyPolicy";
 
-// 4. Import Driver Domain Pages
+// --- 3. DRIVER PAGES ---
 import DriverMap from "./driver/pages/DriverMap";
 import ActiveSession from "./driver/pages/ActiveSession";
 import DriverHistory from "./driver/pages/DriverHistory";
-import DriverProfile from "./driver/pages/DriverProfile"; 
+import DriverProfile from "./driver/pages/DriverProfile";
 
-// 5. Import Owner Domain Pages
+// --- 4. OWNER PAGES ---
 import Dashboard from "./owner/pages/Dashboard";
-import ParkingManagement from "./owner/pages/ParkingManagement"; 
-import AttendantManagement from "./owner/pages/AttendantManagement"; 
-import Operations from "./owner/pages/Operations"; 
-import Analytics from "./owner/pages/Analytics"; 
+import ParkingManagement from "./owner/pages/ParkingManagement";
+import AttendantManagement from "./owner/pages/AttendantManagement";
+import Operations from "./owner/pages/Operations";
+import Analytics from "./owner/pages/Analytics";
 import FinancialReports from "./owner/pages/FinancialReports";
-import PricingSettings from "./owner/pages/PricingSettings"; 
-import PayoutSettings from "./owner/pages/PayoutSettings"; 
-import OwnerProfile from "./owner/pages/OwnerProfile"; 
+import PricingSettings from "./owner/pages/PricingSettings";
+import PayoutSettings from "./owner/pages/PayoutSettings";
+import OwnerProfile from "./owner/pages/OwnerProfile";
+
+// --- 5. ATTENDANT PAGES --- ✅ NEW IMPORTS
+import LiveGrid from "./attendant/pages/LiveGrid";
+import AIExceptions from "./attendant/pages/AIExceptions";
+import WalkUpPOS from "./attendant/pages/WalkUpPOS";
+import Overstays from "./attendant/pages/Overstays";
+import Enforcement from "./attendant/pages/Enforcement";
+import Incidents from "./attendant/pages/Incidents";
+import ZReport from "./attendant/pages/ZReport";
+import AttendantProfile from "./attendant/pages/AttendantProfile";
 
 export default function App() {
-  // 🚨 DEBUGGING: Catch any anchor clicks or form submissions globally
+  // Debugging effects... (keeping your existing logic)
   useEffect(() => {
     const handleClick = (e) => {
       const anchor = e.target.closest('a');
       if (anchor && anchor.getAttribute('href')) {
-        console.warn('🚨 Anchor clicked:', {
-          href: anchor.getAttribute('href'),
-          target: anchor.target,
-          element: anchor
-        });
+        console.warn('🚨 Anchor clicked:', { href: anchor.getAttribute('href'), element: anchor });
       }
     };
-
-    const handleSubmit = (e) => {
-      if (e.target.tagName === 'FORM') {
-        console.warn('📝 Form submitted:', e.target);
-        // e.preventDefault(); 
-      }
-    };
-
     document.addEventListener('click', handleClick);
-    document.addEventListener('submit', handleSubmit);
-    return () => {
-      document.removeEventListener('click', handleClick);
-      document.removeEventListener('submit', handleSubmit);
-    };
+    return () => document.removeEventListener('click', handleClick);
   }, []);
-  
+
   return (
     <ThemeProvider>
       <ScrollProvider>
@@ -69,11 +63,11 @@ export default function App() {
             {/* Public Routes */}
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<DriverSignUp />} /> 
-            <Route path="/forgot-password" element={<ForgotPassword />} /> 
-            <Route path="/privacy-policy" element={<PrivacyPolicy />} /> {/* ✅ HOOKED UP ROUTE */}
+            <Route path="/signup" element={<DriverSignUp />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
 
-            {/* Driver Domain Routing */}
+            {/* --- SECTION A: Driver Domain --- */}
             <Route path="/driver" element={<DriverLayout />}>
               <Route index element={<Navigate to="map" replace />} />
               <Route path="map" element={<DriverMap />} />
@@ -82,21 +76,31 @@ export default function App() {
               <Route path="profile" element={<DriverProfile />} />
             </Route>
 
-            {/* Owner Domain Routing */}
+            {/* --- SECTION B: Owner Domain --- */}
             <Route path="/owner" element={<OwnerLayout />}>
-              {/* Default redirect to dashboard */}
               <Route index element={<Navigate to="dashboard" replace />} />
-              
-              {/* Connected Owner Modules */}
               <Route path="dashboard" element={<Dashboard />} />
-              <Route path="parking" element={<ParkingManagement />} /> 
-              <Route path="attendants" element={<AttendantManagement />} /> 
-              <Route path="operations" element={<Operations />} /> 
-              <Route path="analytics" element={<Analytics />} /> 
-              <Route path="finance" element={<FinancialReports />} /> 
-              <Route path="pricing" element={<PricingSettings />} /> 
-              <Route path="payout" element={<PayoutSettings />} /> 
-              <Route path="profile" element={<OwnerProfile />} /> 
+              <Route path="parking" element={<ParkingManagement />} />
+              <Route path="attendants" element={<AttendantManagement />} />
+              <Route path="operations" element={<Operations />} />
+              <Route path="analytics" element={<Analytics />} />
+              <Route path="finance" element={<FinancialReports />} />
+              <Route path="pricing" element={<PricingSettings />} />
+              <Route path="payout" element={<PayoutSettings />} />
+              <Route path="profile" element={<OwnerProfile />} />
+            </Route>
+
+            {/* --- SECTION C: Attendant Domain --- ✅ ADDED */}
+            <Route path="/attendant" element={<AttendantLayout />}>
+              <Route index element={<Navigate to="dashboard" replace />} />
+              <Route path="dashboard" element={<LiveGrid />} />
+              <Route path="exceptions" element={<AIExceptions />} />
+              <Route path="pos" element={<WalkUpPOS />} />
+              <Route path="overstays" element={<Overstays />} />
+              <Route path="enforcement" element={<Enforcement />} />
+              <Route path="incidents" element={<Incidents />} />
+              <Route path="z-report" element={<ZReport />} />
+              <Route path="profile" element={<AttendantProfile />} />
             </Route>
 
           </Routes>

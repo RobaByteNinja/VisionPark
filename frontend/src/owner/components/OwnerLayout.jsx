@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
-import { 
+import {
   LayoutDashboard, Map, Users, Activity, PieChart,
-  BarChart3, Tags, Landmark, User, Menu, 
+  BarChart3, Tags, Landmark, User, Menu,
   X, Bell, ChevronDown, LogOut, Moon, Sun, Car, PanelLeft
 } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
@@ -135,9 +135,8 @@ export default function OwnerLayout() {
 
       {/* DESKTOP SIDEBAR */}
       <aside
-        className={`hidden lg:flex flex-col relative h-full bg-white dark:bg-[#121214] border-zinc-200 dark:border-white/10 transition-[width] duration-300 ease-[cubic-bezier(0.25,0.8,0.25,1)] shrink-0 z-50 border-r shadow-[4px_0_24px_rgba(0,0,0,0.02)] overflow-hidden ${
-          isSidebarCollapsed ? 'w-[80px]' : 'w-[280px]'
-        }`}
+        className={`hidden lg:flex flex-col relative h-full bg-white dark:bg-[#121214] border-zinc-200 dark:border-white/10 transition-[width] duration-300 ease-[cubic-bezier(0.25,0.8,0.25,1)] shrink-0 z-50 border-r shadow-[4px_0_24px_rgba(0,0,0,0.02)] overflow-hidden ${isSidebarCollapsed ? 'w-[80px]' : 'w-[280px]'
+          }`}
       >
         <SidebarContent
           collapsed={isSidebarCollapsed}
@@ -148,22 +147,22 @@ export default function OwnerLayout() {
         />
       </aside>
 
-    {/* FLOATING COLLAPSED TOOLTIPS */}
-    {hoveredNav && isSidebarCollapsed && (
-      <div
-        className="fixed z-[99999] pointer-events-none animate-in fade-in slide-in-from-left-2 duration-150"
-        style={{ top: hoveredNav.top, left: "88px", transform: "translateY(-50%)" }}
-      >
-        <div className="flex items-center">
-          {/* Arrow matching emerald style */}
-          <div className="w-0 h-0 border-y-[6px] border-y-transparent border-r-[6px] border-r-emerald-500/20 dark:border-r-emerald-500/20" />
-          {/* Tooltip box matching sidebar active item style */}
-          <div className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-sm font-semibold px-3 py-2 rounded-xl shadow-lg whitespace-nowrap border border-emerald-500/20 dark:border-emerald-500/20">
-            {hoveredNav.name}
+      {/* FLOATING COLLAPSED TOOLTIPS */}
+      {hoveredNav && isSidebarCollapsed && (
+        <div
+          className="fixed z-[99999] pointer-events-none animate-in fade-in slide-in-from-left-2 duration-150"
+          style={{ top: hoveredNav.top, left: "88px", transform: "translateY(-50%)" }}
+        >
+          <div className="flex items-center">
+            {/* Arrow matching emerald style */}
+            <div className="w-0 h-0 border-y-[6px] border-y-transparent border-r-[6px] border-r-emerald-500/20 dark:border-r-emerald-500/20" />
+            {/* Tooltip box matching sidebar active item style */}
+            <div className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-sm font-semibold px-3 py-2 rounded-xl shadow-lg whitespace-nowrap border border-emerald-500/20 dark:border-emerald-500/20">
+              {hoveredNav.name}
+            </div>
           </div>
         </div>
-      </div>
-    )}
+      )}
 
       {/* MOBILE MENU */}
       {isMobileMenuOpen && (
@@ -177,8 +176,8 @@ export default function OwnerLayout() {
               collapsed={false}
               currentPath={location.pathname}
               onNavigate={handleNavigation}
-              onHover={() => {}}
-              onLeave={() => {}}
+              onHover={() => { }}
+              onLeave={() => { }}
             />
             <button
               onClick={() => setIsMobileMenuOpen(false)}
@@ -195,23 +194,23 @@ export default function OwnerLayout() {
 
         <header className="h-16 lg:h-20 bg-white/95 dark:bg-[#121214]/95 backdrop-blur-md border-b border-zinc-200 dark:border-white/10 flex items-center justify-between px-4 lg:px-8 z-40 shrink-0 transition-colors duration-500">
 
-        {/* Desktop Sidebar Toggle */}
-        <div className="relative group hidden lg:flex">
-          <button
-            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-            className="p-2 -ml-2 text-zinc-500 hover:text-emerald-600 dark:hover:text-emerald-400 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-colors outline-none active:scale-95"
-          >
-            <PanelLeft className={`h-5 w-5 transition-transform duration-300 ${isSidebarCollapsed ? 'rotate-180' : ''}`} />
-          </button>
+          {/* Desktop Sidebar Toggle */}
+          <div className="relative group hidden lg:flex">
+            <button
+              onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+              className="p-2 -ml-2 text-zinc-500 hover:text-emerald-600 dark:hover:text-emerald-400 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-colors outline-none active:scale-95"
+            >
+              <PanelLeft className={`h-5 w-5 transition-transform duration-300 ${isSidebarCollapsed ? 'rotate-180' : ''}`} />
+            </button>
 
-          {/* Tooltip — matches sidebar nav item style */}
-          <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 flex items-center opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150 z-[99999]">
-            <div className="w-0 h-0 border-y-[6px] border-y-transparent border-r-[6px] border-r-emerald-500/20" />
-            <div className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-sm font-semibold px-3 py-2 rounded-xl shadow-lg whitespace-nowrap border border-emerald-500/20">
-              {isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+            {/* Tooltip — matches sidebar nav item style */}
+            <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 flex items-center opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150 z-[99999]">
+              <div className="w-0 h-0 border-y-[6px] border-y-transparent border-r-[6px] border-r-emerald-500/20" />
+              <div className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-sm font-semibold px-3 py-2 rounded-xl shadow-lg whitespace-nowrap border border-emerald-500/20">
+                {isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+              </div>
             </div>
           </div>
-        </div>
 
           <div className="flex-1" />
 

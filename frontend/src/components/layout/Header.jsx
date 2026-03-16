@@ -14,10 +14,10 @@ export function Header() {
 
   // --- GLOBAL STATE SYNCS ---
   const [profilePhoto, setProfilePhoto] = useState(() => localStorage.getItem("vp_driver_photo") || null);
-  const [userName, setUserName] = useState(() => localStorage.getItem("vp_driver_name") || "Abebe Kebede"); 
+  const [userName, setUserName] = useState(() => localStorage.getItem("vp_driver_name") || "Abebe Kebede");
   const [sessionState, setSessionState] = useState(() => localStorage.getItem("vp_session_state") || "Discovery");
   const [secondsLeft, setSecondsLeft] = useState(0);
-  
+
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -44,7 +44,7 @@ export function Header() {
 
   const sendPushNotification = (title, body) => {
     if ("Notification" in window && Notification.permission === "granted") {
-      new Notification(title, { 
+      new Notification(title, {
         body: body,
         icon: "https://cdn-icons-png.flaticon.com/512/3204/3204933.png"
       });
@@ -55,11 +55,11 @@ export function Header() {
   useEffect(() => {
     const handleProfileUpdate = () => {
       setProfilePhoto(localStorage.getItem("vp_driver_photo"));
-      setUserName(localStorage.getItem("vp_driver_name") || "Abebe Kebede"); 
+      setUserName(localStorage.getItem("vp_driver_name") || "Abebe Kebede");
     };
     window.addEventListener("vp_photo_updated", handleProfileUpdate);
-    window.addEventListener("vp_profile_updated", handleProfileUpdate); 
-    
+    window.addEventListener("vp_profile_updated", handleProfileUpdate);
+
     return () => {
       window.removeEventListener("vp_photo_updated", handleProfileUpdate);
       window.removeEventListener("vp_profile_updated", handleProfileUpdate);
@@ -74,16 +74,16 @@ export function Header() {
       notified3Min.current = false;
       notified1Min.current = false;
     };
-    
+
     window.addEventListener("vp_session_changed", syncSession);
-    
+
     let timer;
     if (sessionState === "Reserved") {
       timer = setInterval(() => {
         const endTimeStr = localStorage.getItem("vp_session_end_time");
         if (endTimeStr) {
           const remaining = Math.floor((parseInt(endTimeStr, 10) - Date.now()) / 1000);
-          
+
           if (remaining <= 300 && remaining > 295 && !notified5Min.current) {
             sendPushNotification("Time Check", "You have 5 minutes left to arrive at your parking spot.");
             notified5Min.current = true;
@@ -93,7 +93,7 @@ export function Header() {
             sendPushNotification("Hurry Up!", "Your parking reservation expires in exactly 3 minutes.");
             notified3Min.current = true;
           }
-          
+
           if (remaining <= 60 && remaining > 55 && !notified1Min.current) {
             sendPushNotification("Warning: Almost Expired", "Only 1 minute left to arrive at your parking spot!");
             notified1Min.current = true;
@@ -153,7 +153,7 @@ export function Header() {
         localStorage.removeItem(key);
       }
     });
-    window.dispatchEvent(new Event("vp_photo_updated")); 
+    window.dispatchEvent(new Event("vp_photo_updated"));
     window.dispatchEvent(new Event("vp_profile_updated"));
     setDropdownOpen(false);
     navigate("/login", { replace: true });
@@ -161,22 +161,21 @@ export function Header() {
 
   return (
     <header className="fixed top-0 left-0 right-0 h-16 bg-white/80 dark:bg-[#09090b]/80 backdrop-blur-md border-b border-zinc-200 dark:border-white/10 z-[5000] px-4 md:px-8 flex items-center justify-between transition-colors duration-500">
-      
+
       <div className="flex items-center gap-2 cursor-pointer transition-transform active:scale-95" onClick={() => navigate("/driver/map")}>
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 border border-emerald-500/20 shrink-0">
           <Car className="h-5 w-5 text-emerald-600 dark:text-emerald-500" />
         </div>
-        {/* ✅ REMOVED 'hidden sm:block' - Now it always shows, adjusting size slightly on smaller screens */}
         <span className="font-bold text-zinc-900 dark:text-white tracking-wide text-base sm:text-lg">
           VisionPark
         </span>
       </div>
-      
+
       <div className="flex items-center gap-3 md:gap-5">
-        
+
         {/* DYNAMIC COLOR-CODED TIMER */}
         {sessionState === "Reserved" && isDriverApp && !isSessionPage && (
-          <div 
+          <div
             onClick={() => navigate("/driver/session")}
             className={`flex items-center gap-1.5 sm:gap-2 border px-2 sm:px-3 py-1.5 rounded-full cursor-pointer transition-all shadow-sm active:scale-95 ${getTimerStyles(secondsLeft).wrapper}`}
           >
@@ -196,7 +195,7 @@ export function Header() {
 
         {isDriverApp && (
           <div className="relative shrink-0" ref={dropdownRef}>
-            <button 
+            <button
               onClick={() => setDropdownOpen(!dropdownOpen)}
               className="flex items-center gap-2.5 p-1 sm:pr-2 rounded-full hover:bg-zinc-100 dark:hover:bg-white/5 transition-colors outline-none active:scale-95"
             >
@@ -213,21 +212,21 @@ export function Header() {
 
             {dropdownOpen && (
               <div className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-[#121214] border border-zinc-200 dark:border-white/10 rounded-2xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 origin-top-right">
-                
+
                 <div className="px-4 py-3 border-b border-zinc-100 dark:border-white/5 bg-zinc-50 dark:bg-white/5">
                   <p className="text-sm font-bold text-zinc-900 dark:text-white truncate">{userName}</p>
                   <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 truncate">Driver</p>
                 </div>
 
                 <div className="p-2 space-y-1">
-                  <button 
+                  <button
                     onClick={() => { setDropdownOpen(false); navigate("/driver/profile"); }}
                     className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/5 rounded-xl transition-colors outline-none cursor-pointer"
                   >
                     <User className="h-4 w-4" /> View Profile
                   </button>
 
-                  <button 
+                  <button
                     onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
                     className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/5 rounded-xl transition-colors outline-none cursor-pointer"
                   >
@@ -237,7 +236,7 @@ export function Header() {
 
                   <div className="h-px w-full bg-zinc-100 dark:bg-white/5 my-1"></div>
 
-                  <button 
+                  <button
                     onClick={handleLogout}
                     className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-bold text-red-600 dark:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl transition-colors outline-none cursor-pointer"
                   >
