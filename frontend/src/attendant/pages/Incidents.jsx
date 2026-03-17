@@ -43,7 +43,7 @@ export default function IncidentLogger() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [incidents, setIncidents] = useState(INITIAL_INCIDENTS);
     const [toastMessage, setToastMessage] = useState("");
-    const [toastType, setToastType] = useState("success"); // 'success' | 'error'
+    const [toastType, setToastType] = useState("success");
 
     // Hidden File Inputs
     const photoInputRef = useRef(null);
@@ -55,7 +55,6 @@ export default function IncidentLogger() {
         setTimeout(() => setToastMessage(""), 5000);
     };
 
-    // --- DYNAMIC FIELD HANDLERS ---
     const handleAddDamagedPlate = () => setDamagedPlates([...damagedPlates, ""]);
 
     const handleRemoveDamagedPlate = (index) => {
@@ -70,7 +69,6 @@ export default function IncidentLogger() {
         setDamagedPlates(newPlates);
     };
 
-    // --- MEDIA HANDLERS ---
     const handleFileUpload = (e, type) => {
         const files = Array.from(e.target.files);
         if (files.length === 0) return;
@@ -98,11 +96,9 @@ export default function IncidentLogger() {
         setMediaFiles([]);
     };
 
-    // --- SUBMISSION LOGIC ---
     const handleSubmit = (e) => {
         e.preventDefault();
 
-        // ✅ STRICT VALIDATION RULE: Plate is only optional for Property Damage
         const isPropertyDamage = incidentType === "Property Damage";
         if (!isPropertyDamage && !offenderPlate.trim()) {
             showToast("License plate is required for this incident type.", "error");
@@ -141,7 +137,6 @@ export default function IncidentLogger() {
             setIncidents([newIncident, ...incidents]);
             setIsSubmitting(false);
 
-            // Dynamic success messages
             if (isUnknown) {
                 showToast(`Report logged. Admin notified to pull CCTV for hit-and-run.`);
             } else if (incidentType === "Fled Without Payment") {
@@ -154,50 +149,50 @@ export default function IncidentLogger() {
         }, 1200);
     };
 
-    // --- REUSABLE GLASS GREEN INPUT STYLES ---
     const glassGreenInputStyles = "w-full bg-white dark:bg-black/40 border border-zinc-200 dark:border-white/10 text-zinc-900 dark:text-white outline-none focus:bg-emerald-50 dark:focus:bg-emerald-500/10 focus:border-emerald-500 focus:shadow-[0_0_15px_rgba(16,185,129,0.15)] transition-all rounded-xl";
 
     return (
         <div className="h-full w-full flex flex-col xl:flex-row gap-6 animate-in fade-in duration-500 relative">
 
-            {/* Toast Notification */}
             {toastMessage && (
-                <div className={`absolute top-4 left-1/2 -translate-x-1/2 text-white font-bold text-sm px-6 py-3 rounded-2xl shadow-2xl z-[8000] animate-in slide-in-from-top-4 flex items-center gap-3 ${toastType === 'error' ? 'bg-red-600' : 'bg-zinc-900 dark:bg-white dark:text-zinc-900'}`}>
-                    {toastType === 'error' ? <AlertTriangle className="h-5 w-5" /> : <CheckCircle className="h-5 w-5 text-emerald-500 shrink-0" />}
+                <div className={`absolute top-4 left-1/2 -translate-x-1/2 text-white font-bold text-xs md:text-sm px-6 py-3 rounded-2xl shadow-2xl z-[8000] animate-in slide-in-from-top-4 flex items-center gap-3 w-11/12 md:w-auto text-center justify-center ${toastType === 'error' ? 'bg-red-600' : 'bg-zinc-900 dark:bg-white dark:text-zinc-900'}`}>
+                    {toastType === 'error' ? <AlertTriangle className="h-5 w-5 shrink-0" /> : <CheckCircle className="h-5 w-5 text-emerald-500 shrink-0" />}
                     {toastMessage}
                 </div>
             )}
 
-            {/* Hidden File Inputs */}
             <input type="file" accept="image/*" multiple ref={photoInputRef} onChange={(e) => handleFileUpload(e, 'photo')} className="hidden" />
             <input type="file" accept="video/*" multiple ref={videoInputRef} onChange={(e) => handleFileUpload(e, 'video')} className="hidden" />
 
             {/* LEFT COLUMN: Report Form */}
-            <div className="flex-1 xl:max-w-[65%] flex flex-col gap-6">
+            {/* ✅ Responsive widths and min-w-0 prevents sidebars from squishing the layout */}
+            <div className="flex-1 xl:max-w-[65%] flex flex-col gap-6 min-w-0">
 
                 {/* Header */}
-                <div className="bg-white dark:bg-[#121214] rounded-3xl p-6 shadow-sm border border-zinc-200 dark:border-white/5 shrink-0 flex items-center justify-between relative overflow-hidden">
+                <div className="bg-white dark:bg-[#121214] rounded-3xl p-5 md:p-6 shadow-sm border border-zinc-200 dark:border-white/5 shrink-0 flex items-center justify-between relative overflow-hidden">
                     <div className="absolute top-0 right-0 p-4 opacity-5">
-                        <ShieldAlert className="h-32 w-32 text-zinc-900 dark:text-white" />
+                        <ShieldAlert className="h-24 w-24 md:h-32 md:w-32 text-zinc-900 dark:text-white" />
                     </div>
-                    <div className="relative z-10">
-                        <h2 className="text-2xl font-black text-zinc-900 dark:text-white flex items-center gap-3">
-                            <AlertTriangle className="h-7 w-7 text-amber-500" /> Incident Logger
+                    <div className="relative z-10 min-w-0">
+                        <h2 className="text-xl md:text-2xl font-black text-zinc-900 dark:text-white flex items-center gap-2 md:gap-3 truncate">
+                            <AlertTriangle className="h-6 w-6 md:h-7 md:w-7 text-amber-500 shrink-0" />
+                            <span className="truncate">Incident Logger</span>
                         </h2>
-                        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">Report manually registered fleeing vehicles, damages, or disputes.</p>
+                        <p className="text-xs md:text-sm text-zinc-500 dark:text-zinc-400 mt-1 truncate">Report manually registered fleeing vehicles, damages, or disputes.</p>
                     </div>
                 </div>
 
                 {/* Main Form */}
-                <div className="flex-1 bg-white dark:bg-[#121214] rounded-3xl shadow-sm border border-zinc-200 dark:border-white/5 p-6 md:p-8 flex flex-col">
-                    <form onSubmit={handleSubmit} className="space-y-6 flex-1 flex flex-col">
+                <div className="flex-1 bg-white dark:bg-[#121214] rounded-3xl shadow-sm border border-zinc-200 dark:border-white/5 p-4 md:p-8 flex flex-col min-w-0">
+                    <form onSubmit={handleSubmit} className="space-y-6 flex-1 flex flex-col min-w-0">
 
                         {/* Row 1: Incident Type */}
-                        <div>
+                        <div className="min-w-0">
                             <label className="block text-xs md:text-sm font-bold uppercase tracking-widest text-zinc-500 mb-2 flex items-center gap-2">
-                                <AlertTriangle className="h-4 w-4" /> Select Incident Type
+                                <AlertTriangle className="h-4 w-4 shrink-0" /> Select Incident Type
                             </label>
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            {/* ✅ Responsive flex-wrap ensures buttons don't break when sidebar expands */}
+                            <div className="flex flex-wrap gap-2 md:gap-3">
                                 {["Fled Without Payment", "Property Damage", "Customer Dispute", "Other"].map((type) => {
                                     const isSelected = incidentType === type;
                                     return (
@@ -208,12 +203,12 @@ export default function IncidentLogger() {
                                                 setIncidentType(type);
                                                 if (type !== "Property Damage" && offenderPlate === "UNKNOWN") setOffenderPlate("");
                                             }}
-                                            className={`p-3 rounded-xl border-2 text-xs font-bold transition-all outline-none flex items-center justify-center text-center cursor-pointer ${isSelected
+                                            className={`flex-1 min-w-[140px] p-3 rounded-xl border-2 text-xs font-bold transition-all outline-none flex items-center justify-center text-center cursor-pointer ${isSelected
                                                     ? 'border-zinc-900 bg-zinc-900 text-white dark:bg-white dark:border-white dark:text-zinc-900 shadow-md'
                                                     : 'border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-black/20 text-zinc-600 dark:text-zinc-400 hover:border-zinc-300 dark:hover:border-white/20'
                                                 }`}
                                         >
-                                            {type}
+                                            <span className="truncate">{type}</span>
                                         </button>
                                     );
                                 })}
@@ -221,10 +216,10 @@ export default function IncidentLogger() {
                         </div>
 
                         {/* Row 2: Offender Info */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                            <div>
-                                <label className="block text-xs md:text-sm font-bold uppercase tracking-widest text-zinc-500 mb-2 flex items-center gap-2">
-                                    <CarFront className="h-4 w-4" /> Offender License Plate
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 min-w-0">
+                            <div className="min-w-0">
+                                <label className="block text-[10px] md:text-sm font-bold uppercase tracking-widest text-zinc-500 mb-2 flex items-center gap-2">
+                                    <CarFront className="h-4 w-4 shrink-0" /> Offender License Plate
                                 </label>
                                 <div className="relative">
                                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -234,23 +229,21 @@ export default function IncidentLogger() {
                                         type="text"
                                         value={offenderPlate}
                                         onChange={(e) => setOffenderPlate(e.target.value.toUpperCase())}
-                                        placeholder={incidentType === "Property Damage" ? "Leave blank if unknown" : "E.g. AA 12345 (Required)"}
-                                        className={`h-14 pl-12 pr-4 font-mono font-black text-lg ${glassGreenInputStyles}`}
+                                        placeholder={incidentType === "Property Damage" ? "Leave blank if unknown" : "E.g. AA 12345"}
+                                        className={`h-12 md:h-14 pl-12 pr-4 font-mono font-black text-base md:text-lg w-full ${glassGreenInputStyles}`}
                                     />
                                 </div>
-                                {/* Helper text ONLY shows for Property Damage */}
                                 {incidentType === "Property Damage" && (
-                                    <p className="text-[10px] text-amber-500 font-bold mt-2 uppercase tracking-widest">
-                                        *If unknown hit-and-run, Admin will review CCTV
+                                    <p className="text-[9px] md:text-[10px] text-amber-500 font-bold mt-2 uppercase tracking-widest truncate">
+                                        *If hit-and-run, Admin will review CCTV
                                     </p>
                                 )}
                             </div>
 
-                            {/* Amount only shows if they fled without payment */}
                             {incidentType === "Fled Without Payment" && (
-                                <div className="animate-in fade-in slide-in-from-top-2">
-                                    <label className="block text-xs md:text-sm font-bold uppercase tracking-widest text-zinc-500 mb-2 flex items-center gap-2">
-                                        <Banknote className="h-4 w-4" /> Unpaid Amount (ETB)
+                                <div className="animate-in fade-in slide-in-from-top-2 min-w-0">
+                                    <label className="block text-[10px] md:text-sm font-bold uppercase tracking-widest text-zinc-500 mb-2 flex items-center gap-2">
+                                        <Banknote className="h-4 w-4 shrink-0" /> Unpaid Amount (ETB)
                                     </label>
                                     <input
                                         type="text"
@@ -258,17 +251,17 @@ export default function IncidentLogger() {
                                         value={amount}
                                         onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ''))}
                                         placeholder="0.00"
-                                        className={`h-14 px-4 font-mono font-black text-lg ${glassGreenInputStyles}`}
+                                        className={`h-12 md:h-14 px-4 font-mono font-black text-base md:text-lg w-full ${glassGreenInputStyles}`}
                                     />
                                 </div>
                             )}
                         </div>
 
-                        {/* Row 3: Property Damage Specifics (The "Lazy Driver" Tracker) */}
+                        {/* Row 3: Property Damage Specifics */}
                         {incidentType === "Property Damage" && (
-                            <div className="p-5 bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/5 rounded-2xl space-y-4 animate-in fade-in">
+                            <div className="p-4 md:p-5 bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/5 rounded-2xl space-y-4 animate-in fade-in min-w-0">
                                 <label className="block text-xs md:text-sm font-bold uppercase tracking-widest text-zinc-500 flex items-center gap-2">
-                                    <ShieldAlert className="h-4 w-4" /> Damaged Vehicles
+                                    <ShieldAlert className="h-4 w-4 shrink-0" /> Damaged Vehicles
                                 </label>
 
                                 <div className="space-y-3">
@@ -278,10 +271,9 @@ export default function IncidentLogger() {
                                                 type="text"
                                                 value={plate}
                                                 onChange={(e) => handleDamagedPlateChange(index, e.target.value)}
-                                                placeholder="Damaged Plate # (e.g. AA 99887)"
-                                                className={`h-12 px-4 font-mono font-bold text-base flex-1 ${glassGreenInputStyles}`}
+                                                placeholder="Damaged Plate #"
+                                                className={`h-12 px-4 font-mono font-bold text-sm md:text-base flex-1 min-w-0 ${glassGreenInputStyles}`}
                                             />
-                                            {/* Premium Red for Delete Action */}
                                             <button
                                                 type="button"
                                                 onClick={() => handleRemoveDamagedPlate(index)}
@@ -294,54 +286,50 @@ export default function IncidentLogger() {
                                     ))}
                                 </div>
 
-                                {/* Blue for Continue/Add Action */}
                                 <button
                                     type="button"
                                     onClick={handleAddDamagedPlate}
-                                    className="w-full py-3 rounded-xl border-2 border-dashed border-blue-300 dark:border-blue-500/30 text-blue-600 dark:text-blue-400 font-bold text-sm hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors flex items-center justify-center gap-2 outline-none cursor-pointer"
+                                    className="w-full py-3 rounded-xl border-2 border-dashed border-blue-300 dark:border-blue-500/30 text-blue-600 dark:text-blue-400 font-bold text-xs md:text-sm hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors flex items-center justify-center gap-2 outline-none cursor-pointer"
                                 >
-                                    <Plus className="h-4 w-4" /> Add Another Damaged Vehicle
+                                    <Plus className="h-4 w-4 shrink-0" /> <span className="truncate">Add Another Damaged Vehicle</span>
                                 </button>
                             </div>
                         )}
 
                         {/* Row 4: Description */}
-                        <div className="flex-1 flex flex-col">
+                        <div className="flex-1 flex flex-col min-w-0">
                             <label className="block text-xs md:text-sm font-bold uppercase tracking-widest text-zinc-500 mb-2 flex items-center gap-2">
-                                <Edit3 className="h-4 w-4" /> Incident Description
+                                <Edit3 className="h-4 w-4 shrink-0" /> Incident Description
                             </label>
                             <textarea
                                 value={description}
                                 onChange={(e) => setDescription(e.target.value)}
-                                placeholder="Provide details about the incident, damages, or dispute..."
-                                className={`flex-1 min-h-[100px] p-4 resize-none font-medium text-sm custom-scrollbar ${glassGreenInputStyles}`}
+                                placeholder="Provide details about the incident..."
+                                className={`flex-1 min-h-[100px] w-full p-4 resize-none font-medium text-sm custom-scrollbar ${glassGreenInputStyles}`}
                                 required
                             />
                         </div>
 
                         {/* Row 5: Media Uploads */}
-                        <div>
-                            <label className="block text-xs md:text-sm font-bold uppercase tracking-widest text-zinc-500 mb-2">Evidence Upload</label>
+                        <div className="min-w-0">
+                            <label className="block text-[10px] md:text-sm font-bold uppercase tracking-widest text-zinc-500 mb-2">Evidence Upload</label>
 
-                            <div className="flex flex-wrap gap-3 mb-3">
-                                {/* Blue for Continue/Add Media Actions */}
-                                <button type="button" onClick={() => photoInputRef.current.click()} className="px-5 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-2 outline-none cursor-pointer shadow-sm active:scale-95">
-                                    <Camera className="h-4 w-4" /> Add Photos
+                            <div className="flex flex-wrap gap-2 md:gap-3 mb-3">
+                                <button type="button" onClick={() => photoInputRef.current.click()} className="px-4 md:px-5 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[10px] md:text-xs font-bold transition-colors flex items-center gap-2 outline-none cursor-pointer shadow-sm active:scale-95">
+                                    <Camera className="h-4 w-4 shrink-0" /> Add Photos
                                 </button>
-                                <button type="button" onClick={() => videoInputRef.current.click()} className="px-5 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-2 outline-none cursor-pointer shadow-sm active:scale-95">
-                                    <Video className="h-4 w-4" /> Add Video
+                                <button type="button" onClick={() => videoInputRef.current.click()} className="px-4 md:px-5 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[10px] md:text-xs font-bold transition-colors flex items-center gap-2 outline-none cursor-pointer shadow-sm active:scale-95">
+                                    <Video className="h-4 w-4 shrink-0" /> Add Video
                                 </button>
                             </div>
 
-                            {/* Uploaded Files Indicator */}
                             {mediaFiles.length > 0 && (
                                 <div className="flex flex-wrap gap-2 mt-2">
                                     {mediaFiles.map((file) => (
-                                        <div key={file.id} className="flex items-center gap-2 px-3 py-1.5 bg-zinc-100 dark:bg-white/10 rounded-lg border border-zinc-200 dark:border-white/10">
-                                            {file.type === 'photo' ? <Camera className="h-3 w-3 text-zinc-500" /> : <Video className="h-3 w-3 text-zinc-500" />}
-                                            <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300 max-w-[120px] truncate">{file.name}</span>
-                                            {/* Premium Red for Delete Action */}
-                                            <button type="button" onClick={() => removeMedia(file.id)} className="ml-1 text-red-500 hover:text-red-700 outline-none cursor-pointer">
+                                        <div key={file.id} className="flex items-center gap-2 px-3 py-1.5 bg-zinc-100 dark:bg-white/10 rounded-lg border border-zinc-200 dark:border-white/10 max-w-full">
+                                            {file.type === 'photo' ? <Camera className="h-3 w-3 text-zinc-500 shrink-0" /> : <Video className="h-3 w-3 text-zinc-500 shrink-0" />}
+                                            <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300 max-w-[100px] md:max-w-[150px] truncate">{file.name}</span>
+                                            <button type="button" onClick={() => removeMedia(file.id)} className="ml-1 text-red-500 hover:text-red-700 outline-none cursor-pointer shrink-0">
                                                 <X className="h-3.5 w-3.5" />
                                             </button>
                                         </div>
@@ -351,29 +339,26 @@ export default function IncidentLogger() {
                         </div>
 
                         {/* Actions Footer */}
-                        <div className="pt-6 border-t border-zinc-100 dark:border-white/5 flex gap-4">
-
-                            {/* Premium Black for Cancel/Back */}
+                        <div className="pt-4 md:pt-6 border-t border-zinc-100 dark:border-white/5 flex flex-col sm:flex-row gap-3 md:gap-4">
                             <button
                                 type="button"
                                 onClick={clearForm}
-                                className="flex-1 py-4 bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 rounded-xl font-bold transition-colors outline-none cursor-pointer shadow-sm active:scale-95"
+                                className="w-full sm:flex-1 py-3.5 md:py-4 bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 rounded-xl font-bold transition-colors outline-none cursor-pointer shadow-sm active:scale-95 text-sm"
                             >
                                 Clear Form
                             </button>
 
-                            {/* Premium Green for Submit/Save/Resolve Actions */}
                             <button
                                 type="submit"
                                 disabled={isSubmitting}
-                                className="flex-[2] py-4 bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-black rounded-xl shadow-lg shadow-emerald-500/20 active:scale-95 transition-all outline-none flex items-center justify-center gap-3 cursor-pointer disabled:opacity-70"
+                                className="w-full sm:flex-[2] py-3.5 md:py-4 bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-black rounded-xl shadow-lg shadow-emerald-500/20 active:scale-95 transition-all outline-none flex items-center justify-center gap-2 md:gap-3 cursor-pointer disabled:opacity-70 text-sm md:text-base"
                             >
                                 {isSubmitting ? (
-                                    <span className="animate-pulse flex items-center gap-2"><RefreshCcw className="h-5 w-5 animate-spin" /> Processing...</span>
+                                    <span className="animate-pulse flex items-center gap-2"><RefreshCcw className="h-4 w-4 md:h-5 md:w-5 animate-spin shrink-0" /> Processing...</span>
                                 ) : incidentType === "Fled Without Payment" ? (
-                                    <>File Report & Hunt <Globe className="h-5 w-5" /></>
+                                    <><span className="truncate">File Report & Hunt</span> <Globe className="h-4 w-4 md:h-5 md:w-5 shrink-0" /></>
                                 ) : (
-                                    <>Save Incident Report <CheckCircle className="h-5 w-5" /></>
+                                    <><span className="truncate">Save Incident Report</span> <CheckCircle className="h-4 w-4 md:h-5 md:w-5 shrink-0" /></>
                                 )}
                             </button>
                         </div>
@@ -383,16 +368,17 @@ export default function IncidentLogger() {
             </div>
 
             {/* RIGHT COLUMN: Recent Incident Log */}
-            <div className="w-full xl:w-[35%] h-[600px] xl:h-auto bg-white dark:bg-[#121214] rounded-3xl shadow-sm border border-zinc-200 dark:border-white/5 flex flex-col shrink-0">
+            {/* ✅ Responsive width prevents squishing on laptops */}
+            <div className="w-full xl:w-[35%] h-[500px] md:h-[600px] xl:h-auto bg-white dark:bg-[#121214] rounded-3xl shadow-sm border border-zinc-200 dark:border-white/5 flex flex-col shrink-0 min-w-0">
 
-                <div className="p-6 border-b border-zinc-100 dark:border-white/5 flex items-center justify-between shrink-0 bg-zinc-50 dark:bg-[#18181b] rounded-t-3xl">
+                <div className="p-4 md:p-6 border-b border-zinc-100 dark:border-white/5 flex items-center justify-between shrink-0 bg-zinc-50 dark:bg-[#18181b] rounded-t-3xl">
                     <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-xl bg-zinc-900 dark:bg-white flex items-center justify-center text-white dark:text-zinc-900 shadow-inner">
+                        <div className="h-10 w-10 rounded-xl bg-zinc-900 dark:bg-white flex items-center justify-center text-white dark:text-zinc-900 shadow-inner shrink-0">
                             <FileText className="h-5 w-5" />
                         </div>
-                        <div>
-                            <h3 className="font-black text-xl text-zinc-900 dark:text-white leading-none">Incident Log</h3>
-                            <p className="text-xs font-bold uppercase tracking-wider text-zinc-500 mt-1">Recent Reports</p>
+                        <div className="min-w-0">
+                            <h3 className="font-black text-lg md:text-xl text-zinc-900 dark:text-white leading-none truncate">Incident Log</h3>
+                            <p className="text-[10px] md:text-xs font-bold uppercase tracking-wider text-zinc-500 mt-1 truncate">Recent Reports</p>
                         </div>
                     </div>
                 </div>
@@ -405,40 +391,40 @@ export default function IncidentLogger() {
                         return (
                             <div key={inc.id} className="bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/5 p-4 rounded-2xl flex flex-col gap-3 hover:border-zinc-300 dark:hover:border-white/10 transition-colors">
 
-                                <div className="flex justify-between items-start">
-                                    <div>
-                                        <span className={`font-mono font-black text-sm px-2 py-0.5 rounded tracking-widest ${isUnknown ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-400' :
+                                <div className="flex justify-between items-start gap-2">
+                                    <div className="min-w-0">
+                                        <span className={`font-mono font-black text-xs md:text-sm px-2 py-0.5 rounded tracking-widest truncate max-w-[120px] md:max-w-[150px] inline-block ${isUnknown ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-400' :
                                                 isFled ? 'bg-red-100 dark:bg-red-500/20 text-red-800 dark:text-red-400' :
                                                     'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white'
                                             }`}>
                                             {inc.plate}
                                         </span>
-                                        <p className="text-[10px] font-bold text-zinc-500 uppercase mt-2">{inc.type}</p>
-                                        {inc.details && <p className="text-[10px] font-medium text-zinc-400 mt-1">{inc.details}</p>}
+                                        <p className="text-[9px] md:text-[10px] font-bold text-zinc-500 uppercase mt-2 truncate">{inc.type}</p>
+                                        {inc.details && <p className="text-[9px] md:text-[10px] font-medium text-zinc-400 mt-1 line-clamp-2">{inc.details}</p>}
                                     </div>
                                     {isFled && (
-                                        <div className="text-right">
-                                            <span className="font-black text-red-600 dark:text-red-400">{inc.amount?.toFixed(2)} ETB</span>
+                                        <div className="text-right shrink-0">
+                                            <span className="font-black text-sm md:text-base text-red-600 dark:text-red-400">{inc.amount?.toFixed(2)} ETB</span>
                                         </div>
                                     )}
                                 </div>
 
-                                <div className="flex justify-between items-center pt-3 border-t border-zinc-200 dark:border-white/5">
-                                    <span className={`text-[9px] font-black uppercase tracking-widest flex items-center gap-1 ${isUnknown ? 'text-amber-500' :
+                                <div className="flex justify-between items-center pt-3 border-t border-zinc-200 dark:border-white/5 gap-2">
+                                    <span className={`text-[8px] md:text-[9px] font-black uppercase tracking-widest flex items-center gap-1 truncate ${isUnknown ? 'text-amber-500' :
                                             isFled ? 'text-red-500' :
                                                 'text-emerald-500'
                                         }`}>
-                                        {isUnknown ? <Camera className="h-3 w-3" /> : isFled ? <Globe className="h-3 w-3" /> : <CheckCircle className="h-3 w-3" />}
-                                        {inc.status}
+                                        {isUnknown ? <Camera className="h-3 w-3 shrink-0" /> : isFled ? <Globe className="h-3 w-3 shrink-0" /> : <CheckCircle className="h-3 w-3 shrink-0" />}
+                                        <span className="truncate">{inc.status}</span>
                                     </span>
-                                    <p className="text-[10px] font-bold text-zinc-400 flex items-center gap-1"><Clock className="h-3 w-3" /> {inc.time}</p>
+                                    <p className="text-[8px] md:text-[10px] font-bold text-zinc-400 flex items-center gap-1 shrink-0"><Clock className="h-3 w-3" /> {inc.time}</p>
                                 </div>
                             </div>
                         );
                     })}
 
                     <div className="pt-4 text-center">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">End of recent logs</p>
+                        <p className="text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-zinc-400">End of recent logs</p>
                     </div>
                 </div>
 

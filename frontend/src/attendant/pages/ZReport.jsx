@@ -4,7 +4,7 @@ import {
     Wallet, Clock, Banknote, ArrowRight,
     CheckCircle, AlertTriangle, Calculator,
     LogOut, FileText, ShieldCheck, Lock,
-    ReceiptText, Printer, XCircle
+    ReceiptText, Printer, XCircle, Download // Added Download icon
 } from "lucide-react";
 
 // --- MOCK SHIFT DATA ---
@@ -30,6 +30,9 @@ export default function Shift() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [zReport, setZReport] = useState(null);
     const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString());
+
+    // PDF Export State
+    const [isDownloading, setIsDownloading] = useState(false);
 
     // Live Clock
     useEffect(() => {
@@ -80,6 +83,15 @@ export default function Shift() {
         setShiftState("active");
         setActualCashInput("");
         setZReport(null);
+    };
+
+    // --- Mock PDF Generator ---
+    const executeDownloadPDF = () => {
+        setIsDownloading(true);
+        setTimeout(() => {
+            setIsDownloading(false);
+            // Ready to be hooked up to PDF generation logic (e.g. jsPDF)
+        }, 1500);
     };
 
     // --- RENDERERS ---
@@ -174,17 +186,26 @@ export default function Shift() {
 
                     {/* Action Buttons Panel */}
                     <div className="bg-zinc-100 dark:bg-[#18181b] p-4 flex flex-col gap-3 shrink-0">
-                        <div className="flex gap-3">
+                        <div className="flex gap-2">
                             {/* ✅ Premium Black for Cancel Action */}
                             <button
                                 onClick={handleCancelZReport}
-                                className="flex-1 bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 font-bold py-3.5 rounded-xl active:scale-95 transition-all outline-none flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+                                className="flex-1 bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 font-bold py-3.5 rounded-xl active:scale-95 transition-all outline-none flex items-center justify-center gap-1.5 cursor-pointer shadow-sm text-sm"
                             >
-                                <XCircle className="h-5 w-5" /> Cancel
+                                <XCircle className="h-4 w-4" /> Cancel
                             </button>
-                            {/* ✅ Blue for Print/Export Action */}
-                            <button className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 rounded-xl active:scale-95 transition-all outline-none flex items-center justify-center gap-2 cursor-pointer shadow-sm">
-                                <Printer className="h-5 w-5" /> Print
+                            {/* ✅ Blue for Print Action */}
+                            <button className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 rounded-xl active:scale-95 transition-all outline-none flex items-center justify-center gap-1.5 cursor-pointer shadow-sm text-sm">
+                                <Printer className="h-4 w-4" /> Print
+                            </button>
+                            {/* ✅ Blue for Save PDF Action (New) */}
+                            <button
+                                onClick={executeDownloadPDF}
+                                disabled={isDownloading}
+                                className="flex-1 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-400 dark:disabled:bg-blue-800 text-white font-bold py-3.5 rounded-xl active:scale-95 transition-all outline-none flex items-center justify-center gap-1.5 cursor-pointer shadow-sm text-sm"
+                            >
+                                <Download className={`h-4 w-4 ${isDownloading ? 'animate-bounce' : ''}`} />
+                                {isDownloading ? 'Saving...' : 'Save PDF'}
                             </button>
                         </div>
 

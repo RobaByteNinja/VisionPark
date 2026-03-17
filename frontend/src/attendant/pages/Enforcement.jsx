@@ -101,7 +101,7 @@ export default function DebtEnforcement() {
     const glassGreenInputStyles = "w-full bg-white dark:bg-black/40 border border-zinc-200 dark:border-white/10 text-zinc-900 dark:text-white outline-none focus:bg-emerald-50 dark:focus:bg-emerald-500/10 focus:border-emerald-500 focus:shadow-[0_0_15px_rgba(16,185,129,0.15)] transition-all";
 
     return (
-        <div className="h-full w-full flex flex-col gap-6 animate-in fade-in duration-500 relative">
+        <div className="h-full w-full flex flex-col gap-4 md:gap-6 animate-in fade-in duration-500 relative">
 
             {/* Toast Notification (Premium Green for System Success) */}
             {toastMessage && (
@@ -113,41 +113,38 @@ export default function DebtEnforcement() {
             {/* HEADER & STATS */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 shrink-0">
 
-                <div className="bg-white dark:bg-[#121214] rounded-3xl p-6 shadow-sm border border-zinc-200 dark:border-white/5 flex flex-col justify-center relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-4 opacity-10">
-                        <Ban className="h-24 w-24 text-red-500" />
-                    </div>
-                    <h2 className="text-2xl font-black text-zinc-900 dark:text-white flex items-center gap-3 relative z-10">
-                        <Ban className="h-7 w-7 text-red-500" /> Debt Radar
+                <div className="bg-white dark:bg-[#121214] rounded-3xl p-5 md:p-6 shadow-sm border border-zinc-200 dark:border-white/5 flex flex-col justify-center relative overflow-hidden">
+                    <h2 className="text-xl md:text-2xl font-black text-zinc-900 dark:text-white flex items-center gap-3 relative z-10">
+                        <Ban className="h-6 w-6 md:h-7 md:w-7 text-red-500" /> Debt Radar
                     </h2>
-                    <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1 relative z-10">Catch blacklisted and historic unpaid vehicles.</p>
+                    <p className="text-xs md:text-sm text-zinc-500 dark:text-zinc-400 mt-1 relative z-10">Catch blacklisted and historic unpaid vehicles.</p>
                 </div>
 
-                <div className="bg-red-50 dark:bg-red-500/10 rounded-3xl p-6 shadow-sm border border-red-200 dark:border-red-500/20 flex items-center justify-between">
+                <div className="bg-red-50 dark:bg-red-500/10 rounded-3xl p-5 md:p-6 shadow-sm border border-red-200 dark:border-red-500/20 flex items-center justify-between">
                     <div>
-                        <p className="text-xs font-bold uppercase tracking-widest text-red-600 dark:text-red-400 mb-1">Active Threats</p>
+                        <p className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-red-600 dark:text-red-400 mb-1">Active Threats</p>
                         <div className="flex items-baseline gap-2">
-                            <span className="text-4xl font-black text-red-700 dark:text-red-500">{entryCount + lotCount}</span>
-                            <span className="text-sm font-bold text-red-600/70 dark:text-red-400/70">Vehicles</span>
+                            <span className="text-3xl md:text-4xl font-black text-red-700 dark:text-red-500">{entryCount + lotCount}</span>
+                            <span className="text-xs md:text-sm font-bold text-red-600/70 dark:text-red-400/70">Vehicles</span>
                         </div>
-                        <p className="text-[10px] font-bold text-red-500 mt-1">{entryCount} at Entry • {lotCount} in Lot</p>
+                        <p className="text-[9px] md:text-[10px] font-bold text-red-500 mt-1">{entryCount} at Entry • {lotCount} in Lot</p>
                     </div>
-                    <div className="h-12 w-12 rounded-full bg-red-200/50 dark:bg-red-500/20 flex items-center justify-center text-red-600 dark:text-red-400 animate-pulse">
-                        <AlertTriangle className="h-6 w-6" />
+                    <div className="h-10 w-10 md:h-12 md:w-12 rounded-full bg-red-200/50 dark:bg-red-500/20 flex items-center justify-center text-red-600 dark:text-red-400 animate-pulse shrink-0">
+                        <AlertTriangle className="h-5 w-5 md:h-6 md:w-6" />
                     </div>
                 </div>
 
-                <div className="bg-zinc-50 dark:bg-[#18181b] rounded-3xl p-6 shadow-sm border border-zinc-200 dark:border-white/5 flex items-center justify-between">
+                <div className="bg-zinc-50 dark:bg-[#18181b] rounded-3xl p-5 md:p-6 shadow-sm border border-zinc-200 dark:border-white/5 flex items-center justify-between">
                     <div>
-                        <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-1">Recoverable Debt</p>
+                        <p className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-1">Recoverable Debt</p>
                         <div className="flex items-baseline gap-2">
-                            <span className="text-4xl font-black text-zinc-900 dark:text-white">{totalDebt.toFixed(0)}</span>
-                            <span className="text-sm font-bold text-zinc-500">ETB</span>
+                            <span className="text-3xl md:text-4xl font-black text-zinc-900 dark:text-white">{totalDebt.toFixed(0)}</span>
+                            <span className="text-xs md:text-sm font-bold text-zinc-500">ETB</span>
                         </div>
-                        <p className="text-[10px] font-bold text-zinc-400 mt-1">From vehicles currently on-site</p>
+                        <p className="text-[9px] md:text-[10px] font-bold text-zinc-400 mt-1">From vehicles currently on-site</p>
                     </div>
-                    <div className="h-12 w-12 rounded-full bg-zinc-200 dark:bg-white/10 flex items-center justify-center text-zinc-600 dark:text-zinc-400">
-                        <Banknote className="h-6 w-6" />
+                    <div className="h-10 w-10 md:h-12 md:w-12 rounded-full bg-zinc-200 dark:bg-white/10 flex items-center justify-center text-zinc-600 dark:text-zinc-400 shrink-0">
+                        <Banknote className="h-5 w-5 md:h-6 md:w-6" />
                     </div>
                 </div>
 
@@ -157,45 +154,48 @@ export default function DebtEnforcement() {
             <div className="flex-1 bg-white dark:bg-[#121214] rounded-3xl shadow-sm border border-zinc-200 dark:border-white/5 flex flex-col overflow-hidden">
 
                 {/* Toolbar */}
-                <div className="p-4 md:p-6 border-b border-zinc-100 dark:border-white/5 flex flex-col sm:flex-row items-center gap-4 bg-zinc-50 dark:bg-[#18181b] shrink-0 justify-between">
+                <div className="p-4 md:p-6 border-b border-zinc-100 dark:border-white/5 bg-zinc-50 dark:bg-[#18181b] shrink-0">
+                    {/* ✅ Fully Responsive Flex Container with Gap and Wrap */}
+                    <div className="flex flex-col lg:flex-row flex-wrap items-start lg:items-center gap-4 lg:gap-8 w-full">
 
-                    <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
-                        <div className="relative w-full sm:max-w-xs">
+                        <div className="relative w-full lg:max-w-sm shrink-0">
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-400" />
-                            {/* Glass Premium Green focus state */}
                             <input
                                 type="text"
                                 placeholder="Search plate..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className={`w-full h-12 pl-12 pr-4 rounded-xl text-sm font-bold ${glassGreenInputStyles}`}
+                                className={`w-full h-12 md:h-14 pl-12 pr-4 rounded-xl text-sm font-bold ${glassGreenInputStyles}`}
                             />
                         </div>
 
-                        <div className="flex bg-white dark:bg-black/40 p-1 rounded-xl border border-zinc-200 dark:border-white/10 shadow-sm w-full sm:w-auto overflow-x-auto custom-scrollbar">
+                        {/* ✅ Filters gracefully wrap to next line if laptop screen is too tight */}
+                        <div className="flex flex-row flex-wrap items-center gap-2 bg-white dark:bg-black/40 p-1.5 rounded-xl border border-zinc-200 dark:border-white/10 shadow-sm w-full lg:w-auto">
                             {["All", "Blocked at Entry", "Spotted in Lot"].map(f => (
                                 <button
                                     key={f}
                                     onClick={() => setFilter(f)}
-                                    className={`flex-none px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all outline-none whitespace-nowrap ${filter === f
-                                            ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 shadow-md'
-                                            : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white'
+                                    className={`flex-1 lg:flex-none px-4 py-2 md:py-2.5 rounded-lg text-[10px] md:text-xs font-bold uppercase tracking-wider transition-all outline-none whitespace-nowrap text-center ${filter === f
+                                        ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 shadow-md'
+                                        : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5'
                                         }`}
                                 >
                                     {f}
                                 </button>
                             ))}
                         </div>
+
                     </div>
                 </div>
 
                 {/* List Content */}
                 <div className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+                    {/* ✅ Responsive Grid prevents cards from squishing on laptops */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4 md:gap-6">
                         {filteredDebts.length === 0 ? (
                             <div className="col-span-full flex flex-col items-center justify-center py-20 text-zinc-500">
                                 <CheckCircle className="h-16 w-16 mb-4 text-emerald-500 opacity-50" />
-                                <p className="text-lg font-bold text-zinc-900 dark:text-white">Lot is Clean!</p>
+                                <p className="text-lg md:text-xl font-bold text-zinc-900 dark:text-white">Lot is Clean!</p>
                                 <p className="text-sm">No vehicles with outstanding debt detected.</p>
                             </div>
                         ) : (
@@ -215,67 +215,65 @@ export default function DebtEnforcement() {
                                     <div key={vehicle.id} className={`flex flex-col rounded-2xl border-2 transition-all overflow-hidden shadow-sm hover:shadow-md ${cardBg} ${cardBorder}`}>
 
                                         {/* Card Header */}
-                                        <div className="p-4 pb-2 flex items-start justify-between">
-                                            <div>
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <span className="font-black text-xl text-zinc-900 dark:text-white tracking-tight">{vehicle.plate}</span>
-                                                    {isClamped && <Lock className="h-4 w-4 text-amber-500" />}
-                                                    {isCCTV && <Camera className="h-4 w-4 text-blue-500" title="Identified via CCTV" />}
+                                        <div className="p-4 md:p-5 pb-3 flex items-start justify-between gap-2">
+                                            <div className="min-w-0">
+                                                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                                    <span className="font-black text-lg md:text-xl text-zinc-900 dark:text-white tracking-tight truncate">{vehicle.plate}</span>
+                                                    {isClamped && <Lock className="h-4 w-4 text-amber-500 shrink-0" />}
+                                                    {isCCTV && <Camera className="h-4 w-4 text-blue-500 shrink-0" title="Identified via CCTV" />}
                                                 </div>
-                                                <p className="text-[11px] font-bold text-zinc-500">{vehicle.vehicleType}</p>
+                                                <p className="text-[10px] md:text-xs font-bold text-zinc-500 truncate">{vehicle.vehicleType}</p>
                                             </div>
-                                            <div className="flex flex-col items-end gap-1">
-                                                <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full font-black text-[10px] uppercase tracking-widest ${pillBg} ${pillText}`}>
-                                                    <div className={`h-2 w-2 rounded-full ${dotColor} ${isEntry ? 'animate-pulse' : ''}`}></div>
+                                            <div className="flex flex-col items-end gap-1.5 shrink-0">
+                                                <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full font-black text-[9px] md:text-[10px] uppercase tracking-widest ${pillBg} ${pillText}`}>
+                                                    <div className={`h-2 w-2 rounded-full ${dotColor} ${isEntry ? 'animate-pulse' : ''} shrink-0`}></div>
                                                     {vehicle.status}
                                                 </div>
-                                                <div className="flex items-center gap-1 font-bold text-zinc-400 text-[10px] uppercase tracking-widest">
-                                                    <MapPin className="h-3 w-3" /> {vehicle.location}
+                                                <div className="flex items-center gap-1 font-bold text-zinc-400 text-[9px] md:text-[10px] uppercase tracking-widest">
+                                                    <MapPin className="h-3 w-3 shrink-0" /> {vehicle.location}
                                                 </div>
                                             </div>
                                         </div>
 
                                         {/* Body (Time & Debt Info) */}
-                                        <div className="px-4 py-3 grid grid-cols-2 gap-4">
-                                            <div>
-                                                <p className="text-[10px] font-bold uppercase tracking-widest text-red-500 flex items-center gap-1 mb-0.5">
-                                                    <Clock className="h-3 w-3" /> Flagged
+                                        <div className="px-4 md:px-5 py-4 grid grid-cols-2 gap-4 items-start">
+                                            <div className="min-w-0">
+                                                <p className="text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-red-500 flex items-center gap-1 mb-0.5">
+                                                    <Clock className="h-3 w-3 shrink-0" /> Flagged
                                                 </p>
-                                                <p className="text-lg font-black text-red-500 tracking-tight">{vehicle.timeFlagged}</p>
+                                                <p className="text-base md:text-lg font-black text-red-500 tracking-tight truncate">{vehicle.timeFlagged}</p>
 
-                                                <div className="mt-2 text-[10px] text-zinc-500 font-medium">
-                                                    <span className="font-bold uppercase block text-zinc-400">Reason:</span>
-                                                    <span className={`leading-tight inline-block mt-0.5 ${isCCTV ? 'text-blue-600 dark:text-blue-400 font-bold' : ''}`}>
+                                                <div className="mt-3 text-[9px] md:text-[10px] text-zinc-500 font-medium">
+                                                    <span className="font-bold uppercase block text-zinc-400 mb-0.5">Reason:</span>
+                                                    <span className={`leading-snug inline-block ${isCCTV ? 'text-blue-600 dark:text-blue-400 font-bold' : ''}`}>
                                                         {vehicle.reason}
                                                     </span>
                                                 </div>
                                             </div>
-                                            <div className="text-right">
-                                                <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-0.5">Historic Due</p>
-                                                <p className="text-xl font-black text-zinc-900 dark:text-white tracking-tight">
+                                            <div className="text-right min-w-0">
+                                                <p className="text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-0.5">Historic Due</p>
+                                                <p className="text-lg md:text-xl font-black text-zinc-900 dark:text-white tracking-tight truncate">
                                                     {vehicle.debtAmount.toFixed(2)} ETB
                                                 </p>
                                             </div>
                                         </div>
 
                                         {/* Action Buttons */}
-                                        <div className={`p-4 mt-auto border-t flex gap-2 ${isClamped ? 'bg-amber-100/50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/20' :
-                                                'bg-red-50/50 dark:bg-red-500/5 border-red-100 dark:border-red-500/10'
+                                        <div className={`p-4 md:p-5 mt-auto border-t flex flex-col sm:flex-row gap-2 md:gap-3 ${isClamped ? 'bg-amber-100/50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/20' :
+                                            'bg-red-50/50 dark:bg-red-500/5 border-red-100 dark:border-red-500/10'
                                             }`}>
 
                                             {isEntry ? (
                                                 <>
-                                                    {/* Premium Yellow/Orange for Warning/Clamp Action */}
                                                     <button
                                                         onClick={() => openModal('clamp', vehicle)}
-                                                        className="flex-1 bg-yellow-400 hover:bg-yellow-500 text-yellow-950 dark:bg-orange-500/10 dark:hover:bg-orange-500/20 dark:border dark:border-orange-500/30 dark:text-orange-400 font-bold py-3 rounded-xl shadow-sm active:scale-95 transition-all outline-none flex items-center justify-center gap-2 text-sm cursor-pointer"
+                                                        className="w-full sm:flex-1 bg-yellow-400 hover:bg-yellow-500 text-yellow-950 dark:bg-orange-500/10 dark:hover:bg-orange-500/20 dark:border dark:border-orange-500/30 dark:text-orange-400 font-bold py-3 md:py-3.5 rounded-xl shadow-sm active:scale-95 transition-all outline-none flex items-center justify-center gap-2 text-xs md:text-sm cursor-pointer"
                                                     >
                                                         <Lock className="h-4 w-4" /> Clamp
                                                     </button>
-                                                    {/* Premium Green for Resolution / Collect */}
                                                     <button
                                                         onClick={() => openModal('collect', vehicle)}
-                                                        className="flex-[2] bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-bold py-3 rounded-xl shadow-sm active:scale-95 transition-all outline-none flex items-center justify-center gap-2 text-sm cursor-pointer"
+                                                        className="w-full sm:flex-[2] bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-bold py-3 md:py-3.5 rounded-xl shadow-sm active:scale-95 transition-all outline-none flex items-center justify-center gap-2 text-xs md:text-sm cursor-pointer"
                                                     >
                                                         <Banknote className="h-4 w-4" /> Collect & Let In
                                                     </button>
@@ -283,8 +281,7 @@ export default function DebtEnforcement() {
                                             ) : isClamped ? (
                                                 <button
                                                     onClick={() => openModal('collect', vehicle)}
-                                                    /* Premium Green for Resolution / Unclamp */
-                                                    className="w-full bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-bold py-3 rounded-xl shadow-sm active:scale-95 transition-all outline-none flex items-center justify-center gap-2 text-sm cursor-pointer"
+                                                    className="w-full bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-bold py-3 md:py-3.5 rounded-xl shadow-sm active:scale-95 transition-all outline-none flex items-center justify-center gap-2 text-xs md:text-sm cursor-pointer"
                                                 >
                                                     <LockOpen className="h-4 w-4" /> Collect Fine & Unclamp
                                                 </button>
@@ -292,15 +289,13 @@ export default function DebtEnforcement() {
                                                 <>
                                                     <button
                                                         onClick={() => openModal('clamp', vehicle)}
-                                                        /* Premium Yellow/Orange for Warning Actions */
-                                                        className="flex-1 bg-yellow-400 hover:bg-yellow-500 text-yellow-950 dark:bg-orange-500/10 dark:hover:bg-orange-500/20 dark:border dark:border-orange-500/30 dark:text-orange-400 font-bold py-3 rounded-xl shadow-sm active:scale-95 transition-all outline-none flex items-center justify-center gap-2 text-sm cursor-pointer"
+                                                        className="w-full sm:flex-1 bg-yellow-400 hover:bg-yellow-500 text-yellow-950 dark:bg-orange-500/10 dark:hover:bg-orange-500/20 dark:border dark:border-orange-500/30 dark:text-orange-400 font-bold py-3 md:py-3.5 rounded-xl shadow-sm active:scale-95 transition-all outline-none flex items-center justify-center gap-2 text-xs md:text-sm cursor-pointer"
                                                     >
                                                         <Lock className="h-4 w-4" /> Clamp
                                                     </button>
                                                     <button
                                                         onClick={() => openModal('collect', vehicle)}
-                                                        /* Premium Green for Resolution / Collect Debt */
-                                                        className="flex-1 bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-bold py-3 rounded-xl shadow-sm active:scale-95 transition-all outline-none flex items-center justify-center gap-2 text-sm cursor-pointer"
+                                                        className="w-full sm:flex-[1.5] bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-bold py-3 md:py-3.5 rounded-xl shadow-sm active:scale-95 transition-all outline-none flex items-center justify-center gap-2 text-xs md:text-sm cursor-pointer"
                                                     >
                                                         <Banknote className="h-4 w-4" /> Collect Debt
                                                     </button>
@@ -329,8 +324,8 @@ export default function DebtEnforcement() {
                             <div className="bg-white/20 p-3 rounded-2xl mb-3 shadow-sm backdrop-blur-sm">
                                 <Lock className="h-10 w-10 text-current" />
                             </div>
-                            <h2 className="text-2xl font-black tracking-tight">Clamp Authorization</h2>
-                            <p className="font-bold text-xs opacity-80 uppercase tracking-widest mt-1">{selectedVehicle.location}</p>
+                            <h2 className="text-xl md:text-2xl font-black tracking-tight">Clamp Authorization</h2>
+                            <p className="font-bold text-[10px] md:text-xs opacity-80 uppercase tracking-widest mt-1">{selectedVehicle.location}</p>
                         </div>
 
                         <div className="p-6 space-y-4">
@@ -339,11 +334,11 @@ export default function DebtEnforcement() {
                                 Do not remove the clamp until the historic debt of {selectedVehicle.debtAmount.toFixed(2)} ETB is paid.
                             </p>
 
-                            <div className="flex gap-3 pt-4 border-t border-zinc-100 dark:border-white/5">
+                            <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-zinc-100 dark:border-white/5">
                                 {/* Premium Black for Cancel */}
                                 <button
                                     onClick={() => setActiveModal(null)}
-                                    className="flex-1 py-4 bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 rounded-xl font-bold transition-colors outline-none cursor-pointer shadow-sm active:scale-95"
+                                    className="w-full sm:flex-1 py-3.5 md:py-4 bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 rounded-xl font-bold transition-colors outline-none cursor-pointer shadow-sm active:scale-95 text-sm md:text-base"
                                 >
                                     Cancel
                                 </button>
@@ -351,7 +346,7 @@ export default function DebtEnforcement() {
                                 <button
                                     onClick={handleClampVehicle}
                                     disabled={isProcessing}
-                                    className="flex-[2] bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-black py-4 rounded-xl shadow-lg active:scale-95 transition-all outline-none flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70"
+                                    className="w-full sm:flex-[2] bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-black py-3.5 md:py-4 rounded-xl shadow-lg active:scale-95 transition-all outline-none flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70 text-sm md:text-base"
                                 >
                                     {isProcessing ? <span className="animate-pulse">Processing...</span> : "Confirm Clamp"}
                                 </button>
@@ -372,8 +367,8 @@ export default function DebtEnforcement() {
                                     <Banknote className="h-5 w-5" />
                                 </div>
                                 <div>
-                                    <h3 className="font-black text-xl text-zinc-900 dark:text-white leading-none">Collect Debt</h3>
-                                    <p className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-500 mt-1">Clear Account</p>
+                                    <h3 className="font-black text-lg md:text-xl text-zinc-900 dark:text-white leading-none">Collect Debt</h3>
+                                    <p className="text-[10px] md:text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-500 mt-1">Clear Account</p>
                                 </div>
                             </div>
                             <button onClick={() => setActiveModal(null)} className="p-2 text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-white/10 rounded-full transition-colors outline-none cursor-pointer"><X className="h-5 w-5" /></button>
@@ -382,25 +377,25 @@ export default function DebtEnforcement() {
                         <div className="p-6 space-y-6">
 
                             <div className="bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-white/10 rounded-2xl p-4 space-y-3">
-                                <div className="flex justify-between items-center text-sm font-medium text-zinc-600 dark:text-zinc-400">
+                                <div className="flex justify-between items-center text-xs md:text-sm font-medium text-zinc-600 dark:text-zinc-400">
                                     <span>Historic Balance Due</span>
                                     <span>{selectedVehicle.debtAmount.toFixed(2)} ETB</span>
                                 </div>
-                                <div className="text-[10px] text-red-500 font-bold bg-red-50 dark:bg-red-500/10 p-2 rounded border border-red-200 dark:border-red-500/20">
+                                <div className="text-[10px] text-red-500 font-bold bg-red-50 dark:bg-red-500/10 p-3 rounded-lg border border-red-200 dark:border-red-500/20">
                                     Reason: {selectedVehicle.reason}
                                 </div>
                                 <div className="h-px w-full bg-zinc-200 dark:bg-white/10 my-2"></div>
                                 <div className="flex justify-between items-center">
-                                    <span className="text-xs font-black uppercase tracking-widest text-zinc-900 dark:text-white">Cash to Collect</span>
-                                    <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{selectedVehicle.debtAmount.toFixed(2)}</span>
+                                    <span className="text-[10px] md:text-xs font-black uppercase tracking-widest text-zinc-900 dark:text-white">Cash to Collect</span>
+                                    <span className="text-xl md:text-2xl font-black text-emerald-600 dark:text-emerald-400">{selectedVehicle.debtAmount.toFixed(2)}</span>
                                 </div>
                             </div>
 
-                            <div className="flex gap-3 pt-2">
+                            <div className="flex flex-col sm:flex-row gap-3 pt-2">
                                 {/* Premium Black for Cancel */}
                                 <button
                                     onClick={() => setActiveModal(null)}
-                                    className="flex-1 py-4 bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 rounded-xl font-bold transition-colors outline-none cursor-pointer shadow-sm active:scale-95"
+                                    className="w-full sm:flex-1 py-3.5 md:py-4 bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 rounded-xl font-bold transition-colors outline-none cursor-pointer shadow-sm active:scale-95 text-sm md:text-base"
                                 >
                                     Cancel
                                 </button>
@@ -409,15 +404,17 @@ export default function DebtEnforcement() {
                                 <button
                                     onClick={handleCollectDebt}
                                     disabled={isProcessing}
-                                    className="flex-[2] bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-black py-4 rounded-xl shadow-lg active:scale-95 transition-all outline-none flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70"
+                                    className="w-full sm:flex-[2] bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-black py-3.5 md:py-4 rounded-xl shadow-lg active:scale-95 transition-all outline-none flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70 text-sm md:text-base"
                                 >
                                     {isProcessing ? (
                                         <span className="animate-pulse">Processing...</span>
                                     ) : (
                                         <>
-                                            <CheckCircle className="h-5 w-5" />
-                                            {selectedVehicle.status === 'Blocked at Entry' ? 'Confirm Payment & Let In' :
-                                                selectedVehicle.isClamped ? 'Confirm Payment & Unclamp' : 'Confirm Cash Received'}
+                                            <CheckCircle className="h-4 w-4 md:h-5 md:w-5 shrink-0" />
+                                            <span className="truncate">
+                                                {selectedVehicle.status === 'Blocked at Entry' ? 'Confirm & Let In' :
+                                                    selectedVehicle.isClamped ? 'Confirm & Unclamp' : 'Confirm Payment'}
+                                            </span>
                                         </>
                                     )}
                                 </button>
