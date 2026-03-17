@@ -60,7 +60,7 @@ export default function WalkUpPOS() {
     const [vehicleType, setVehicleType] = useState("Public Transport Vehicles | Upto 12 Seats");
     const [plate, setPlate] = useState("");
 
-    // ✅ TIME STATE (Now split into typable Hours and Minutes)
+    // TIME STATE
     const [depositHours, setDepositHours] = useState("2");
     const [depositMinutes, setDepositMinutes] = useState("0");
 
@@ -88,7 +88,6 @@ export default function WalkUpPOS() {
     const safeMinutes = Math.max(0, parseInt(depositMinutes) || 0);
 
     const currentRate = VEHICLE_RATES[vehicleType] || 20;
-    // Calculate total including fractional hours (e.g. 15 mins = 0.25 hours)
     const totalDeposit = currentRate * (safeHours + (safeMinutes / 60));
 
     const formatTimeDisplay = (h, m) => {
@@ -102,7 +101,7 @@ export default function WalkUpPOS() {
     const handleHourChange = (e) => setDepositHours(e.target.value.replace(/\D/g, ''));
     const handleMinuteChange = (e) => {
         let val = e.target.value.replace(/\D/g, '');
-        if (parseInt(val) > 59) val = "59"; // Max out manual entry at 59 mins
+        if (parseInt(val) > 59) val = "59";
         setDepositMinutes(val);
     };
 
@@ -273,7 +272,7 @@ export default function WalkUpPOS() {
         }, 1000);
     };
 
-    // --- REUSABLE SELECTOR BUTTON ---
+    // --- REUSABLE SELECTOR BUTTON (With Glass Premium Green Focus) ---
     const SelectorButton = ({ icon: Icon, label, value, field }) => (
         <div>
             <label className="block text-xs md:text-sm font-bold uppercase tracking-widest text-zinc-500 mb-1.5 ml-1 flex items-center gap-2">
@@ -282,7 +281,7 @@ export default function WalkUpPOS() {
             <button
                 type="button"
                 onClick={() => setActiveModal(field)}
-                className="w-full h-16 relative flex items-center rounded-2xl transition-all duration-300 outline-none cursor-pointer border-2 border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-black/40 text-zinc-900 dark:text-white hover:border-emerald-500 hover:shadow-[0_0_15px_rgba(16,185,129,0.15)] focus:border-emerald-500"
+                className="w-full h-16 relative flex items-center rounded-2xl transition-all duration-300 outline-none cursor-pointer border-2 border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-black/40 text-zinc-900 dark:text-white hover:border-emerald-500 hover:shadow-[0_0_15px_rgba(16,185,129,0.15)] focus:bg-emerald-50 dark:focus:bg-emerald-500/10 focus:border-emerald-500 focus:shadow-[0_0_15px_rgba(16,185,129,0.15)]"
             >
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <Icon className="h-5 w-5 md:h-6 md:w-6 text-zinc-400 dark:text-zinc-500" />
@@ -332,7 +331,13 @@ export default function WalkUpPOS() {
                                         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                                             <Globe className="h-5 w-5 md:h-6 md:w-6 text-zinc-400 dark:text-zinc-500 group-focus-within:text-emerald-500 transition-colors duration-300" />
                                         </div>
-                                        <input type="text" value={countryCode} onChange={(e) => setCountryCode(e.target.value)} placeholder="E.g., Italy" className="w-full h-16 pl-12 pr-4 rounded-2xl bg-zinc-50 dark:bg-black/40 border-2 border-zinc-200 dark:border-white/10 text-zinc-900 dark:text-white outline-none focus:border-emerald-500 focus:shadow-[0_0_20px_rgba(16,185,129,0.15)] transition-all font-bold" />
+                                        <input
+                                            type="text"
+                                            value={countryCode}
+                                            onChange={(e) => setCountryCode(e.target.value)}
+                                            placeholder="E.g., Italy"
+                                            className="w-full h-16 pl-12 pr-4 rounded-2xl bg-zinc-50 dark:bg-black/40 border-2 border-zinc-200 dark:border-white/10 text-zinc-900 dark:text-white outline-none focus:bg-emerald-50 dark:focus:bg-emerald-500/10 focus:border-emerald-500 focus:shadow-[0_0_20px_rgba(16,185,129,0.15)] transition-all font-bold"
+                                        />
                                     </div>
                                 </div>
                             ) : hideRegion ? (
@@ -350,8 +355,8 @@ export default function WalkUpPOS() {
                             </label>
                             <div className={`relative group flex items-center w-full h-16 rounded-2xl transition-all duration-300 outline-none border-2 bg-zinc-50 dark:bg-black/40 text-zinc-900 dark:text-white overflow-hidden
                 ${plateError
-                                    ? 'border-red-500/50 focus-within:border-red-500 focus-within:shadow-[0_0_15px_rgba(239,68,68,0.2)]'
-                                    : 'border-zinc-200 dark:border-white/10 hover:border-emerald-500/50 focus-within:border-emerald-500 focus-within:shadow-[0_0_15px_rgba(16,185,129,0.15)]'
+                                    ? 'border-red-500/50 focus-within:bg-red-50 dark:focus-within:bg-red-500/10 focus-within:border-red-500 focus-within:shadow-[0_0_15px_rgba(239,68,68,0.2)]'
+                                    : 'border-zinc-200 dark:border-white/10 hover:border-emerald-500/50 focus-within:bg-emerald-50 dark:focus-within:bg-emerald-500/10 focus-within:border-emerald-500 focus-within:shadow-[0_0_15px_rgba(16,185,129,0.15)]'
                                 }`}
                             >
                                 <div className="pl-4 pr-3 flex items-center pointer-events-none text-zinc-400 dark:text-zinc-500 group-focus-within:text-emerald-500 transition-colors duration-300">
@@ -386,7 +391,7 @@ export default function WalkUpPOS() {
                             <div className="grid grid-cols-2 gap-4">
 
                                 {/* Hours Control */}
-                                <div className="flex items-center justify-between bg-zinc-50 dark:bg-black/40 border-2 border-zinc-200 dark:border-white/10 p-2 rounded-2xl focus-within:border-emerald-500 focus-within:shadow-[0_0_15px_rgba(16,185,129,0.15)] transition-all">
+                                <div className="flex items-center justify-between bg-zinc-50 dark:bg-black/40 border-2 border-zinc-200 dark:border-white/10 p-2 rounded-2xl focus-within:bg-emerald-50 dark:focus-within:bg-emerald-500/10 focus-within:border-emerald-500 focus-within:shadow-[0_0_15px_rgba(16,185,129,0.15)] transition-all">
                                     <button onClick={decHour} className="h-12 w-12 flex items-center justify-center rounded-xl bg-white dark:bg-[#18181b] shadow-sm border border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400 hover:text-emerald-500 active:scale-90 transition-all outline-none cursor-pointer">
                                         <Minus className="h-5 w-5" />
                                     </button>
@@ -406,7 +411,7 @@ export default function WalkUpPOS() {
                                 </div>
 
                                 {/* Minutes Control */}
-                                <div className="flex items-center justify-between bg-zinc-50 dark:bg-black/40 border-2 border-zinc-200 dark:border-white/10 p-2 rounded-2xl focus-within:border-emerald-500 focus-within:shadow-[0_0_15px_rgba(16,185,129,0.15)] transition-all">
+                                <div className="flex items-center justify-between bg-zinc-50 dark:bg-black/40 border-2 border-zinc-200 dark:border-white/10 p-2 rounded-2xl focus-within:bg-emerald-50 dark:focus-within:bg-emerald-500/10 focus-within:border-emerald-500 focus-within:shadow-[0_0_15px_rgba(16,185,129,0.15)] transition-all">
                                     <button onClick={decMin} className="h-12 w-12 flex items-center justify-center rounded-xl bg-white dark:bg-[#18181b] shadow-sm border border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400 hover:text-emerald-500 active:scale-90 transition-all outline-none cursor-pointer">
                                         <Minus className="h-5 w-5" />
                                     </button>
@@ -432,8 +437,8 @@ export default function WalkUpPOS() {
                     {/* ROW 5: Total & Action */}
                     <div className="mt-8 pt-6 border-t border-zinc-100 dark:border-white/5 flex flex-col sm:flex-row items-center gap-4">
 
-                        <div className="w-full sm:w-auto flex-1 flex flex-col p-4 bg-emerald-50 dark:bg-emerald-500/10 rounded-2xl border border-emerald-200 dark:border-emerald-500/20 transition-all duration-300">
-                            <span className="text-xs font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-500 mb-1">Total Cash Required</span>
+                        <div className="w-full sm:w-1/3 flex flex-col p-4 bg-emerald-50 dark:bg-emerald-500/10 rounded-2xl border border-emerald-200 dark:border-emerald-500/20 transition-all duration-300">
+                            <span className="text-xs font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-500 mb-1">Total Due</span>
                             <div className="flex items-baseline gap-2">
                                 <span className="text-3xl font-black text-emerald-800 dark:text-emerald-400">{totalDeposit.toFixed(2)}</span>
                                 <span className="text-lg font-bold opacity-80 text-emerald-800 dark:text-emerald-400">ETB</span>
@@ -441,10 +446,11 @@ export default function WalkUpPOS() {
                             <p className="text-[10px] text-emerald-600 dark:text-emerald-500 font-bold mt-1">({currentRate} ETB/hr × {formatTimeDisplay(safeHours, safeMinutes)})</p>
                         </div>
 
+                        {/* ✅ Responsive Premium Green Action Button */}
                         <button
                             onClick={handleProcessCheckIn}
                             disabled={isProcessing || !!plateError || plate.length < 4 || (safeHours === 0 && safeMinutes === 0)}
-                            className="w-full sm:w-auto flex-1 h-[90px] bg-emerald-500 hover:bg-emerald-400 disabled:bg-zinc-300 dark:disabled:bg-zinc-800 disabled:text-zinc-500 text-zinc-950 font-black text-lg md:text-xl rounded-2xl shadow-lg shadow-emerald-500/20 active:scale-95 transition-all outline-none flex items-center justify-center gap-3 cursor-pointer"
+                            className="w-full sm:flex-1 h-[80px] sm:h-[90px] bg-emerald-500 hover:bg-emerald-400 disabled:bg-zinc-300 dark:disabled:bg-zinc-800 disabled:text-zinc-500 text-emerald-950 font-black text-lg md:text-xl rounded-2xl shadow-lg shadow-emerald-500/20 active:scale-95 transition-all outline-none flex items-center justify-center gap-3 cursor-pointer"
                         >
                             {isProcessing ? (
                                 <span className="flex items-center gap-2 animate-pulse"><Receipt className="h-6 w-6" /> Generating Pass...</span>
@@ -489,9 +495,10 @@ export default function WalkUpPOS() {
                                 <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-md ${session.status === 'Active' ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-500' : 'bg-zinc-200 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'}`}>
                                     {session.status}
                                 </span>
+                                {/* ✅ Blue text for "Continue/Export/View" action */}
                                 <button
                                     onClick={() => { resetShareState(); setGeneratedReceipt(session); }}
-                                    className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 flex items-center gap-1 cursor-pointer outline-none"
+                                    className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 flex items-center gap-1 cursor-pointer outline-none active:scale-95"
                                 >
                                     <Receipt className="h-3.5 w-3.5" /> View Pass
                                 </button>
@@ -595,18 +602,20 @@ export default function WalkUpPOS() {
                                                         <Mail className="h-4 w-4 text-zinc-500 dark:text-zinc-400" />}
                                                 Send via {shareMode.charAt(0).toUpperCase() + shareMode.slice(1)}
                                             </h4>
-                                            <button onClick={resetShareState} className="text-xs font-bold text-zinc-500 hover:text-zinc-900 dark:hover:text-white cursor-pointer outline-none">Cancel</button>
+                                            {/* ✅ Premium Black for Cancel Action */}
+                                            <button onClick={resetShareState} className="text-xs px-3 py-1.5 rounded-lg font-bold bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 cursor-pointer outline-none active:scale-95 transition-all">Cancel</button>
                                         </div>
 
                                         {shareMode === 'telegram' && (
                                             <div className="flex gap-2 mb-3 bg-zinc-100 dark:bg-white/5 p-1 rounded-lg">
-                                                <button onClick={() => { setTelegramMethod('phone'); setShareInput(''); setShareError(''); }} className={`flex-1 text-xs font-bold py-1.5 rounded-md transition-colors outline-none ${telegramMethod === 'phone' ? 'bg-white dark:bg-[#121214] shadow-sm text-zinc-900 dark:text-white' : 'text-zinc-500'}`}>Phone</button>
-                                                <button onClick={() => { setTelegramMethod('username'); setShareInput(''); setShareError(''); }} className={`flex-1 text-xs font-bold py-1.5 rounded-md transition-colors outline-none ${telegramMethod === 'username' ? 'bg-white dark:bg-[#121214] shadow-sm text-zinc-900 dark:text-white' : 'text-zinc-500'}`}>Username</button>
+                                                <button onClick={() => { setTelegramMethod('phone'); setShareInput(''); setShareError(''); }} className={`flex-1 text-xs font-bold py-1.5 rounded-md transition-colors outline-none cursor-pointer ${telegramMethod === 'phone' ? 'bg-white dark:bg-[#121214] shadow-sm text-zinc-900 dark:text-white' : 'text-zinc-500'}`}>Phone</button>
+                                                <button onClick={() => { setTelegramMethod('username'); setShareInput(''); setShareError(''); }} className={`flex-1 text-xs font-bold py-1.5 rounded-md transition-colors outline-none cursor-pointer ${telegramMethod === 'username' ? 'bg-white dark:bg-[#121214] shadow-sm text-zinc-900 dark:text-white' : 'text-zinc-500'}`}>Username</button>
                                             </div>
                                         )}
 
                                         <div>
-                                            <div className={`flex w-full h-14 rounded-xl border bg-zinc-50 dark:bg-black/40 transition-all overflow-hidden ${shareError ? 'border-red-500 focus-within:border-red-500 focus-within:shadow-[0_0_15px_rgba(239,68,68,0.2)]' : 'border-zinc-200 dark:border-white/10 focus-within:border-emerald-500 focus-within:shadow-[0_0_15px_rgba(16,185,129,0.15)]'}`}>
+                                            {/* ✅ Glass Premium Green focus state */}
+                                            <div className={`flex w-full h-14 rounded-xl border bg-zinc-50 dark:bg-black/40 transition-all overflow-hidden ${shareError ? 'border-red-500 focus-within:bg-red-50 dark:focus-within:bg-red-500/10 focus-within:border-red-500 focus-within:shadow-[0_0_15px_rgba(239,68,68,0.2)]' : 'border-zinc-200 dark:border-white/10 focus-within:bg-emerald-50 dark:focus-within:bg-emerald-500/10 focus-within:border-emerald-500 focus-within:shadow-[0_0_15px_rgba(16,185,129,0.15)]'}`}>
 
                                                 {(shareMode === 'whatsapp' || (shareMode === 'telegram' && telegramMethod === 'phone')) && (
                                                     <div className="flex items-center justify-center px-4 bg-zinc-200/50 dark:bg-white/5 border-r border-zinc-200 dark:border-white/10 font-bold font-mono text-zinc-700 dark:text-zinc-300 shrink-0">
@@ -646,10 +655,11 @@ export default function WalkUpPOS() {
                                             {shareError && <p className="text-[10px] text-red-500 normal-case tracking-normal font-medium mt-1.5">{shareError}</p>}
                                         </div>
 
+                                        {/* ✅ Premium Green for Primary Submission */}
                                         <button
                                             onClick={executeShare}
                                             disabled={isSending}
-                                            className="w-full py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-sm shadow-md transition-all active:scale-95 disabled:opacity-70 flex items-center justify-center gap-2 cursor-pointer outline-none"
+                                            className="w-full py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-black text-sm shadow-md transition-all active:scale-95 disabled:opacity-70 flex items-center justify-center gap-2 cursor-pointer outline-none"
                                         >
                                             {isSending ? <span className="animate-pulse">Sending...</span> : "Send Receipt"}
                                         </button>
@@ -662,6 +672,7 @@ export default function WalkUpPOS() {
                                             </p>
                                         </div>
 
+                                        {/* Social actions retain their standard UI brand colors */}
                                         <div className="grid grid-cols-2 gap-3">
                                             <button onClick={() => setShareMode('whatsapp')} className="flex items-center justify-center gap-2 p-3 rounded-xl bg-[#25D366]/10 text-[#25D366] border border-[#25D366]/20 hover:bg-[#25D366]/20 font-bold text-sm transition-colors cursor-pointer outline-none active:scale-95">
                                                 <MessageCircle className="h-4 w-4" /> WhatsApp
@@ -672,15 +683,18 @@ export default function WalkUpPOS() {
                                         </div>
 
                                         <div className="grid grid-cols-2 gap-3">
-                                            <button onClick={() => setShareMode('email')} className="flex items-center justify-center gap-2 p-3 rounded-xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/5 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-white/10 font-bold text-sm transition-colors cursor-pointer outline-none active:scale-95">
+                                            {/* ✅ Blue for Export / Continue Actions */}
+                                            <button onClick={() => setShareMode('email')} className="flex items-center justify-center gap-2 p-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm transition-colors cursor-pointer outline-none active:scale-95 shadow-sm">
                                                 <Mail className="h-4 w-4" /> Email
                                             </button>
-                                            <button onClick={executeDownloadPDF} disabled={isDownloading} className="flex items-center justify-center gap-2 p-3 rounded-xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/5 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-white/10 font-bold text-sm transition-colors cursor-pointer outline-none active:scale-95 disabled:opacity-50">
+                                            {/* ✅ Blue for Export / Download */}
+                                            <button onClick={executeDownloadPDF} disabled={isDownloading} className="flex items-center justify-center gap-2 p-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm transition-colors cursor-pointer outline-none active:scale-95 shadow-sm disabled:opacity-70">
                                                 <Download className={`h-4 w-4 ${isDownloading ? 'animate-bounce' : ''}`} /> {isDownloading ? 'Saving...' : 'Save PDF'}
                                             </button>
                                         </div>
 
-                                        <button onClick={executePrint} disabled={isPrinting} className="w-full mt-2 flex items-center justify-center gap-2 p-3 rounded-xl text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/5 font-bold text-sm transition-colors cursor-pointer outline-none active:scale-95 disabled:opacity-50">
+                                        {/* ✅ Premium Black for secondary fallback action */}
+                                        <button onClick={executePrint} disabled={isPrinting} className="w-full mt-2 flex items-center justify-center gap-2 p-3 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200 font-bold text-sm transition-colors cursor-pointer outline-none active:scale-95 disabled:opacity-70 shadow-sm">
                                             <Printer className={`h-4 w-4 ${isPrinting ? 'animate-pulse text-emerald-500' : ''}`} /> {isPrinting ? 'Connecting to printer...' : 'Print Physical Fallback'}
                                         </button>
                                     </div>

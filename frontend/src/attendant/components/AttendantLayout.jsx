@@ -102,6 +102,9 @@ export default function AttendantLayout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [hoveredNav, setHoveredNav] = useState(null);
 
+  // ✅ Dynamic Notification State
+  const [unreadCount, setUnreadCount] = useState(MOCK_ATTENDANT.unreadNotifications);
+
   const location = useLocation();
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
@@ -115,6 +118,12 @@ export default function AttendantLayout() {
     setIsMobileMenuOpen(false);
     setHoveredNav(null);
   }, [location.pathname]);
+
+  // ✅ Backend Hook Ready: Listen for real-time notifications here
+  useEffect(() => {
+    // Example socket listener:
+    // socket.on('new_alert', (data) => setUnreadCount(prev => prev + 1));
+  }, []);
 
   const handleNavigation = (path) => {
     setHoveredNav(null);
@@ -133,6 +142,11 @@ export default function AttendantLayout() {
 
   const toggleTheme = () => {
     setTheme(theme === "dark" ? "light" : "dark");
+  };
+
+  const handleNotificationClick = () => {
+    // Clear notifications on click (or open a popover panel)
+    setUnreadCount(0);
   };
 
   return (
@@ -199,7 +213,7 @@ export default function AttendantLayout() {
 
         <header className="h-16 lg:h-20 bg-white/95 dark:bg-[#121214]/95 backdrop-blur-md border-b border-zinc-200 dark:border-white/10 flex items-center justify-between px-4 lg:px-8 z-40 shrink-0 transition-colors duration-500">
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 md:gap-4">
             {/* MOBILE HAMBURGER TOGGLE */}
             <button
               onClick={() => setIsMobileMenuOpen(true)}
@@ -207,6 +221,16 @@ export default function AttendantLayout() {
             >
               <Menu className="h-6 w-6" />
             </button>
+
+            {/* ✅ MOBILE BRAND LOGO (Visible only on small screens) */}
+            <div className="flex lg:hidden items-center gap-2">
+              <div className="h-7 w-7 rounded-lg bg-emerald-500 flex items-center justify-center text-white shadow-md shadow-emerald-500/30">
+                <Car className="h-4 w-4" strokeWidth={2.5} />
+              </div>
+              <span className="text-lg font-bold text-zinc-900 dark:text-white tracking-tight">
+                VisionPark <span className="text-emerald-500">Staff</span>
+              </span>
+            </div>
 
             {/* Desktop Sidebar Toggle */}
             <div className="relative group hidden lg:flex">
@@ -229,7 +253,6 @@ export default function AttendantLayout() {
           <div className="flex items-center gap-2 md:gap-4 relative">
 
             {/* IN-HEADER THEME TOGGLE */}
-            {/* IN-HEADER THEME TOGGLE */}
             <button
               onClick={toggleTheme}
               className="relative p-2.5 text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5 rounded-full transition-colors outline-none cursor-pointer"
@@ -237,13 +260,14 @@ export default function AttendantLayout() {
               {theme === "dark" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
             </button>
 
-            {/* Notifications */}
+            {/* ✅ DYNAMIC Notifications */}
             <button
-              className="relative p-2.5 text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5 rounded-full transition-colors outline-none"
+              onClick={handleNotificationClick}
+              className="relative p-2.5 text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5 rounded-full transition-colors outline-none cursor-pointer"
             >
               <Bell className="h-5 w-5" />
-              {MOCK_ATTENDANT.unreadNotifications > 0 && (
-                <span className="absolute top-2 right-2 h-2.5 w-2.5 rounded-full bg-red-500 border-2 border-white dark:border-[#121214]" />
+              {unreadCount > 0 && (
+                <span className="absolute top-2 right-2 h-2.5 w-2.5 rounded-full bg-red-500 border-2 border-white dark:border-[#121214] animate-pulse" />
               )}
             </button>
           </div>

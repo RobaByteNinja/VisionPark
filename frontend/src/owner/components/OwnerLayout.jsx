@@ -33,7 +33,7 @@ const SidebarContent = ({ collapsed, currentPath, onNavigate, onHover, onLeave }
     <div className={`h-16 lg:h-20 flex items-center shrink-0 border-b border-zinc-200 dark:border-white/10 transition-all duration-300 ${collapsed ? 'justify-center px-0' : 'px-6 justify-start'}`}>
       <div className="flex items-center gap-2 overflow-hidden whitespace-nowrap">
         <div className="h-8 w-8 shrink-0 rounded-lg bg-emerald-500 flex items-center justify-center text-white shadow-lg shadow-emerald-500/30">
-          <Car className="h-5 w-5" />
+          <Car className="h-5 w-5" strokeWidth={2.5} />
         </div>
         <span className={`text-xl font-bold text-zinc-900 dark:text-white tracking-tight transition-all duration-300 overflow-hidden whitespace-nowrap ${collapsed ? 'opacity-0 max-w-0' : 'opacity-100 max-w-[200px]'}`}>
           VisionPark <span className="text-emerald-500">Owner</span>
@@ -92,8 +92,10 @@ export default function OwnerLayout() {
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
-  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [hoveredNav, setHoveredNav] = useState(null);
+
+  // ✅ Dynamic Notification State
+  const [unreadCount, setUnreadCount] = useState(MOCK_OWNER.unreadNotifications);
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -121,7 +123,8 @@ export default function OwnerLayout() {
 
   const toggleTheme = () => {
     setTheme(theme === "dark" ? "light" : "dark");
-    setIsProfileDropdownOpen(false);
+    // Keep dropdown open so they can see the change, or close it if you prefer:
+    // setIsProfileDropdownOpen(false); 
   };
 
   const handleNavHover = (e, name, isCollapsed) => {
@@ -194,20 +197,40 @@ export default function OwnerLayout() {
 
         <header className="h-16 lg:h-20 bg-white/95 dark:bg-[#121214]/95 backdrop-blur-md border-b border-zinc-200 dark:border-white/10 flex items-center justify-between px-4 lg:px-8 z-40 shrink-0 transition-colors duration-500">
 
-          {/* Desktop Sidebar Toggle */}
-          <div className="relative group hidden lg:flex">
+          <div className="flex items-center gap-3 md:gap-4">
+            {/* ✅ MOBILE HAMBURGER TOGGLE */}
             <button
-              onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-              className="p-2 -ml-2 text-zinc-500 hover:text-emerald-600 dark:hover:text-emerald-400 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-colors outline-none active:scale-95"
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="lg:hidden p-2 -ml-2 text-zinc-500 hover:text-emerald-600 dark:hover:text-emerald-400 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-colors outline-none active:scale-95 cursor-pointer"
             >
-              <PanelLeft className={`h-5 w-5 transition-transform duration-300 ${isSidebarCollapsed ? 'rotate-180' : ''}`} />
+              <Menu className="h-6 w-6" />
             </button>
 
-            {/* Tooltip — matches sidebar nav item style */}
-            <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 flex items-center opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150 z-[99999]">
-              <div className="w-0 h-0 border-y-[6px] border-y-transparent border-r-[6px] border-r-emerald-500/20" />
-              <div className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-sm font-semibold px-3 py-2 rounded-xl shadow-lg whitespace-nowrap border border-emerald-500/20">
-                {isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+            {/* ✅ MOBILE BRAND LOGO (Visible only on small screens) */}
+            <div className="flex lg:hidden items-center gap-2">
+              <div className="h-7 w-7 rounded-lg bg-emerald-500 flex items-center justify-center text-white shadow-md shadow-emerald-500/30">
+                <Car className="h-4 w-4" strokeWidth={2.5} />
+              </div>
+              <span className="text-lg font-bold text-zinc-900 dark:text-white tracking-tight">
+                VisionPark <span className="text-emerald-500">Owner</span>
+              </span>
+            </div>
+
+            {/* Desktop Sidebar Toggle */}
+            <div className="relative group hidden lg:flex">
+              <button
+                onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                className="p-2 -ml-2 text-zinc-500 hover:text-emerald-600 dark:hover:text-emerald-400 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-colors outline-none active:scale-95 cursor-pointer"
+              >
+                <PanelLeft className={`h-5 w-5 transition-transform duration-300 ${isSidebarCollapsed ? 'rotate-180' : ''}`} />
+              </button>
+
+              {/* Tooltip — matches sidebar nav item style */}
+              <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 flex items-center opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150 z-[99999]">
+                <div className="w-0 h-0 border-y-[6px] border-y-transparent border-r-[6px] border-r-emerald-500/20" />
+                <div className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-sm font-semibold px-3 py-2 rounded-xl shadow-lg whitespace-nowrap border border-emerald-500/20">
+                  {isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+                </div>
               </div>
             </div>
           </div>
@@ -218,12 +241,12 @@ export default function OwnerLayout() {
 
             {/* Notifications */}
             <button
-              onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
-              className="relative p-2.5 text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5 rounded-full transition-colors outline-none"
+              onClick={() => setUnreadCount(0)} // Clear notifications on click
+              className="relative p-2.5 text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5 rounded-full transition-colors outline-none cursor-pointer"
             >
               <Bell className="h-5 w-5" />
-              {MOCK_OWNER.unreadNotifications > 0 && (
-                <span className="absolute top-2 right-2 h-2.5 w-2.5 rounded-full bg-red-500 border-2 border-white dark:border-[#121214]" />
+              {unreadCount > 0 && (
+                <span className="absolute top-2 right-2 h-2.5 w-2.5 rounded-full bg-red-500 border-2 border-white dark:border-[#121214] animate-pulse" />
               )}
             </button>
 
@@ -231,7 +254,7 @@ export default function OwnerLayout() {
             <div className="relative">
               <button
                 onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
-                className="flex items-center gap-3 p-1 pr-2 md:pr-3 rounded-full hover:bg-zinc-100 dark:hover:bg-white/5 transition-colors border border-transparent hover:border-zinc-200 dark:hover:border-white/10 outline-none"
+                className="flex items-center gap-3 p-1 pr-2 md:pr-3 rounded-full hover:bg-zinc-100 dark:hover:bg-white/5 transition-colors border border-transparent hover:border-zinc-200 dark:hover:border-white/10 outline-none cursor-pointer"
               >
                 <img
                   src={MOCK_OWNER.avatar}
@@ -252,13 +275,14 @@ export default function OwnerLayout() {
                   <div className="p-1.5 flex flex-col">
                     <button
                       onClick={() => handleNavigation("/owner/profile")}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors text-left outline-none"
+                      className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors text-left outline-none cursor-pointer"
                     >
                       <User className="h-4 w-4" /> View Profile
                     </button>
+                    {/* ✅ Theme Toggle strictly inside the dropdown */}
                     <button
                       onClick={toggleTheme}
-                      className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors text-left outline-none"
+                      className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors text-left outline-none cursor-pointer"
                     >
                       <div className="flex items-center gap-3">
                         {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
@@ -268,9 +292,10 @@ export default function OwnerLayout() {
                   </div>
 
                   <div className="p-1.5 border-t border-zinc-100 dark:border-white/5">
+                    {/* ✅ Premium Red for Sign Out Action */}
                     <button
                       onClick={handleLogout}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-bold text-red-600 dark:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl transition-colors text-left outline-none"
+                      className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-bold text-red-600 dark:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl transition-colors text-left outline-none cursor-pointer"
                     >
                       <LogOut className="h-4 w-4" /> Sign Out
                     </button>
@@ -284,7 +309,7 @@ export default function OwnerLayout() {
         {/* PAGE CONTENT */}
         <main className="flex-1 overflow-y-auto overscroll-contain bg-[#f4f4f5] dark:bg-[#09090b] custom-scrollbar">
           <div className="p-4 md:p-8 lg:p-10 max-w-[1600px] mx-auto min-h-full transition-all duration-300 animate-in fade-in">
-            <Outlet />
+            <Outlet context={{ setUnreadCount }} />
           </div>
         </main>
 
