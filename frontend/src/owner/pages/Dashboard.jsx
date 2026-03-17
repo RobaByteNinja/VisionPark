@@ -1,4 +1,6 @@
 /**
+ * Component: Dashboard | Author: RobaByteNinja | Date: 2026-03-17
+ * 
  * COMPONENT: Dashboard
  * PURPOSE: Global network monitoring and aggregated statistics.
  *
@@ -11,8 +13,8 @@
  */
 
 import React, { useState } from "react";
-import { 
-  Car, CheckCircle, MapPin, TrendingUp, 
+import {
+  Car, CheckCircle, MapPin, TrendingUp,
   Calendar, Clock, Banknote, Filter, ChevronDown, X, Check
 } from "lucide-react";
 
@@ -37,12 +39,12 @@ const CITIES_BY_REGION = {
 // ✅ ADDED: Unified Branch mapping to support auto-selection
 const BRANCHES_BY_CITY = {
   "Addis Ababa": ["Bole Airport Parking", "Piazza Street Parking", "Meskel Square Parking"],
-  "Dire Dawa": ["Dire Dawa Central Parking"], 
+  "Dire Dawa": ["Dire Dawa Central Parking"],
   "Adama": ["Adama Bus Terminal Parking", "Stadium Parking"],
-  "Bahir Dar": ["Lake Tana Parking"], 
-  "Mekelle": ["Mekelle City Parking"], 
-  "Jigjiga": ["Jigjiga Market Parking"], 
-  "Hawassa": ["Hawassa Park & Ride"], 
+  "Bahir Dar": ["Lake Tana Parking"],
+  "Mekelle": ["Mekelle City Parking"],
+  "Jigjiga": ["Jigjiga Market Parking"],
+  "Hawassa": ["Hawassa Park & Ride"],
   "All Cities": ["All Branches"]
 };
 
@@ -116,7 +118,7 @@ export default function Dashboard() {
 
   return (
     <div className="w-full flex flex-col gap-6 animate-in fade-in duration-500 relative pb-10">
-      
+
       {/* Header & Filters */}
       <div className="flex flex-col gap-4 w-full">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -136,7 +138,7 @@ export default function Dashboard() {
             <Filter className="h-4 w-4 text-emerald-500" />
             <span className="text-xs font-bold uppercase text-zinc-500 tracking-wider">Filter Scope</span>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 w-full">
             <DropdownTrigger label="Region" value={region} onClick={() => setActiveDropdown('region')} />
             <DropdownTrigger label="City" value={city} disabled={region === "All Regions"} onClick={() => setActiveDropdown('city')} />
@@ -182,7 +184,7 @@ export default function Dashboard() {
 
       {/* 2. Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-        
+
         {/* Donut Chart */}
         <div className="bg-white dark:bg-[#121214] p-6 rounded-2xl border border-zinc-200 dark:border-white/5 shadow-sm flex flex-col">
           <h2 className="text-base font-bold text-zinc-900 dark:text-white mb-6">Parking Occupancy</h2>
@@ -228,7 +230,7 @@ export default function Dashboard() {
             <h2 className="text-base font-bold text-zinc-900 dark:text-white">Recent Activity</h2>
             <Clock className="h-5 w-5 text-zinc-400" />
           </div>
-          
+
           <div className="overflow-x-auto flex-1 w-full custom-scrollbar">
             <table className="w-full text-left border-collapse min-w-[800px]">
               <thead>
@@ -271,9 +273,9 @@ export default function Dashboard() {
       {activeDropdown && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-zinc-900/60 dark:bg-black/80 backdrop-blur-sm" onClick={closeDropdown}></div>
-          
+
           <div className="relative w-full max-w-md bg-white dark:bg-[#18181b] rounded-2xl shadow-2xl flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-200 overflow-hidden">
-            
+
             {/* Modal Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-100 dark:border-white/5 shrink-0">
               <h2 className="text-lg font-bold text-zinc-900 dark:text-white">
@@ -284,7 +286,7 @@ export default function Dashboard() {
 
             {/* Modal Body (Scrollable) */}
             <div className="p-2 overflow-y-auto overscroll-contain flex-1 custom-scrollbar">
-              
+
               {/* REGION SELECTION */}
               {activeDropdown === 'region' && REGION_GROUPS.map((group) => (
                 <div key={group.group} className="mb-2">
@@ -329,7 +331,7 @@ export default function Dashboard() {
                   <button onClick={() => { setBranch("All Branches"); closeDropdown(); }} className={`flex items-center justify-between w-full px-4 py-3 rounded-xl text-sm font-medium transition-colors outline-none ${branch === "All Branches" ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-white/5'}`}>
                     All Branches {branch === "All Branches" && <Check className="h-4 w-4" />}
                   </button>
-                  
+
                   {/* ✅ UPDATED: Now uses dynamic branches mapping based on city */}
                   {(BRANCHES_BY_CITY[city] || []).filter(c => c !== "All Branches").map(opt => (
                     <button
