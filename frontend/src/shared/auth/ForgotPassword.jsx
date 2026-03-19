@@ -19,7 +19,7 @@ export default function ForgotPassword() {
   const [otp, setOtp] = useState("");
   const [password, setPassword] = useState("");
   const [repeatPassword, setRepeatPassword] = useState("");
-  
+
   // --- Validation Errors ---
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
@@ -43,10 +43,10 @@ export default function ForgotPassword() {
       if (parts[0].length === 0) { setEmailError("Enter the part before the '@'."); return; }
       if (!parts[1] || parts[1].length === 0) { setEmailError("Enter a domain after the '@'."); return; }
       if (!parts[1].includes('.')) { setEmailError(`Complete the domain extension (e.g., ${parts[1]}.com).`); return; }
-      
+
       const tld = parts[1].split('.').pop();
       if (tld.length < 2) { setEmailError("Domain extension is too short."); return; }
-      
+
       const typos = {
         'gmai.com': 'gmail.com', 'gmal.com': 'gmail.com', 'gmail.co': 'gmail.com',
         'yaho.com': 'yahoo.com', 'yahoo.co': 'yahoo.com', 'yhoo.com': 'yahoo.com'
@@ -65,15 +65,15 @@ export default function ForgotPassword() {
   const getPasswordScore = (pass) => {
     let score = 0;
     if (!pass) return 0;
-    if (pass.length >= 8) score += 1; 
-    if (/[A-Z]/.test(pass) && /[a-z]/.test(pass)) score += 1; 
-    if (/\d/.test(pass)) score += 1; 
-    if (/[^A-Za-z0-9]/.test(pass)) score += 1; 
-    if (pass.length >= 12) score += 1; 
+    if (pass.length >= 8) score += 1;
+    if (/[A-Z]/.test(pass) && /[a-z]/.test(pass)) score += 1;
+    if (/\d/.test(pass)) score += 1;
+    if (/[^A-Za-z0-9]/.test(pass)) score += 1;
+    if (pass.length >= 12) score += 1;
     return Math.min(score, 5);
   };
   const passwordScore = getPasswordScore(password);
-  const isPasswordStrong = passwordScore >= 4; 
+  const isPasswordStrong = passwordScore >= 4;
 
   const getStrengthUI = (score) => {
     if (score === 0) return { text: "", color: "bg-transparent", textColor: "" };
@@ -99,7 +99,7 @@ export default function ForgotPassword() {
     if (emailError || !email) return;
     setError(null);
     setIsLoading(true);
-    
+
     // Simulate API call to send OTP
     setTimeout(() => {
       setIsLoading(false);
@@ -115,7 +115,7 @@ export default function ForgotPassword() {
     }
     setError(null);
     setIsLoading(true);
-    
+
     // Simulate OTP Verification
     setTimeout(() => {
       setIsLoading(false);
@@ -130,10 +130,10 @@ export default function ForgotPassword() {
   const handleResetPassword = async (e) => {
     e.preventDefault();
     if (!isPasswordStrong || passwordError) return;
-    
+
     setError(null);
     setIsLoading(true);
-    
+
     try {
       // 🛑 TEAMS: REPLACE THIS TIMEOUT WITH ACTUAL API CALL 🛑
       // Example: await api.post('/auth/reset-password', { email, otp, password });
@@ -159,8 +159,8 @@ export default function ForgotPassword() {
   const getInputClass = (hasError) => `block w-full h-12 md:h-14 pl-12 pr-4 rounded-xl text-sm md:text-base transition-all duration-300 outline-none
     bg-white/50 border border-zinc-200 text-zinc-900 placeholder:text-zinc-400
     dark:bg-black/40 dark:border-white/10 dark:text-white dark:placeholder:text-zinc-600
-    ${hasError ? 'border-red-500/50 focus:border-red-500 focus:shadow-[0_0_15px_rgba(239,68,68,0.2)]' 
-               : 'hover:border-zinc-300 dark:hover:border-white/20 focus:border-emerald-500 focus:shadow-[0_0_15px_rgba(16,185,129,0.2)] focus:bg-white/80 dark:focus:bg-black/60'}
+    ${hasError ? 'border-red-500/50 focus:border-red-500 focus:shadow-[0_0_15px_rgba(239,68,68,0.2)]'
+      : 'hover:border-zinc-300 dark:hover:border-white/20 focus:border-emerald-500 focus:shadow-[0_0_15px_rgba(16,185,129,0.2)] focus:bg-white/80 dark:focus:bg-black/60'}
   `;
 
   return (
@@ -171,9 +171,9 @@ export default function ForgotPassword() {
       <div className="ambient-glow-secondary fixed w-[40vw] h-[40vw] bottom-[-10%] right-[-10%] pointer-events-none z-0" />
 
       <main className="flex-1 flex flex-col px-4 w-full relative z-10 pt-28 md:pt-32 pb-10">
-        
+
         <div className="w-full max-w-[420px] m-auto animate-in fade-in zoom-in-95 duration-500">
-          
+
           {/* Hide title dynamically on Step 4 (Success screen has its own title) */}
           {step !== 4 && (
             <div className="text-center mb-8">
@@ -181,9 +181,9 @@ export default function ForgotPassword() {
                 {step === 1 ? "Reset Password" : step === 2 ? "Check Your Email" : "Create New Password"}
               </h1>
               <p className="text-xs md:text-sm text-zinc-500 dark:text-zinc-400 font-medium tracking-wide mt-2">
-                {step === 1 ? "Enter your email to receive a secure OTP." 
-                : step === 2 ? `We sent a 6-digit code to ${email}`
-                : "Your identity is verified. Set your new password."}
+                {step === 1 ? "Enter your email to receive a secure OTP."
+                  : step === 2 ? `We sent a 6-digit code to ${email}`
+                    : "Your identity is verified. Set your new password."}
               </p>
             </div>
           )}
@@ -277,7 +277,7 @@ export default function ForgotPassword() {
                 {/* ✅ STEP 2 DUAL BACK BUTTONS */}
                 <div className="mt-4 text-center text-xs md:text-sm text-zinc-600 dark:text-zinc-400 flex flex-col gap-4">
                   <p>Didn't receive the code? <button type="button" onClick={() => setOtp("")} className="text-emerald-600 dark:text-emerald-400 font-bold hover:underline outline-none cursor-pointer">Resend</button></p>
-                  
+
                   <div className="flex items-center justify-center gap-4">
                     <button type="button" onClick={() => setStep(1)} className="flex items-center justify-center gap-1.5 font-medium hover:text-emerald-500 dark:hover:text-emerald-400 transition-all outline-none cursor-pointer">
                       <ArrowLeft className="h-4 w-4" /> Change Email
@@ -306,24 +306,24 @@ export default function ForgotPassword() {
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                       <Lock className="h-5 w-5 text-zinc-400 dark:text-zinc-500 group-focus-within:text-emerald-500 transition-colors duration-300" />
                     </div>
-                    <input 
-                      type={showPassword ? "text" : "password"} 
-                      value={password} 
-                      onChange={(e) => setPassword(e.target.value)} 
-                      required 
-                      placeholder="Create new password" 
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      placeholder="Create new password"
                       autoComplete="new-password"
                       onCopy={(e) => e.preventDefault()}
                       onPaste={(e) => e.preventDefault()}
                       onCut={(e) => e.preventDefault()}
                       onDrop={(e) => e.preventDefault()}
-                      className={`block w-full h-12 md:h-14 pl-12 pr-12 rounded-xl text-sm md:text-base font-mono transition-all duration-300 outline-none border bg-white/50 dark:bg-black/40 text-zinc-900 dark:text-white border-zinc-200 dark:border-white/10 hover:border-zinc-300 dark:hover:border-white/20 focus:border-emerald-500 focus:shadow-[0_0_15px_rgba(16,185,129,0.2)] focus:bg-white/80 dark:focus:bg-black/60`} 
+                      className={`block w-full h-12 md:h-14 pl-12 pr-12 rounded-xl text-sm md:text-base font-mono transition-all duration-300 outline-none border bg-white/50 dark:bg-black/40 text-zinc-900 dark:text-white border-zinc-200 dark:border-white/10 hover:border-zinc-300 dark:hover:border-white/20 focus:border-emerald-500 focus:shadow-[0_0_15px_rgba(16,185,129,0.2)] focus:bg-white/80 dark:focus:bg-black/60`}
                     />
                     <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 pr-4 text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors outline-none cursor-pointer">
                       {showPassword ? <Eye className="h-5 w-5" /> : <EyeOff className="h-5 w-5" />}
                     </button>
                   </div>
-                  
+
                   {password && (
                     <div className="mt-2 animate-in fade-in duration-300">
                       <div className="flex gap-1 h-1.5 w-full rounded-full overflow-hidden bg-zinc-200 dark:bg-white/10">
@@ -347,18 +347,18 @@ export default function ForgotPassword() {
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                       <Lock className="h-5 w-5 text-zinc-400 dark:text-zinc-500 group-focus-within:text-emerald-500 transition-colors duration-300" />
                     </div>
-                    <input 
-                      type={showRepeatPassword ? "text" : "password"} 
-                      value={repeatPassword} 
-                      onChange={(e) => setRepeatPassword(e.target.value)} 
-                      required 
-                      placeholder="Confirm new password" 
+                    <input
+                      type={showRepeatPassword ? "text" : "password"}
+                      value={repeatPassword}
+                      onChange={(e) => setRepeatPassword(e.target.value)}
+                      required
+                      placeholder="Confirm new password"
                       autoComplete="new-password"
                       onCopy={(e) => e.preventDefault()}
                       onPaste={(e) => e.preventDefault()}
                       onCut={(e) => e.preventDefault()}
                       onDrop={(e) => e.preventDefault()}
-                      className={`block w-full h-12 md:h-14 pl-12 pr-12 rounded-xl text-sm md:text-base font-mono transition-all duration-300 outline-none border bg-white/50 dark:bg-black/40 text-zinc-900 dark:text-white ${passwordError ? 'border-red-500/50 focus:border-red-500' : 'border-zinc-200 dark:border-white/10 focus:border-emerald-500'}`} 
+                      className={`block w-full h-12 md:h-14 pl-12 pr-12 rounded-xl text-sm md:text-base font-mono transition-all duration-300 outline-none border bg-white/50 dark:bg-black/40 text-zinc-900 dark:text-white ${passwordError ? 'border-red-500/50 focus:border-red-500' : 'border-zinc-200 dark:border-white/10 focus:border-emerald-500'}`}
                     />
                     <button type="button" onClick={() => setShowRepeatPassword(!showRepeatPassword)} className="absolute inset-y-0 right-0 pr-4 text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors outline-none cursor-pointer">
                       {showRepeatPassword ? <Eye className="h-5 w-5" /> : <EyeOff className="h-5 w-5" />}

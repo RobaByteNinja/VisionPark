@@ -21,12 +21,24 @@ src/
 ├── App.jsx                                     - Main application routing (Domain checking & layout rendering)
 ├── index.css                                   - Tailwind directives and comprehensive design system styling
 ├── main.jsx                                    - React mounting point and context provider wrapping
+├── assets/
+│   └── react.svg                               - Default React vector graphic
 ├── attendant/
-│   └── components/
-│       └── AttendantLayout.jsx                 - Shell layout and sidebar for the Attendant module
+│   ├── components/
+│   │   └── AttendantLayout.jsx                 - Shell layout and sidebar for the Attendant module
+│   └── pages/
+│       ├── AIExceptions.jsx                    - Interface for resolving AI detection anomalies
+│       ├── AttendantProfile.jsx                - Preferences and settings for the attendant
+│       ├── Enforcement.jsx                     - Tools for issuing citations or logging violations
+│       ├── Incidents.jsx                       - Feed for logging and responding to facility incidents
+│       ├── LiveGrid.jsx                        - Real-time status map of the parking floor
+│       ├── Overstays.jsx                       - Tracking interface for vehicles exceeding reserved times
+│       ├── WalkUpPOS.jsx                       - Point of sale terminal for unreserved drive-in customers
+│       └── ZReport.jsx                         - End of shift financial reconciliation and reporting
 ├── components/
 │   ├── layout/
 │   │   └── Header.jsx                          - Top navigation overlay used in standard pages and auth
+│   ├── theme-provider.jsx                      - System-wide Next-themes provider wrapper
 │   └── ui/
 │       ├── GlassCard.jsx                       - Premium glassmorphism container component
 │       ├── Logo.jsx                            - App logo rendering component
@@ -44,6 +56,8 @@ src/
 │   │   ├── DriverLayout.jsx                    - Main responsive layout wrapper for driver user domains
 │   │   └── session/
 │   │       └── ProgressRing.jsx                - SVG circular progress timer indicator for parking sessions
+│   ├── context/
+│   │   └── ScrollContext.jsx                   - Driver specific localized scroll context
 │   └── pages/
 │       ├── ActiveSession.jsx                   - Live tracking screen for an ongoing reserved parking spot
 │       ├── DriverHistory.jsx                   - Interactive timeline feed of a driver's past parking usage
@@ -61,7 +75,7 @@ src/
 │       ├── FinancialReports.jsx                - Comprehensive revenue metrics, ledgers, and transaction tables
 │       ├── Operations.jsx                      - Command center for live camera feeds and real-time AI incident alerts
 │       ├── OwnerProfile.jsx                    - Organization and individual settings for the lot owner
-│       ├── ParkingManagement.jsx               - Builder for zones, grids, and individual spot definition
+│       ├── ParkingManagement.jsx             - Builder for zones, grids, and individual spot definition
 │       ├── PayoutSettings.jsx                  - Interface connecting withdrawal endpoints (banks, Telebirr)
 │       └── PricingSettings.jsx                 - Management of hourly rates, tiers, and overstay multipliers
 └── shared/

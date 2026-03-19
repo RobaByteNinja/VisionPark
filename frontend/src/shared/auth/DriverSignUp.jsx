@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useTheme } from "../../context/ThemeContext";
-import { Header } from "../../components/layout/Header"; 
-import { GlassCard } from "../../components/ui/GlassCard"; 
-import { 
+import { Header } from "../../components/layout/Header";
+import { GlassCard } from "../../components/ui/GlassCard";
+import {
   User, Mail, Lock, Phone, Car, Hash, MapPin, Globe, Shield, Check, ChevronDown, X, Eye, EyeOff
 } from "lucide-react";
 
@@ -63,23 +63,27 @@ export default function DriverSignUp() {
   const [plateError, setPlateError] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [activeModal, setActiveModal] = useState(null);
-  
+
   const [showPassword, setShowPassword] = useState(false);
   const [showRepeatPassword, setShowRepeatPassword] = useState(false);
+
+  // --- Verification States ---
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const getPasswordScore = (pass) => {
     let score = 0;
     if (!pass) return 0;
-    if (pass.length >= 8) score += 1; 
-    if (/[A-Z]/.test(pass) && /[a-z]/.test(pass)) score += 1; 
-    if (/\d/.test(pass)) score += 1; 
-    if (/[^A-Za-z0-9]/.test(pass)) score += 1; 
-    if (pass.length >= 12) score += 1; 
+    if (pass.length >= 8) score += 1;
+    if (/[A-Z]/.test(pass) && /[a-z]/.test(pass)) score += 1;
+    if (/\d/.test(pass)) score += 1;
+    if (/[^A-Za-z0-9]/.test(pass)) score += 1;
+    if (pass.length >= 12) score += 1;
     return Math.min(score, 5);
   };
 
   const passwordScore = getPasswordScore(formData.password);
-  const isPasswordStrong = passwordScore >= 4; 
+  const isPasswordStrong = passwordScore >= 4;
 
   const getStrengthUI = (score) => {
     if (score === 0) return { text: "", color: "bg-transparent", textColor: "" };
@@ -100,7 +104,7 @@ export default function DriverSignUp() {
     if (formData.licenceType === "United Nations") return "UN";
     if (formData.licenceType === "African Union") return "AU";
     if (formData.licenceType === "Government" || formData.licenceType === "Temporary") return "ET";
-    
+
     const regionMatch = formData.region.match(/\(([^)]+)\)/);
     return regionMatch ? regionMatch[1] : "AA";
   };
@@ -109,7 +113,7 @@ export default function DriverSignUp() {
 
   const getPlatePlaceholder = () => {
     if (formData.licenceType === "Diplomatic") return "01 CD 0123";
-    return "0123456"; 
+    return "0123456";
   };
 
   const handleChange = (e) => {
@@ -120,9 +124,9 @@ export default function DriverSignUp() {
   const handlePlateChange = (e) => {
     let normalized = e.target.value.toUpperCase();
     if (formData.licenceType !== "Diplomatic") {
-      normalized = normalized.replace(/[^0-9]/g, ""); 
+      normalized = normalized.replace(/[^0-9]/g, "");
     } else {
-      normalized = normalized.replace(/[^A-Z0-9\s]/g, ""); 
+      normalized = normalized.replace(/[^A-Z0-9\s]/g, "");
     }
     setFormData((prev) => ({ ...prev, licensePlate: normalized }));
   };
@@ -171,7 +175,7 @@ export default function DriverSignUp() {
       const typos = {
         'gmai.com': 'gmail.com', 'gmal.com': 'gmail.com', 'gmail.co': 'gmail.com', 'gmail.c': 'gmail.com',
         'yaho.com': 'yahoo.com', 'yahoo.co': 'yahoo.com', 'yhoo.com': 'yahoo.com', 'yaho.co': 'yahoo.com',
-        'outloo.com': 'outlook.com', 'outlook.co': 'outlook.com', 
+        'outloo.com': 'outlook.com', 'outlook.co': 'outlook.com',
         'hotmail.co': 'hotmail.com', 'hotmal.com': 'hotmail.com'
       };
 
@@ -188,7 +192,7 @@ export default function DriverSignUp() {
 
   // ✅ SMART DELAYED PHONE VALIDATION
   useEffect(() => {
-    const phoneRaw = formData.phone.replace(/[\s-]/g, ''); 
+    const phoneRaw = formData.phone.replace(/[\s-]/g, '');
 
     if (phoneRaw.length === 0) {
       setPhoneError("");
@@ -221,7 +225,7 @@ export default function DriverSignUp() {
     const timer = setTimeout(() => {
       const remaining = expectedLength - phoneRaw.length;
       setPhoneError(`Incomplete number. Needs ${remaining} more digits.`);
-    }, 1200); 
+    }, 1200);
 
     return () => clearTimeout(timer);
   }, [formData.phone]);
@@ -257,32 +261,42 @@ export default function DriverSignUp() {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (plateError || passwordError || emailError || phoneError || !isPasswordStrong || !formData.agreePolicy) return;
-    
+
+    setIsSubmitting(true);
+
     const fullPlate = platePrefix ? `${platePrefix} ${formData.licensePlate}` : formData.licensePlate;
-    
+
     localStorage.setItem("vp_driver_name", formData.fullName.trim());
     localStorage.setItem("vp_driver_email", formData.email.trim());
     localStorage.setItem("vp_driver_phone", formData.phone.trim());
     localStorage.setItem("vp_driver_vehicle", formData.vehicleType);
     localStorage.setItem("vp_driver_license_plate", fullPlate);
 
-    navigate("/login");
+    // Simulated API call and success feedback delay before redirect
+    setTimeout(() => {
+      setIsSubmitting(false);
+      setIsSuccess(true);
+
+      setTimeout(() => {
+        navigate("/login");
+      }, 1500); // Wait 1.5 seconds on success state to confirm for user
+    }, 1200);
   };
 
   const getInputClass = (hasError, isPassword = false) => `block w-full h-12 md:h-14 pl-12 ${isPassword ? 'pr-12 tracking-wider font-mono placeholder:font-sans placeholder:tracking-normal' : 'pr-4'} rounded-xl text-sm md:text-base transition-all duration-300 outline-none border
     bg-white/50 text-zinc-900 placeholder:text-zinc-400
     dark:bg-black/40 dark:text-white dark:placeholder:text-zinc-600
-    ${hasError 
-      ? 'border-red-500/50 focus:border-red-500 focus:shadow-[0_0_15px_rgba(239,68,68,0.2)]' 
+    ${hasError
+      ? 'border-red-500/50 focus:border-red-500 focus:shadow-[0_0_15px_rgba(239,68,68,0.2)]'
       : 'border-zinc-200 dark:border-white/10 hover:border-zinc-300 dark:hover:border-white/20 focus:border-emerald-500 focus:shadow-[0_0_15px_rgba(16,185,129,0.2)] focus:bg-white/80 dark:focus:bg-black/60'
     }`;
 
   const SelectorButton = ({ icon: Icon, label, value, field }) => (
-    <div>
+    <div className="w-full min-w-0">
       <label className="block text-xs md:text-sm font-medium text-zinc-600 dark:text-zinc-400 mb-1.5 ml-1">{label}</label>
-      <button 
-        type="button" 
-        onClick={() => setActiveModal(field)} 
+      <button
+        type="button"
+        onClick={() => setActiveModal(field)}
         className="w-full h-12 md:h-14 relative flex items-center rounded-xl transition-all duration-300 outline-none cursor-pointer border border-zinc-200 dark:border-white/10 bg-white/50 dark:bg-black/40 text-zinc-900 dark:text-white hover:border-emerald-50 hover:shadow-[0_0_15px_rgba(16,185,129,0.2)] hover:bg-white/80 dark:hover:bg-black/60"
       >
         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none"><Icon className="h-5 w-5 md:h-6 md:w-6 text-zinc-400 dark:text-zinc-500" /></div>
@@ -293,17 +307,19 @@ export default function DriverSignUp() {
   );
 
   return (
-    <div className="relative min-h-[100dvh] w-full overflow-y-auto overflow-x-hidden bg-[#f4f4f5] dark:bg-[#09090b] text-zinc-900 dark:text-white flex flex-col font-sans transition-colors duration-500">
-      
+    // ✅ ADDED overflow-x-hidden HERE to prevent horizontal wobble
+    <div className="relative min-h-[100dvh] w-full overflow-x-hidden bg-[#f4f4f5] dark:bg-[#09090b] text-zinc-900 dark:text-white flex flex-col font-sans transition-colors duration-500">
+
       <Header />
 
       <div className="ambient-glow-primary fixed w-[50vw] h-[50vw] top-[-10%] left-[-10%] pointer-events-none z-0" />
       <div className="ambient-glow-secondary fixed w-[40vw] h-[40vw] bottom-[-10%] right-[-10%] pointer-events-none z-0" />
 
-      <main className="flex-1 flex flex-col px-4 md:px-8 w-full relative z-10 pt-28 md:pt-32 pb-16">
-        
+      {/* ✅ REMOVED z-10 HERE so content properly slides underneath the Header */}
+      <main className="flex-1 flex flex-col px-4 md:px-8 w-full relative pt-28 md:pt-32 pb-16">
+
         <div className="w-full max-w-xl m-auto flex flex-col items-center">
-          
+
           <div className="flex flex-col items-center mb-8 mt-4">
             <div className="flex items-center gap-2 mb-6">
               <div className="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-500 shadow-sm backdrop-blur-sm">
@@ -317,11 +333,11 @@ export default function DriverSignUp() {
 
           <div className="w-full">
             <GlassCard>
-              <form onSubmit={handleSubmit} className="flex flex-col gap-5 md:gap-6">
-                
-                <div>
+              <form onSubmit={handleSubmit} className="flex flex-col gap-5 md:gap-6 w-full">
+
+                <div className="w-full min-w-0">
                   <label className="block text-xs md:text-sm font-medium text-zinc-600 dark:text-zinc-400 mb-1.5 ml-1">Full Name</label>
-                  <div className="relative group">
+                  <div className="relative group w-full">
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                       <User className="h-5 w-5 md:h-6 md:w-6 text-zinc-400 dark:text-zinc-500 group-focus-within:text-emerald-500 transition-colors duration-300" />
                     </div>
@@ -329,11 +345,11 @@ export default function DriverSignUp() {
                   </div>
                 </div>
 
-                <div>
+                <div className="w-full min-w-0">
                   <label className="block text-xs md:text-sm font-medium text-zinc-600 dark:text-zinc-400 mb-1.5 ml-1 flex justify-between">
                     Email {emailError && <span className="text-red-500 text-[10px] mt-0.5">{emailError}</span>}
                   </label>
-                  <div className="relative group">
+                  <div className="relative group w-full">
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                       <Mail className="h-5 w-5 md:h-6 md:w-6 text-zinc-400 dark:text-zinc-500 group-focus-within:text-emerald-500 transition-colors duration-300" />
                     </div>
@@ -341,24 +357,24 @@ export default function DriverSignUp() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
-                  <div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6 w-full">
+                  <div className="w-full min-w-0">
                     <label className="block text-xs md:text-sm font-medium text-zinc-600 dark:text-zinc-400 mb-1.5 ml-1">Password</label>
-                    <div className="relative group">
+                    <div className="relative group w-full">
                       <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                         <Lock className="h-5 w-5 md:h-6 md:w-6 text-zinc-400 dark:text-zinc-500 group-focus-within:text-emerald-500 transition-colors duration-300" />
                       </div>
-                      <input 
-                        type={showPassword ? "text" : "password"} 
-                        name="password" 
-                        value={formData.password} 
-                        onChange={handleChange} 
-                        required 
-                        placeholder="Create password" 
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        name="password"
+                        value={formData.password}
+                        onChange={handleChange}
+                        required
+                        placeholder="Create password"
                         onCopy={(e) => e.preventDefault()}
                         onPaste={(e) => e.preventDefault()}
                         onCut={(e) => e.preventDefault()}
-                        className={getInputClass(false, true)} 
+                        className={getInputClass(false, true)}
                       />
                       <button
                         type="button"
@@ -368,7 +384,7 @@ export default function DriverSignUp() {
                         {showPassword ? <Eye className="h-5 w-5" /> : <EyeOff className="h-5 w-5" />}
                       </button>
                     </div>
-                    
+
                     {formData.password && (
                       <div className="mt-2 animate-in fade-in duration-300">
                         <div className="flex gap-1 h-1.5 w-full rounded-full overflow-hidden bg-zinc-200 dark:bg-white/10">
@@ -384,25 +400,25 @@ export default function DriverSignUp() {
                     )}
                   </div>
 
-                  <div>
+                  <div className="w-full min-w-0">
                     <label className="block text-xs md:text-sm font-medium text-zinc-600 dark:text-zinc-400 mb-1.5 ml-1 flex justify-between">
                       Repeat Password {passwordError && <span className="text-red-500 text-[10px] mt-0.5">{passwordError}</span>}
                     </label>
-                    <div className="relative group">
+                    <div className="relative group w-full">
                       <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                         <Lock className="h-5 w-5 md:h-6 md:w-6 text-zinc-400 dark:text-zinc-500 group-focus-within:text-emerald-500 transition-colors duration-300" />
                       </div>
-                      <input 
-                        type={showRepeatPassword ? "text" : "password"} 
-                        name="repeatPassword" 
-                        value={formData.repeatPassword} 
-                        onChange={handleChange} 
-                        required 
-                        placeholder="Confirm password" 
+                      <input
+                        type={showRepeatPassword ? "text" : "password"}
+                        name="repeatPassword"
+                        value={formData.repeatPassword}
+                        onChange={handleChange}
+                        required
+                        placeholder="Confirm password"
                         onCopy={(e) => e.preventDefault()}
                         onPaste={(e) => e.preventDefault()}
                         onCut={(e) => e.preventDefault()}
-                        className={getInputClass(!!passwordError, true)} 
+                        className={getInputClass(!!passwordError, true)}
                       />
                       <button
                         type="button"
@@ -415,11 +431,11 @@ export default function DriverSignUp() {
                   </div>
                 </div>
 
-                <div>
+                <div className="w-full min-w-0">
                   <label className="block text-xs md:text-sm font-medium text-zinc-600 dark:text-zinc-400 mb-1.5 ml-1 flex justify-between">
                     Phone Number {phoneError && <span className="text-red-500 text-[10px] mt-0.5">{phoneError}</span>}
                   </label>
-                  <div className="relative group">
+                  <div className="relative group w-full">
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                       <Phone className="h-5 w-5 md:h-6 md:w-6 text-zinc-400 dark:text-zinc-500 group-focus-within:text-emerald-500 transition-colors duration-300" />
                     </div>
@@ -427,16 +443,16 @@ export default function DriverSignUp() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6 w-full">
                   <SelectorButton icon={Shield} label="Licence Type" value={formData.licenceType} field="licenceType" />
                   <SelectorButton icon={Car} label="Vehicle Category" value={formData.vehicleType} field="vehicleType" />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6 w-full">
                   {showCountry ? (
-                    <div>
+                    <div className="w-full min-w-0">
                       <label className="block text-xs md:text-sm font-medium text-zinc-600 dark:text-zinc-400 mb-1.5 ml-1">Country</label>
-                      <div className="relative group">
+                      <div className="relative group w-full">
                         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                           <Globe className="h-5 w-5 md:h-6 md:w-6 text-zinc-400 dark:text-zinc-500 group-focus-within:text-emerald-500 transition-colors duration-300" />
                         </div>
@@ -444,84 +460,95 @@ export default function DriverSignUp() {
                       </div>
                     </div>
                   ) : hideRegion ? (
-                    <div className="hidden md:block"></div> 
+                    <div className="hidden md:block w-full min-w-0"></div>
                   ) : (
                     <SelectorButton icon={MapPin} label="Region" value={formData.region} field="region" />
                   )}
 
-                  <div>
+                  <div className="w-full min-w-0">
                     <label className="block text-xs md:text-sm font-medium text-zinc-600 dark:text-zinc-400 mb-1.5 ml-1 flex justify-between">
                       License Plate {plateError && <span className="text-red-500 text-[10px] mt-0.5">{plateError}</span>}
                     </label>
                     <div className={`relative group flex items-center w-full h-12 md:h-14 rounded-xl text-sm md:text-base transition-all duration-300 outline-none border bg-white/50 dark:bg-black/40 text-zinc-900 dark:text-white overflow-hidden
-                      ${plateError 
-                        ? 'border-red-500/50 focus-within:border-red-500 focus-within:shadow-[0_0_15px_rgba(239,68,68,0.2)]' 
+                      ${plateError
+                        ? 'border-red-500/50 focus-within:border-red-500 focus-within:shadow-[0_0_15px_rgba(239,68,68,0.2)]'
                         : 'border-zinc-200 dark:border-white/10 hover:border-zinc-300 dark:hover:border-white/20 focus-within:border-emerald-500 focus-within:shadow-[0_0_15px_rgba(16,185,129,0.2)] focus-within:bg-white/80 dark:focus-within:bg-black/60'
                       }`}
                     >
-                      <div className="pl-4 pr-3 flex items-center pointer-events-none text-zinc-400 dark:text-zinc-500 group-focus-within:text-emerald-500 transition-colors duration-300">
+                      <div className="pl-4 pr-3 flex items-center pointer-events-none text-zinc-400 dark:text-zinc-500 group-focus-within:text-emerald-500 transition-colors duration-300 shrink-0">
                         <Hash className="h-5 w-5 md:h-6 md:w-6" />
                       </div>
-                      
+
                       {platePrefix && (
                         <div className="flex items-center justify-center h-full px-3 bg-zinc-100 dark:bg-white/5 border-r border-zinc-200 dark:border-white/10 font-mono font-bold text-zinc-700 dark:text-zinc-300 shrink-0">
                           {platePrefix}
                         </div>
                       )}
-                      
-                      <input 
-                        type="text" 
-                        name="licensePlate" 
-                        value={formData.licensePlate} 
-                        onChange={handlePlateChange} 
-                        required 
-                        placeholder={getPlatePlaceholder()} 
-                        className="flex-1 h-full pl-3 pr-4 bg-transparent outline-none font-mono placeholder:font-sans placeholder:tracking-normal w-full min-w-0" 
+
+                      <input
+                        type="text"
+                        name="licensePlate"
+                        value={formData.licensePlate}
+                        onChange={handlePlateChange}
+                        required
+                        placeholder={getPlatePlaceholder()}
+                        className="flex-1 h-full pl-3 pr-4 bg-transparent outline-none font-mono placeholder:font-sans placeholder:tracking-normal w-full min-w-0"
                       />
                     </div>
                   </div>
                 </div>
 
-                {/* ✅ UPDATED PRIVACY POLICY SECTION */}
-                <div className="flex items-start md:items-center gap-3 mt-2 p-4 md:p-5 border border-zinc-200 dark:border-white/10 rounded-xl bg-white/50 dark:bg-black/40 select-none">
-                  {/* Clickable Label specifically for the Checkbox */}
-                  <label htmlFor="agreePolicy" className="relative flex items-center justify-center h-5 w-5 shrink-0 rounded-[6px] border border-zinc-300 dark:border-zinc-600 bg-white/50 dark:bg-black/40 transition-all duration-300 hover:border-emerald-500 dark:hover:border-emerald-400 overflow-hidden shadow-sm mt-0.5 md:mt-0 cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      id="agreePolicy" 
-                      name="agreePolicy" 
-                      checked={formData.agreePolicy} 
-                      onChange={handleChange} 
-                      className="peer sr-only" 
+                <div className="flex items-start gap-3 mt-2 p-4 md:p-5 border border-zinc-200 dark:border-white/10 rounded-xl bg-white/50 dark:bg-black/40 select-none w-full min-w-0">
+                  <label htmlFor="agreePolicy" className="relative flex items-center justify-center h-5 w-5 shrink-0 rounded-[6px] border border-zinc-300 dark:border-zinc-600 bg-white/50 dark:bg-black/40 transition-all duration-300 hover:border-emerald-500 dark:hover:border-emerald-400 overflow-hidden shadow-sm mt-0.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      id="agreePolicy"
+                      name="agreePolicy"
+                      checked={formData.agreePolicy}
+                      onChange={handleChange}
+                      className="peer sr-only"
                     />
                     <div className="absolute inset-0 bg-emerald-500 opacity-0 peer-checked:opacity-100 transition-opacity duration-300"></div>
                     <Check className="h-3.5 w-3.5 text-white absolute scale-0 opacity-0 peer-checked:scale-100 peer-checked:opacity-100 transition-all duration-300 z-10" strokeWidth={4} />
                   </label>
-                  
-                  {/* Clickable text link for the Policy */}
-                  <span className="text-xs md:text-sm text-zinc-600 dark:text-zinc-400">
+
+                  <div className="text-xs md:text-sm text-zinc-600 dark:text-zinc-400 leading-snug w-full">
                     <label htmlFor="agreePolicy" className="cursor-pointer hover:text-zinc-900 dark:hover:text-zinc-200 transition-colors">I agree to the </label>
-                    <a 
-                      href="/privacy-policy" 
-                      target="_blank" 
-                      rel="noopener noreferrer" 
-                      className="text-zinc-900 dark:text-white underline underline-offset-4 font-medium hover:text-emerald-500 transition-colors z-10 relative cursor-pointer"
+                    <a
+                      href="/privacy-policy"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-zinc-900 dark:text-white underline underline-offset-4 font-medium hover:text-emerald-500 transition-colors z-10 cursor-pointer break-words"
                     >
                       Article 26 Privacy Policy
                     </a>
-                  </span>
+                  </div>
                 </div>
 
-                <button 
+                <button
                   type="submit"
-                  disabled={!!plateError || !!passwordError || !!emailError || !!phoneError || !isPasswordStrong || !formData.agreePolicy}
-                  className="group relative w-full h-12 md:h-14 mt-2 flex items-center justify-center rounded-xl bg-emerald-500 text-zinc-950 font-bold text-sm md:text-base tracking-wide uppercase overflow-hidden transition-all duration-300 hover:bg-emerald-400 hover:scale-[1.02] active:scale-95 disabled:opacity-70 disabled:hover:scale-100 disabled:cursor-not-allowed shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_0_30px_rgba(16,185,129,0.5)] outline-none cursor-pointer"
+                  disabled={!!plateError || !!passwordError || !!emailError || !!phoneError || !isPasswordStrong || !formData.agreePolicy || isSubmitting || isSuccess}
+                  className={`group relative w-full h-12 md:h-14 mt-2 flex items-center justify-center rounded-xl font-bold text-sm md:text-base tracking-wide uppercase overflow-hidden transition-all duration-300 outline-none cursor-pointer ${isSuccess
+                      ? 'bg-emerald-600 text-white shadow-[0_0_20px_rgba(5,150,105,0.5)]'
+                      : 'bg-emerald-500 text-zinc-950 hover:bg-emerald-400 hover:scale-[1.02] active:scale-95 shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_0_30px_rgba(16,185,129,0.5)]'
+                    } disabled:opacity-70 disabled:hover:scale-100 disabled:cursor-not-allowed`}
                 >
-                  <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  Create Account
+                  {!isSuccess && <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />}
+
+                  {isSubmitting ? (
+                    <span className="flex items-center gap-2 animate-pulse">
+                      Processing...
+                    </span>
+                  ) : isSuccess ? (
+                    <span className="flex items-center gap-2">
+                      <Check className="h-5 w-5" /> Account Created!
+                    </span>
+                  ) : (
+                    "Create Account"
+                  )}
                 </button>
 
-                <p className="text-center text-xs md:text-sm text-zinc-600 dark:text-zinc-400 mt-4">
+                <p className="text-center text-xs md:text-sm text-zinc-600 dark:text-zinc-400 mt-2">
                   Already have an account? <Link to="/login" className="text-emerald-600 dark:text-emerald-400 font-bold hover:underline underline-offset-4 transition-all">Sign in</Link>
                 </p>
               </form>
