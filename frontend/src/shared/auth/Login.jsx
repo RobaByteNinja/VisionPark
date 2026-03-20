@@ -50,7 +50,7 @@ export default function Login() {
   return (
     // Same pattern as AdminLogin — overflow-y-auto on the wrapper, html/body scrollbars
     // hidden in index.css, so only one scrollbar exists. pt-20 on card clears the header.
-    <div className="auth-scroll relative min-h-[100dvh] w-full overflow-y-auto overflow-x-hidden bg-[#f4f4f5] dark:bg-[#09090b] text-zinc-900 dark:text-zinc-100 transition-colors duration-500 flex flex-col items-center justify-center px-4 py-10">
+    <div className="auth-page relative min-h-[100dvh] w-full overflow-y-auto overflow-x-hidden bg-[#f4f4f5] dark:bg-[#09090b] text-zinc-900 dark:text-zinc-100 transition-colors duration-500 flex flex-col items-center justify-center px-4 py-10">
       <Header />
 
       <div className="ambient-glow-primary fixed w-[50vw] h-[50vw] top-[-10%] left-[-10%] pointer-events-none z-0" />

@@ -21,6 +21,21 @@ src/
 ├── App.jsx                                     - Main application routing (Domain checking & layout rendering)
 ├── index.css                                   - Tailwind directives and comprehensive design system styling
 ├── main.jsx                                    - React mounting point and context provider wrapping
+├── admin/
+│   ├── components/
+│   │   └── AdminLayout.jsx                     - Shell layout and sidebar for the Admin module
+│   └── pages/
+│       ├── AdminProfile.jsx                    - Preferences and settings for the admin
+│       ├── AlertThresholds.jsx                 - Configuration for system alert triggers
+│       ├── AuditLog.jsx                        - Comprehensive log of system activity and user actions
+│       ├── BackupRecovery.jsx                  - Interface for data backups and restoration
+│       ├── Dashboard.jsx                       - High-level overview of platform status and metrics
+│       ├── NetworkHealth.jsx                   - Monitoring of system node connectivity and latency
+│       ├── OwnerAccount.jsx                    - Management interface for platform owners
+│       ├── PaymentGateway.jsx                  - Configuration for external payment integrations
+│       ├── PlatformAnalytics.jsx               - Cross-system data visualizations and reporting
+│       ├── SessionManager.jsx                  - Overview and control of active user sessions
+│       └── SystemConfig.jsx                    - Master settings for the VisionPark platform
 ├── assets/
 │   └── react.svg                               - Default React vector graphic
 ├── attendant/
@@ -37,6 +52,7 @@ src/
 │       └── ZReport.jsx                         - End of shift financial reconciliation and reporting
 ├── components/
 │   ├── layout/
+│   │   ├── AdminHeader.jsx                     - Top navigation overlay used in admin domains
 │   │   └── Header.jsx                          - Top navigation overlay used in standard pages and auth
 │   ├── theme-provider.jsx                      - System-wide Next-themes provider wrapper
 │   └── ui/
@@ -75,11 +91,14 @@ src/
 │       ├── FinancialReports.jsx                - Comprehensive revenue metrics, ledgers, and transaction tables
 │       ├── Operations.jsx                      - Command center for live camera feeds and real-time AI incident alerts
 │       ├── OwnerProfile.jsx                    - Organization and individual settings for the lot owner
-│       ├── ParkingManagement.jsx             - Builder for zones, grids, and individual spot definition
+│       ├── ParkingManagement.jsx               - Builder for zones, grids, and individual spot definition
 │       ├── PayoutSettings.jsx                  - Interface connecting withdrawal endpoints (banks, Telebirr)
 │       └── PricingSettings.jsx                 - Management of hourly rates, tiers, and overstay multipliers
 └── shared/
     ├── auth/
+    │   ├── admin/
+    │   │   ├── AdminForgotPassword.jsx         - Recovery flow for admin credentials
+    │   │   └── AdminLogin.jsx                  - Secure authentication gateway for platform administrators
     │   ├── DriverSignUp.jsx                    - Multi-step registration for new platform drivers
     │   ├── ForgotPassword.jsx                  - Flow for fetching and resetting user credential access
     │   └── Login.jsx                           - Central identity gateway branching all user types

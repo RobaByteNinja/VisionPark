@@ -52,6 +52,16 @@ body {
 }
 
 
+/* Auth pages: scrollable but no visible scrollbar — matches admin login behaviour */
+.auth-page {
+  scrollbar-width: none;
+}
+
+.auth-page::-webkit-scrollbar {
+  display: none;
+}
+
+
 /* ==========================================
    PREMIUM THIN CUSTOM SCROLLBAR
    Applies to any container using .custom-scrollbar
@@ -63,12 +73,6 @@ body {
 
 .custom-scrollbar::-webkit-scrollbar-track {
   background: transparent;
-}
-
-/* Auth pages: push the scrollbar track down so it starts
-   below the fixed 64px header, not behind it */
-.auth-scroll::-webkit-scrollbar-track {
-  margin-top: 64px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {

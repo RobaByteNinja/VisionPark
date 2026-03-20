@@ -4,10 +4,10 @@
  */
 
 import React, { useState, useRef, useEffect } from "react";
-import { 
-  User, Mail, Phone, Building, FileText, 
-  Shield, Bell, Key, Save, CheckCircle, 
-  Camera, Upload, Eye, EyeOff, RefreshCw, X 
+import {
+  User, Mail, Phone, Building, FileText,
+  Shield, Bell, Key, Save, CheckCircle,
+  Camera, Upload, Eye, EyeOff, RefreshCw, X
 } from "lucide-react";
 
 // --- MOCK DATA ---
@@ -27,8 +27,8 @@ const Toggle = ({ label, description, enabled, onChange }) => (
       <h4 className="text-sm font-bold text-zinc-900 dark:text-white">{label}</h4>
       <p className="text-[10px] sm:text-xs text-zinc-500 mt-0.5">{description}</p>
     </div>
-    <button 
-      type="button" 
+    <button
+      type="button"
       onClick={onChange}
       className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none outline-none ${enabled ? 'bg-emerald-500' : 'bg-zinc-200 dark:bg-zinc-700'}`}
     >
@@ -55,22 +55,22 @@ const getPasswordStrength = (pass) => {
 export default function OwnerProfile() {
   const [profile, setProfile] = useState(INITIAL_PROFILE);
   const [passwords, setPasswords] = useState({ current: "", new: "", confirm: "" });
-  
+
   // Password Visibility States
   const [showPasswords, setShowPasswords] = useState({ current: false, new: false, confirm: false });
-  
+
   // Photo & Camera States
   const [photoMenuOpen, setPhotoMenuOpen] = useState(false);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
-  
+
   // Notification States
   const [notifyPayouts, setNotifyPayouts] = useState(true);
   const [notifyOverstays, setNotifyOverstays] = useState(false);
   const [notifyDailySummary, setNotifyDailySummary] = useState(true);
-  
+
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
-  
+
   // Refs
   const fileInputRef = useRef(null);
   const videoRef = useRef(null);
@@ -106,7 +106,7 @@ export default function OwnerProfile() {
       canvas.height = video.videoHeight;
       const context = canvas.getContext('2d');
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
-      
+
       const imageUrl = canvas.toDataURL('image/png');
       setProfile(prev => ({ ...prev, avatar: imageUrl }));
       stopCamera();
@@ -129,7 +129,7 @@ export default function OwnerProfile() {
       setProfile(prev => ({ ...prev, avatar: URL.createObjectURL(file) }));
     }
     setPhotoMenuOpen(false);
-    e.target.value = null; 
+    e.target.value = null;
   };
 
   const removePhoto = () => {
@@ -138,7 +138,7 @@ export default function OwnerProfile() {
   };
 
   const togglePasswordVisibility = (e, field) => {
-    e.preventDefault(); 
+    e.preventDefault();
     setShowPasswords(prev => ({ ...prev, [field]: !prev[field] }));
   };
 
@@ -154,15 +154,15 @@ export default function OwnerProfile() {
     const num = "0123456789";
     const special = "!@#$%^&*";
     const all = upper + lower + num + special;
-    
-    let pass = upper[Math.floor(Math.random() * upper.length)] + 
-               lower[Math.floor(Math.random() * lower.length)] + 
-               num[Math.floor(Math.random() * num.length)] + 
-               special[Math.floor(Math.random() * special.length)];
-               
+
+    let pass = upper[Math.floor(Math.random() * upper.length)] +
+      lower[Math.floor(Math.random() * lower.length)] +
+      num[Math.floor(Math.random() * num.length)] +
+      special[Math.floor(Math.random() * special.length)];
+
     for (let i = 0; i < 8; i++) pass += all[Math.floor(Math.random() * all.length)];
     pass = pass.split('').sort(() => 0.5 - Math.random()).join('');
-    
+
     setPasswords(prev => ({ ...prev, new: pass, confirm: pass }));
     setShowPasswords(prev => ({ ...prev, new: true, confirm: true }));
   };
@@ -172,8 +172,8 @@ export default function OwnerProfile() {
     setTimeout(() => {
       setIsSaving(false);
       setSaveSuccess(true);
-      setPasswords({ current: "", new: "", confirm: "" }); 
-      setShowPasswords({ current: false, new: false, confirm: false }); 
+      setPasswords({ current: "", new: "", confirm: "" });
+      setShowPasswords({ current: false, new: false, confirm: false });
       setTimeout(() => setSaveSuccess(false), 3000);
     }, 800);
   };
@@ -182,21 +182,21 @@ export default function OwnerProfile() {
 
   return (
     <div className="w-full flex flex-col gap-6 animate-in fade-in duration-500 pb-10">
-      
+
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-zinc-900 dark:text-white tracking-tight">Owner Profile</h1>
           <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">Manage your identity, business details, and system preferences.</p>
         </div>
-        
+
         <div className="flex items-center gap-4">
           {saveSuccess && (
             <span className="text-sm font-bold text-emerald-500 flex items-center gap-1 animate-in fade-in slide-in-from-right-4">
               <CheckCircle className="h-4 w-4" /> Saved Successfully
             </span>
           )}
-          <button 
+          <button
             type="button" onClick={handleSave} disabled={isSaving}
             className="flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 px-6 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-emerald-500/20 active:scale-[0.98] disabled:opacity-50 outline-none"
           >
@@ -206,19 +206,19 @@ export default function OwnerProfile() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
+
         {/* LEFT COLUMN: Profile & Business Info */}
         <div className="lg:col-span-2 space-y-6">
-          
+
           {/* Personal Info Card */}
           <div className="bg-white dark:bg-[#121214] p-6 rounded-2xl border border-zinc-200 dark:border-white/5 shadow-sm">
             <div className="flex items-center gap-2 mb-6 text-emerald-500">
               <User className="h-5 w-5" />
               <h2 className="font-bold text-zinc-900 dark:text-white">Personal Information</h2>
             </div>
-            
+
             <div className="flex flex-col md:flex-row gap-8">
-              
+
               {/* Profile Photo Area */}
               <div className="flex flex-col items-center gap-3 shrink-0">
                 <div className="relative">
@@ -229,8 +229,8 @@ export default function OwnerProfile() {
                       <User className="h-12 w-12 text-zinc-300 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                     )}
                   </div>
-                  
-                  <button 
+
+                  <button
                     type="button" onClick={() => setPhotoMenuOpen(!photoMenuOpen)}
                     className="absolute -bottom-2 -right-2 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 p-2 rounded-full shadow-lg transition-transform hover:scale-110 outline-none"
                   >
@@ -243,7 +243,7 @@ export default function OwnerProfile() {
                       <button type="button" onClick={() => fileInputRef.current?.click()} className="flex items-center gap-2.5 w-full p-2.5 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-white/5 rounded-lg outline-none transition-colors">
                         <Upload className="h-4 w-4 text-emerald-500" /> Upload Photo
                       </button>
-                      
+
                       {/* WebRTC Camera Trigger */}
                       <button type="button" onClick={startCamera} className="flex items-center gap-2.5 w-full p-2.5 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-white/5 rounded-lg outline-none transition-colors">
                         <Camera className="h-4 w-4 text-blue-500" /> Take Photo
@@ -268,18 +268,18 @@ export default function OwnerProfile() {
                   <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Full Name</label>
                   <div className="relative flex items-center bg-zinc-50 dark:bg-[#1a1a1c] border border-zinc-200 dark:border-white/10 rounded-xl focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500 transition-all">
                     <User className="absolute left-4 h-4 w-4 text-zinc-400" />
-                    <input 
+                    <input
                       type="text" value={profile.name} onChange={(e) => handleProfileChange("name", e.target.value)}
                       className="w-full bg-transparent text-zinc-900 dark:text-white text-sm font-bold pl-11 pr-4 py-3 outline-none"
                     />
                   </div>
                 </div>
-                
+
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Email Address</label>
                   <div className="relative flex items-center bg-zinc-50 dark:bg-[#1a1a1c] border border-zinc-200 dark:border-white/10 rounded-xl focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500 transition-all">
                     <Mail className="absolute left-4 h-4 w-4 text-zinc-400" />
-                    <input 
+                    <input
                       type="email" value={profile.email} onChange={(e) => handleProfileChange("email", e.target.value)}
                       className="w-full bg-transparent text-zinc-900 dark:text-white text-sm font-bold pl-11 pr-4 py-3 outline-none"
                     />
@@ -290,7 +290,7 @@ export default function OwnerProfile() {
                   <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Phone Number</label>
                   <div className="relative flex items-center bg-zinc-50 dark:bg-[#1a1a1c] border border-zinc-200 dark:border-white/10 rounded-xl focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500 transition-all">
                     <Phone className="absolute left-4 h-4 w-4 text-zinc-400" />
-                    <input 
+                    <input
                       type="tel" value={profile.phone} onChange={(e) => handleProfileChange("phone", e.target.value)}
                       className="w-full bg-transparent text-zinc-900 dark:text-white text-sm font-mono tracking-wider font-bold pl-11 pr-4 py-3 outline-none"
                     />
@@ -306,24 +306,24 @@ export default function OwnerProfile() {
               <Building className="h-5 w-5" />
               <h2 className="font-bold text-zinc-900 dark:text-white">Business Details</h2>
             </div>
-            
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Registered Company Name</label>
                 <div className="relative flex items-center bg-zinc-50 dark:bg-[#1a1a1c] border border-zinc-200 dark:border-white/10 rounded-xl focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all">
                   <Building className="absolute left-4 h-4 w-4 text-zinc-400" />
-                  <input 
+                  <input
                     type="text" value={profile.companyName} onChange={(e) => handleProfileChange("companyName", e.target.value)}
                     className="w-full bg-transparent text-zinc-900 dark:text-white text-sm font-bold pl-11 pr-4 py-3 outline-none"
                   />
                 </div>
               </div>
-              
+
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">TIN Number</label>
                 <div className="relative flex items-center bg-zinc-50 dark:bg-[#1a1a1c] border border-zinc-200 dark:border-white/10 rounded-xl focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all">
                   <FileText className="absolute left-4 h-4 w-4 text-zinc-400" />
-                  <input 
+                  <input
                     type="text" value={profile.tinNumber} onChange={(e) => handleProfileChange("tinNumber", e.target.value)}
                     className="w-full bg-transparent text-zinc-900 dark:text-white text-sm font-mono tracking-wider font-bold pl-11 pr-4 py-3 outline-none"
                   />
@@ -336,7 +336,7 @@ export default function OwnerProfile() {
 
         {/* RIGHT COLUMN: Security & Notifications */}
         <div className="lg:col-span-1 space-y-6">
-          
+
           {/* Password Reset */}
           <div className="bg-white dark:bg-[#121214] p-6 rounded-2xl border border-zinc-200 dark:border-white/5 shadow-sm">
             <div className="flex items-center gap-2 mb-6 text-amber-500">
@@ -345,23 +345,23 @@ export default function OwnerProfile() {
             </div>
 
             <div className="space-y-4">
-              
+
               {/* Current Password */}
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Current Password</label>
                 <div className="relative flex items-center bg-zinc-50 dark:bg-[#1a1a1c] border border-zinc-200 dark:border-white/10 rounded-xl focus-within:border-amber-500 focus-within:ring-1 focus-within:ring-amber-500 transition-all">
                   <Key className="absolute left-4 h-4 w-4 text-zinc-400" />
-                  <input 
-                    type={showPasswords.current ? "text" : "password"} 
-                    placeholder="••••••••" 
-                    value={passwords.current} 
-                    onChange={(e) => setPasswords({...passwords, current: e.target.value})}
+                  <input
+                    type={showPasswords.current ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={passwords.current}
+                    onChange={(e) => setPasswords({ ...passwords, current: e.target.value })}
                     onCopy={disableCopyPaste} onPaste={disableCopyPaste} onCut={disableCopyPaste}
                     className="w-full bg-transparent text-zinc-900 dark:text-white text-sm font-bold pl-11 pr-12 py-3 outline-none"
                   />
-                  <button 
-                    type="button" 
-                    onClick={(e) => togglePasswordVisibility(e, "current")} 
+                  <button
+                    type="button"
+                    onClick={(e) => togglePasswordVisibility(e, "current")}
                     className="absolute right-2 p-2 text-zinc-400 hover:text-zinc-900 dark:hover:text-white outline-none rounded-lg transition-colors"
                   >
                     {showPasswords.current ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
@@ -377,20 +377,20 @@ export default function OwnerProfile() {
                     <RefreshCw className="h-3 w-3" /> Auto-generate
                   </button>
                 </div>
-                
+
                 <div className="relative flex items-center bg-zinc-50 dark:bg-[#1a1a1c] border border-zinc-200 dark:border-white/10 rounded-xl focus-within:border-amber-500 focus-within:ring-1 focus-within:ring-amber-500 transition-all">
                   <Key className="absolute left-4 h-4 w-4 text-zinc-400" />
-                  <input 
-                    type={showPasswords.new ? "text" : "password"} 
-                    placeholder="••••••••" 
-                    value={passwords.new} 
-                    onChange={(e) => setPasswords({...passwords, new: e.target.value})}
+                  <input
+                    type={showPasswords.new ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={passwords.new}
+                    onChange={(e) => setPasswords({ ...passwords, new: e.target.value })}
                     onCopy={disableCopyPaste} onPaste={disableCopyPaste} onCut={disableCopyPaste}
                     className="w-full bg-transparent text-zinc-900 dark:text-white text-sm font-bold pl-11 pr-12 py-3 outline-none"
                   />
-                  <button 
-                    type="button" 
-                    onClick={(e) => togglePasswordVisibility(e, "new")} 
+                  <button
+                    type="button"
+                    onClick={(e) => togglePasswordVisibility(e, "new")}
                     className="absolute right-2 p-2 text-zinc-400 hover:text-zinc-900 dark:hover:text-white outline-none rounded-lg transition-colors"
                   >
                     {showPasswords.new ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
@@ -416,17 +416,17 @@ export default function OwnerProfile() {
                 <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Confirm New Password</label>
                 <div className="relative flex items-center bg-zinc-50 dark:bg-[#1a1a1c] border border-zinc-200 dark:border-white/10 rounded-xl focus-within:border-amber-500 focus-within:ring-1 focus-within:ring-amber-500 transition-all">
                   <Key className="absolute left-4 h-4 w-4 text-zinc-400" />
-                  <input 
-                    type={showPasswords.confirm ? "text" : "password"} 
-                    placeholder="••••••••" 
-                    value={passwords.confirm} 
-                    onChange={(e) => setPasswords({...passwords, confirm: e.target.value})}
+                  <input
+                    type={showPasswords.confirm ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={passwords.confirm}
+                    onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
                     onCopy={disableCopyPaste} onPaste={disableCopyPaste} onCut={disableCopyPaste}
                     className="w-full bg-transparent text-zinc-900 dark:text-white text-sm font-bold pl-11 pr-12 py-3 outline-none"
                   />
-                  <button 
-                    type="button" 
-                    onClick={(e) => togglePasswordVisibility(e, "confirm")} 
+                  <button
+                    type="button"
+                    onClick={(e) => togglePasswordVisibility(e, "confirm")}
                     className="absolute right-2 p-2 text-zinc-400 hover:text-zinc-900 dark:hover:text-white outline-none rounded-lg transition-colors"
                   >
                     {showPasswords.confirm ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
@@ -443,25 +443,25 @@ export default function OwnerProfile() {
               <Bell className="h-5 w-5" />
               <h2 className="font-bold text-zinc-900 dark:text-white">Notifications</h2>
             </div>
-            
+
             <div className="divide-y divide-zinc-100 dark:divide-white/5">
-              <Toggle 
-                label="Payout Alerts" 
-                description="Receive an email when your net earnings are successfully deposited." 
-                enabled={notifyPayouts} 
-                onChange={() => setNotifyPayouts(!notifyPayouts)} 
+              <Toggle
+                label="Payout Alerts"
+                description="Receive an email when your net earnings are successfully deposited."
+                enabled={notifyPayouts}
+                onChange={() => setNotifyPayouts(!notifyPayouts)}
               />
-              <Toggle 
-                label="Overstay Warnings" 
-                description="Get notified if a vehicle triggers a massive penalty multiplier." 
-                enabled={notifyOverstays} 
-                onChange={() => setNotifyOverstays(!notifyOverstays)} 
+              <Toggle
+                label="Overstay Warnings"
+                description="Get notified if a vehicle triggers a massive penalty multiplier."
+                enabled={notifyOverstays}
+                onChange={() => setNotifyOverstays(!notifyOverstays)}
               />
-              <Toggle 
-                label="Daily Financial Summary" 
-                description="A breakdown of daily revenue sent to your email at 11:59 PM." 
-                enabled={notifyDailySummary} 
-                onChange={() => setNotifyDailySummary(!notifyDailySummary)} 
+              <Toggle
+                label="Daily Financial Summary"
+                description="A breakdown of daily revenue sent to your email at 11:59 PM."
+                enabled={notifyDailySummary}
+                onChange={() => setNotifyDailySummary(!notifyDailySummary)}
               />
             </div>
           </div>
@@ -473,7 +473,7 @@ export default function OwnerProfile() {
       {isCameraOpen && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="w-full max-w-md bg-[#18181b] rounded-3xl overflow-hidden shadow-2xl border border-white/10 flex flex-col relative">
-            
+
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 absolute top-0 w-full z-10 bg-gradient-to-b from-black/80 to-transparent">
               <h2 className="text-lg font-bold text-white shadow-black drop-shadow-md">Take Profile Photo</h2>
@@ -484,10 +484,10 @@ export default function OwnerProfile() {
 
             {/* Video Feed */}
             <div className="relative w-full aspect-square bg-black flex items-center justify-center overflow-hidden">
-              <video 
-                ref={videoRef} 
-                autoPlay 
-                playsInline 
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
                 className="w-full h-full object-cover mirror-mode"
                 style={{ transform: "scaleX(-1)" }} // Mirror effect for front camera
               />
@@ -500,7 +500,7 @@ export default function OwnerProfile() {
 
             {/* Controls */}
             <div className="p-6 bg-[#18181b] flex items-center justify-center border-t border-white/10">
-              <button 
+              <button
                 onClick={capturePhoto}
                 className="h-16 w-16 bg-white rounded-full border-4 border-zinc-400 hover:border-emerald-500 hover:bg-zinc-100 transition-all flex items-center justify-center outline-none active:scale-95"
               >

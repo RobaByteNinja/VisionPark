@@ -29,23 +29,17 @@ const INITIAL_INCIDENTS = [
 ];
 
 export default function IncidentLogger() {
-    // Form State
     const [incidentType, setIncidentType] = useState("Fled Without Payment");
     const [offenderPlate, setOffenderPlate] = useState("");
     const [amount, setAmount] = useState("");
     const [description, setDescription] = useState("");
-
-    // Dynamic Arrays for Damage & Media
     const [damagedPlates, setDamagedPlates] = useState([""]);
     const [mediaFiles, setMediaFiles] = useState([]);
-
-    // Processing State
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [incidents, setIncidents] = useState(INITIAL_INCIDENTS);
     const [toastMessage, setToastMessage] = useState("");
     const [toastType, setToastType] = useState("success");
 
-    // Hidden File Inputs
     const photoInputRef = useRef(null);
     const videoInputRef = useRef(null);
 
@@ -56,36 +50,24 @@ export default function IncidentLogger() {
     };
 
     const handleAddDamagedPlate = () => setDamagedPlates([...damagedPlates, ""]);
-
     const handleRemoveDamagedPlate = (index) => {
-        const newPlates = [...damagedPlates];
-        newPlates.splice(index, 1);
-        setDamagedPlates(newPlates);
+        const p = [...damagedPlates]; p.splice(index, 1); setDamagedPlates(p);
     };
-
     const handleDamagedPlateChange = (index, value) => {
-        const newPlates = [...damagedPlates];
-        newPlates[index] = value.toUpperCase();
-        setDamagedPlates(newPlates);
+        const p = [...damagedPlates]; p[index] = value.toUpperCase(); setDamagedPlates(p);
     };
 
     const handleFileUpload = (e, type) => {
         const files = Array.from(e.target.files);
-        if (files.length === 0) return;
-
-        const newMedia = files.map(file => ({
-            id: Math.random().toString(36).substr(2, 9),
-            name: file.name,
-            type: type
-        }));
-
-        setMediaFiles([...mediaFiles, ...newMedia]);
+        if (!files.length) return;
+        setMediaFiles(prev => [
+            ...prev,
+            ...files.map(f => ({ id: Math.random().toString(36).substr(2, 9), name: f.name, type }))
+        ]);
         e.target.value = null;
     };
 
-    const removeMedia = (id) => {
-        setMediaFiles(mediaFiles.filter(m => m.id !== id));
-    };
+    const removeMedia = (id) => setMediaFiles(prev => prev.filter(m => m.id !== id));
 
     const clearForm = () => {
         setIncidentType("Fled Without Payment");
@@ -98,32 +80,24 @@ export default function IncidentLogger() {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-
         const isPropertyDamage = incidentType === "Property Damage";
         if (!isPropertyDamage && !offenderPlate.trim()) {
-            showToast("License plate is required for this incident type.", "error");
-            return;
+            showToast("License plate is required for this incident type.", "error"); return;
         }
-
         if (incidentType === "Fled Without Payment" && !amount) {
-            showToast("Unpaid amount is required to flag a fleeing vehicle.", "error");
-            return;
+            showToast("Unpaid amount is required to flag a fleeing vehicle.", "error"); return;
         }
-
         setIsSubmitting(true);
-
         setTimeout(() => {
             const finalPlate = offenderPlate.trim() ? offenderPlate.toUpperCase() : "UNKNOWN";
             const isUnknown = finalPlate === "UNKNOWN";
-
             let detailsText = "";
             if (incidentType === "Property Damage") {
-                const validDamaged = damagedPlates.filter(p => p.trim() !== "");
-                detailsText = validDamaged.length > 0 ? `Hit: ${validDamaged.join(", ")}` : "Property Damage";
+                const valid = damagedPlates.filter(p => p.trim());
+                detailsText = valid.length ? `Hit: ${valid.join(", ")}` : "Property Damage";
             } else if (incidentType === "Customer Dispute") {
                 detailsText = "Aggressive or argumentative driver";
             }
-
             const newIncident = {
                 id: `INC-${Math.floor(100 + Math.random() * 900)}`,
                 plate: finalPlate,
@@ -131,20 +105,17 @@ export default function IncidentLogger() {
                 details: detailsText,
                 amount: incidentType === "Fled Without Payment" ? parseFloat(amount) || 0 : null,
                 time: "Just Now",
-                status: isUnknown ? "Admin CCTV Review Needed" : (incidentType === "Fled Without Payment" ? "Global Watchlist Active" : "Report Filed")
+                status: isUnknown
+                    ? "Admin CCTV Review Needed"
+                    : incidentType === "Fled Without Payment"
+                        ? "Global Watchlist Active"
+                        : "Report Filed"
             };
-
-            setIncidents([newIncident, ...incidents]);
+            setIncidents(prev => [newIncident, ...prev]);
             setIsSubmitting(false);
-
-            if (isUnknown) {
-                showToast(`Report logged. Admin notified to pull CCTV for hit-and-run.`);
-            } else if (incidentType === "Fled Without Payment") {
-                showToast(`ALERT: Plate ${finalPlate} added to the Global Branch Watchlist.`);
-            } else {
-                showToast("Incident report successfully filed to management.");
-            }
-
+            if (isUnknown) showToast("Report logged. Admin notified to pull CCTV for hit-and-run.");
+            else if (incidentType === "Fled Without Payment") showToast(`ALERT: Plate ${finalPlate} added to the Global Branch Watchlist.`);
+            else showToast("Incident report successfully filed to management.");
             clearForm();
         }, 1200);
     };
@@ -154,21 +125,27 @@ export default function IncidentLogger() {
     return (
         <div className="h-full w-full flex flex-col xl:flex-row gap-6 animate-in fade-in duration-500 relative">
 
+            {/* TOAST
+                FIX: `absolute top-4` placed this behind/under the header.
+                `fixed top-16 lg:top-20` matches AttendantLayout header heights
+                (h-16 mobile, h-20 lg+) so the toast always clears the navbar. */}
             {toastMessage && (
-                <div className={`absolute top-4 left-1/2 -translate-x-1/2 text-white font-bold text-xs md:text-sm px-6 py-3 rounded-2xl shadow-2xl z-[8000] animate-in slide-in-from-top-4 flex items-center gap-3 w-11/12 md:w-auto text-center justify-center ${toastType === 'error' ? 'bg-red-600' : 'bg-zinc-900 dark:bg-white dark:text-zinc-900'}`}>
-                    {toastType === 'error' ? <AlertTriangle className="h-5 w-5 shrink-0" /> : <CheckCircle className="h-5 w-5 text-emerald-500 shrink-0" />}
+                <div className={`fixed top-16 lg:top-20 left-1/2 -translate-x-1/2 text-white font-bold text-xs md:text-sm px-6 py-3 rounded-2xl shadow-2xl z-[8000] animate-in slide-in-from-top-4 flex items-center gap-3 w-11/12 md:w-auto text-center justify-center ${toastType === "error" ? "bg-red-600" : "bg-zinc-900 dark:bg-white dark:text-zinc-900"}`}>
+                    {toastType === "error"
+                        ? <AlertTriangle className="h-5 w-5 shrink-0" />
+                        : <CheckCircle className="h-5 w-5 text-emerald-500 shrink-0" />
+                    }
                     {toastMessage}
                 </div>
             )}
 
-            <input type="file" accept="image/*" multiple ref={photoInputRef} onChange={(e) => handleFileUpload(e, 'photo')} className="hidden" />
-            <input type="file" accept="video/*" multiple ref={videoInputRef} onChange={(e) => handleFileUpload(e, 'video')} className="hidden" />
+            <input type="file" accept="image/*" multiple ref={photoInputRef} onChange={e => handleFileUpload(e, "photo")} className="hidden" />
+            <input type="file" accept="video/*" multiple ref={videoInputRef} onChange={e => handleFileUpload(e, "video")} className="hidden" />
 
             {/* LEFT COLUMN: Report Form */}
-            {/* ✅ Responsive widths and min-w-0 prevents sidebars from squishing the layout */}
             <div className="flex-1 xl:max-w-[65%] flex flex-col gap-6 min-w-0">
 
-                {/* Header */}
+                {/* Header card */}
                 <div className="bg-white dark:bg-[#121214] rounded-3xl p-5 md:p-6 shadow-sm border border-zinc-200 dark:border-white/5 shrink-0 flex items-center justify-between relative overflow-hidden">
                     <div className="absolute top-0 right-0 p-4 opacity-5">
                         <ShieldAlert className="h-24 w-24 md:h-32 md:w-32 text-zinc-900 dark:text-white" />
@@ -191,27 +168,17 @@ export default function IncidentLogger() {
                             <label className="block text-xs md:text-sm font-bold uppercase tracking-widest text-zinc-500 mb-2 flex items-center gap-2">
                                 <AlertTriangle className="h-4 w-4 shrink-0" /> Select Incident Type
                             </label>
-                            {/* ✅ Responsive flex-wrap ensures buttons don't break when sidebar expands */}
                             <div className="flex flex-wrap gap-2 md:gap-3">
-                                {["Fled Without Payment", "Property Damage", "Customer Dispute", "Other"].map((type) => {
-                                    const isSelected = incidentType === type;
-                                    return (
-                                        <button
-                                            key={type}
-                                            type="button"
-                                            onClick={() => {
-                                                setIncidentType(type);
-                                                if (type !== "Property Damage" && offenderPlate === "UNKNOWN") setOffenderPlate("");
-                                            }}
-                                            className={`flex-1 min-w-[140px] p-3 rounded-xl border-2 text-xs font-bold transition-all outline-none flex items-center justify-center text-center cursor-pointer ${isSelected
-                                                    ? 'border-zinc-900 bg-zinc-900 text-white dark:bg-white dark:border-white dark:text-zinc-900 shadow-md'
-                                                    : 'border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-black/20 text-zinc-600 dark:text-zinc-400 hover:border-zinc-300 dark:hover:border-white/20'
-                                                }`}
-                                        >
-                                            <span className="truncate">{type}</span>
-                                        </button>
-                                    );
-                                })}
+                                {["Fled Without Payment", "Property Damage", "Customer Dispute", "Other"].map(type => (
+                                    <button key={type} type="button"
+                                        onClick={() => { setIncidentType(type); if (type !== "Property Damage" && offenderPlate === "UNKNOWN") setOffenderPlate(""); }}
+                                        className={`flex-1 min-w-[140px] p-3 rounded-xl border-2 text-xs font-bold transition-all outline-none flex items-center justify-center text-center cursor-pointer ${incidentType === type
+                                            ? "border-zinc-900 bg-zinc-900 text-white dark:bg-white dark:border-white dark:text-zinc-900 shadow-md"
+                                            : "border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-black/20 text-zinc-600 dark:text-zinc-400 hover:border-zinc-300 dark:hover:border-white/20"
+                                            }`}>
+                                        <span className="truncate">{type}</span>
+                                    </button>
+                                ))}
                             </div>
                         </div>
 
@@ -225,10 +192,8 @@ export default function IncidentLogger() {
                                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                                         <Hash className="h-5 w-5 text-zinc-400 dark:text-zinc-500" />
                                     </div>
-                                    <input
-                                        type="text"
-                                        value={offenderPlate}
-                                        onChange={(e) => setOffenderPlate(e.target.value.toUpperCase())}
+                                    <input type="text" value={offenderPlate}
+                                        onChange={e => setOffenderPlate(e.target.value.toUpperCase())}
                                         placeholder={incidentType === "Property Damage" ? "Leave blank if unknown" : "E.g. AA 12345"}
                                         className={`h-12 md:h-14 pl-12 pr-4 font-mono font-black text-base md:text-lg w-full ${glassGreenInputStyles}`}
                                     />
@@ -245,11 +210,8 @@ export default function IncidentLogger() {
                                     <label className="block text-[10px] md:text-sm font-bold uppercase tracking-widest text-zinc-500 mb-2 flex items-center gap-2">
                                         <Banknote className="h-4 w-4 shrink-0" /> Unpaid Amount (ETB)
                                     </label>
-                                    <input
-                                        type="text"
-                                        inputMode="decimal"
-                                        value={amount}
-                                        onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ''))}
+                                    <input type="text" inputMode="decimal" value={amount}
+                                        onChange={e => setAmount(e.target.value.replace(/[^0-9.]/g, ""))}
                                         placeholder="0.00"
                                         className={`h-12 md:h-14 px-4 font-mono font-black text-base md:text-lg w-full ${glassGreenInputStyles}`}
                                     />
@@ -257,40 +219,30 @@ export default function IncidentLogger() {
                             )}
                         </div>
 
-                        {/* Row 3: Property Damage Specifics */}
+                        {/* Row 3: Property Damage */}
                         {incidentType === "Property Damage" && (
                             <div className="p-4 md:p-5 bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/5 rounded-2xl space-y-4 animate-in fade-in min-w-0">
                                 <label className="block text-xs md:text-sm font-bold uppercase tracking-widest text-zinc-500 flex items-center gap-2">
                                     <ShieldAlert className="h-4 w-4 shrink-0" /> Damaged Vehicles
                                 </label>
-
                                 <div className="space-y-3">
                                     {damagedPlates.map((plate, index) => (
                                         <div key={index} className="flex gap-2 items-center">
-                                            <input
-                                                type="text"
-                                                value={plate}
-                                                onChange={(e) => handleDamagedPlateChange(index, e.target.value)}
+                                            <input type="text" value={plate}
+                                                onChange={e => handleDamagedPlateChange(index, e.target.value)}
                                                 placeholder="Damaged Plate #"
                                                 className={`h-12 px-4 font-mono font-bold text-sm md:text-base flex-1 min-w-0 ${glassGreenInputStyles}`}
                                             />
-                                            <button
-                                                type="button"
-                                                onClick={() => handleRemoveDamagedPlate(index)}
+                                            <button type="button" onClick={() => handleRemoveDamagedPlate(index)}
                                                 disabled={damagedPlates.length === 1}
-                                                className="h-12 w-12 shrink-0 flex items-center justify-center rounded-xl bg-red-100 dark:bg-red-500/10 text-red-600 dark:text-red-500 hover:bg-red-200 dark:hover:bg-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors outline-none cursor-pointer"
-                                            >
+                                                className="h-12 w-12 shrink-0 flex items-center justify-center rounded-xl bg-red-100 dark:bg-red-500/10 text-red-600 dark:text-red-500 hover:bg-red-200 dark:hover:bg-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors outline-none cursor-pointer">
                                                 <Trash2 className="h-5 w-5" />
                                             </button>
                                         </div>
                                     ))}
                                 </div>
-
-                                <button
-                                    type="button"
-                                    onClick={handleAddDamagedPlate}
-                                    className="w-full py-3 rounded-xl border-2 border-dashed border-blue-300 dark:border-blue-500/30 text-blue-600 dark:text-blue-400 font-bold text-xs md:text-sm hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors flex items-center justify-center gap-2 outline-none cursor-pointer"
-                                >
+                                <button type="button" onClick={handleAddDamagedPlate}
+                                    className="w-full py-3 rounded-xl border-2 border-dashed border-blue-300 dark:border-blue-500/30 text-blue-600 dark:text-blue-400 font-bold text-xs md:text-sm hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors flex items-center justify-center gap-2 outline-none cursor-pointer">
                                     <Plus className="h-4 w-4 shrink-0" /> <span className="truncate">Add Another Damaged Vehicle</span>
                                 </button>
                             </div>
@@ -301,9 +253,7 @@ export default function IncidentLogger() {
                             <label className="block text-xs md:text-sm font-bold uppercase tracking-widest text-zinc-500 mb-2 flex items-center gap-2">
                                 <Edit3 className="h-4 w-4 shrink-0" /> Incident Description
                             </label>
-                            <textarea
-                                value={description}
-                                onChange={(e) => setDescription(e.target.value)}
+                            <textarea value={description} onChange={e => setDescription(e.target.value)}
                                 placeholder="Provide details about the incident..."
                                 className={`flex-1 min-h-[100px] w-full p-4 resize-none font-medium text-sm custom-scrollbar ${glassGreenInputStyles}`}
                                 required
@@ -313,21 +263,21 @@ export default function IncidentLogger() {
                         {/* Row 5: Media Uploads */}
                         <div className="min-w-0">
                             <label className="block text-[10px] md:text-sm font-bold uppercase tracking-widest text-zinc-500 mb-2">Evidence Upload</label>
-
                             <div className="flex flex-wrap gap-2 md:gap-3 mb-3">
-                                <button type="button" onClick={() => photoInputRef.current.click()} className="px-4 md:px-5 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[10px] md:text-xs font-bold transition-colors flex items-center gap-2 outline-none cursor-pointer shadow-sm active:scale-95">
+                                <button type="button" onClick={() => photoInputRef.current.click()}
+                                    className="px-4 md:px-5 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[10px] md:text-xs font-bold transition-colors flex items-center gap-2 outline-none cursor-pointer shadow-sm active:scale-95">
                                     <Camera className="h-4 w-4 shrink-0" /> Add Photos
                                 </button>
-                                <button type="button" onClick={() => videoInputRef.current.click()} className="px-4 md:px-5 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[10px] md:text-xs font-bold transition-colors flex items-center gap-2 outline-none cursor-pointer shadow-sm active:scale-95">
+                                <button type="button" onClick={() => videoInputRef.current.click()}
+                                    className="px-4 md:px-5 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[10px] md:text-xs font-bold transition-colors flex items-center gap-2 outline-none cursor-pointer shadow-sm active:scale-95">
                                     <Video className="h-4 w-4 shrink-0" /> Add Video
                                 </button>
                             </div>
-
                             {mediaFiles.length > 0 && (
                                 <div className="flex flex-wrap gap-2 mt-2">
-                                    {mediaFiles.map((file) => (
+                                    {mediaFiles.map(file => (
                                         <div key={file.id} className="flex items-center gap-2 px-3 py-1.5 bg-zinc-100 dark:bg-white/10 rounded-lg border border-zinc-200 dark:border-white/10 max-w-full">
-                                            {file.type === 'photo' ? <Camera className="h-3 w-3 text-zinc-500 shrink-0" /> : <Video className="h-3 w-3 text-zinc-500 shrink-0" />}
+                                            {file.type === "photo" ? <Camera className="h-3 w-3 text-zinc-500 shrink-0" /> : <Video className="h-3 w-3 text-zinc-500 shrink-0" />}
                                             <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300 max-w-[100px] md:max-w-[150px] truncate">{file.name}</span>
                                             <button type="button" onClick={() => removeMedia(file.id)} className="ml-1 text-red-500 hover:text-red-700 outline-none cursor-pointer shrink-0">
                                                 <X className="h-3.5 w-3.5" />
@@ -340,19 +290,12 @@ export default function IncidentLogger() {
 
                         {/* Actions Footer */}
                         <div className="pt-4 md:pt-6 border-t border-zinc-100 dark:border-white/5 flex flex-col sm:flex-row gap-3 md:gap-4">
-                            <button
-                                type="button"
-                                onClick={clearForm}
-                                className="w-full sm:flex-1 py-3.5 md:py-4 bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 rounded-xl font-bold transition-colors outline-none cursor-pointer shadow-sm active:scale-95 text-sm"
-                            >
+                            <button type="button" onClick={clearForm}
+                                className="w-full sm:flex-1 py-3.5 md:py-4 bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 rounded-xl font-bold transition-colors outline-none cursor-pointer shadow-sm active:scale-95 text-sm">
                                 Clear Form
                             </button>
-
-                            <button
-                                type="submit"
-                                disabled={isSubmitting}
-                                className="w-full sm:flex-[2] py-3.5 md:py-4 bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-black rounded-xl shadow-lg shadow-emerald-500/20 active:scale-95 transition-all outline-none flex items-center justify-center gap-2 md:gap-3 cursor-pointer disabled:opacity-70 text-sm md:text-base"
-                            >
+                            <button type="submit" disabled={isSubmitting}
+                                className="w-full sm:flex-[2] py-3.5 md:py-4 bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-black rounded-xl shadow-lg shadow-emerald-500/20 active:scale-95 transition-all outline-none flex items-center justify-center gap-2 md:gap-3 cursor-pointer disabled:opacity-70 text-sm md:text-base">
                                 {isSubmitting ? (
                                     <span className="animate-pulse flex items-center gap-2"><RefreshCcw className="h-4 w-4 md:h-5 md:w-5 animate-spin shrink-0" /> Processing...</span>
                                 ) : incidentType === "Fled Without Payment" ? (
@@ -362,15 +305,12 @@ export default function IncidentLogger() {
                                 )}
                             </button>
                         </div>
-
                     </form>
                 </div>
             </div>
 
             {/* RIGHT COLUMN: Recent Incident Log */}
-            {/* ✅ Responsive width prevents squishing on laptops */}
             <div className="w-full xl:w-[35%] h-[500px] md:h-[600px] xl:h-auto bg-white dark:bg-[#121214] rounded-3xl shadow-sm border border-zinc-200 dark:border-white/5 flex flex-col shrink-0 min-w-0">
-
                 <div className="p-4 md:p-6 border-b border-zinc-100 dark:border-white/5 flex items-center justify-between shrink-0 bg-zinc-50 dark:bg-[#18181b] rounded-t-3xl">
                     <div className="flex items-center gap-3">
                         <div className="h-10 w-10 rounded-xl bg-zinc-900 dark:bg-white flex items-center justify-center text-white dark:text-zinc-900 shadow-inner shrink-0">
@@ -384,21 +324,19 @@ export default function IncidentLogger() {
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-3 custom-scrollbar">
-                    {incidents.map((inc) => {
+                    {incidents.map(inc => {
                         const isFled = inc.type === "Fled Without Payment";
                         const isUnknown = inc.plate === "UNKNOWN";
-
                         return (
                             <div key={inc.id} className="bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/5 p-4 rounded-2xl flex flex-col gap-3 hover:border-zinc-300 dark:hover:border-white/10 transition-colors">
-
                                 <div className="flex justify-between items-start gap-2">
                                     <div className="min-w-0">
-                                        <span className={`font-mono font-black text-xs md:text-sm px-2 py-0.5 rounded tracking-widest truncate max-w-[120px] md:max-w-[150px] inline-block ${isUnknown ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-400' :
-                                                isFled ? 'bg-red-100 dark:bg-red-500/20 text-red-800 dark:text-red-400' :
-                                                    'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white'
-                                            }`}>
-                                            {inc.plate}
-                                        </span>
+                                        <span className={`font-mono font-black text-xs md:text-sm px-2 py-0.5 rounded tracking-widest truncate max-w-[120px] md:max-w-[150px] inline-block ${isUnknown
+                                            ? "bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-400"
+                                            : isFled
+                                                ? "bg-red-100 dark:bg-red-500/20 text-red-800 dark:text-red-400"
+                                                : "bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white"
+                                            }`}>{inc.plate}</span>
                                         <p className="text-[9px] md:text-[10px] font-bold text-zinc-500 uppercase mt-2 truncate">{inc.type}</p>
                                         {inc.details && <p className="text-[9px] md:text-[10px] font-medium text-zinc-400 mt-1 line-clamp-2">{inc.details}</p>}
                                     </div>
@@ -408,28 +346,25 @@ export default function IncidentLogger() {
                                         </div>
                                     )}
                                 </div>
-
                                 <div className="flex justify-between items-center pt-3 border-t border-zinc-200 dark:border-white/5 gap-2">
-                                    <span className={`text-[8px] md:text-[9px] font-black uppercase tracking-widest flex items-center gap-1 truncate ${isUnknown ? 'text-amber-500' :
-                                            isFled ? 'text-red-500' :
-                                                'text-emerald-500'
-                                        }`}>
-                                        {isUnknown ? <Camera className="h-3 w-3 shrink-0" /> : isFled ? <Globe className="h-3 w-3 shrink-0" /> : <CheckCircle className="h-3 w-3 shrink-0" />}
+                                    <span className={`text-[8px] md:text-[9px] font-black uppercase tracking-widest flex items-center gap-1 truncate ${isUnknown ? "text-amber-500" : isFled ? "text-red-500" : "text-emerald-500"}`}>
+                                        {isUnknown ? <Camera className="h-3 w-3 shrink-0" />
+                                            : isFled ? <Globe className="h-3 w-3 shrink-0" />
+                                                : <CheckCircle className="h-3 w-3 shrink-0" />}
                                         <span className="truncate">{inc.status}</span>
                                     </span>
-                                    <p className="text-[8px] md:text-[10px] font-bold text-zinc-400 flex items-center gap-1 shrink-0"><Clock className="h-3 w-3" /> {inc.time}</p>
+                                    <p className="text-[8px] md:text-[10px] font-bold text-zinc-400 flex items-center gap-1 shrink-0">
+                                        <Clock className="h-3 w-3" /> {inc.time}
+                                    </p>
                                 </div>
                             </div>
                         );
                     })}
-
                     <div className="pt-4 text-center">
                         <p className="text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-zinc-400">End of recent logs</p>
                     </div>
                 </div>
-
             </div>
-
         </div>
     );
 }
