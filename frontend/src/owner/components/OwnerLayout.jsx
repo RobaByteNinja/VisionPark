@@ -46,14 +46,29 @@ const NAVIGATION = [
 
 const ALL_NAV = NAVIGATION.flatMap(g => g.items);
 
-const MOCK_OWNER = {
-  name: "Abel Tesfaye",
-  role: "Parking Owner",
-  avatar: "https://i.pravatar.cc/150?u=abel",
-  unreadNotifications: 3
+// ── Read the live owner profile from localStorage ─────────────────────────────
+const readOwnerProfile = () => {
+  // Attempt to parse the object saved by the System Admin (OwnerAccount.jsx)
+  // or by the Owner editing their own profile.
+  const savedData = localStorage.getItem("vp_owner_data");
+  let parsedData = {};
+  if (savedData) {
+    try {
+      parsedData = JSON.parse(savedData);
+    } catch (e) {
+      console.error("Failed to parse owner data", e);
+    }
+  }
+
+  return {
+    name: parsedData.name || "System Owner",
+    avatar: parsedData.avatar || "https://i.pravatar.cc/150?u=abel", // Fallback mock avatar
+    role: "Parking Owner",
+    unreadNotifications: 3
+  };
 };
 
-const SidebarContent = ({ collapsed, currentPath, onNavigate, onHover, onLeave }) => (
+const SidebarContent = ({ collapsed, currentPath, onNavigate, onHover, onLeave, owner }) => (
   <div className="flex flex-col h-full bg-white dark:bg-[#121214] w-full">
     <div className={`h-16 lg:h-20 flex items-center shrink-0 border-b border-zinc-200 dark:border-white/10 transition-all duration-300 ${collapsed ? 'justify-center px-0' : 'px-6 justify-start'}`}>
       <div className="flex items-center gap-2 overflow-hidden whitespace-nowrap">
@@ -66,11 +81,11 @@ const SidebarContent = ({ collapsed, currentPath, onNavigate, onHover, onLeave }
       </div>
     </div>
     <div className={`flex flex-col items-center border-b border-zinc-200 dark:border-white/10 shrink-0 transition-all duration-300 ${collapsed ? 'py-4' : 'py-6'}`}>
-      <img src={MOCK_OWNER.avatar} alt={MOCK_OWNER.name}
+      <img src={owner.avatar} alt={owner.name}
         className={`rounded-full border-2 border-emerald-500 shadow-sm object-cover transition-all duration-300 ${collapsed ? 'h-10 w-10 border' : 'h-16 w-16'}`} />
       <div className={`flex flex-col items-center overflow-hidden whitespace-nowrap transition-all duration-300 ${collapsed ? 'opacity-0 max-h-0 mt-0' : 'opacity-100 max-h-[100px] mt-3'}`}>
-        <h3 className="font-bold text-zinc-900 dark:text-white">{MOCK_OWNER.name}</h3>
-        <span className="text-xs text-zinc-500 font-medium uppercase tracking-wider">{MOCK_OWNER.role}</span>
+        <h3 className="font-bold text-zinc-900 dark:text-white">{owner.name}</h3>
+        <span className="text-xs text-zinc-500 font-medium uppercase tracking-wider">{owner.role}</span>
       </div>
     </div>
     <nav className="flex-1 overflow-y-auto py-4 px-3 custom-scrollbar" onMouseLeave={onLeave}>
@@ -106,7 +121,6 @@ const SidebarContent = ({ collapsed, currentPath, onNavigate, onHover, onLeave }
         </div>
       ))}
     </nav>
-
   </div>
 );
 
@@ -118,7 +132,24 @@ export default function OwnerLayout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [hoveredNav, setHoveredNav] = useState(null);
-  const [unreadCount, setUnreadCount] = useState(MOCK_OWNER.unreadNotifications);
+
+  // ── Live owner profile state ──────────────────────────────────────────────
+  const [owner, setOwner] = useState(readOwnerProfile);
+  const [unreadCount, setUnreadCount] = useState(owner.unreadNotifications);
+
+  useEffect(() => {
+    // Listen for the custom event dispatched by OwnerProfile after saving
+    const refresh = () => setOwner(readOwnerProfile());
+    window.addEventListener("vp_owner_profile_updated", refresh);
+
+    // Also listen to the admin event, in case the admin updates the owner account
+    window.addEventListener("vp_owner_data_updated", refresh);
+
+    return () => {
+      window.removeEventListener("vp_owner_profile_updated", refresh);
+      window.removeEventListener("vp_owner_data_updated", refresh);
+    };
+  }, []);
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -151,7 +182,7 @@ export default function OwnerLayout() {
       <aside className={`hidden lg:flex flex-col relative h-full bg-white dark:bg-[#121214] border-r border-zinc-200 dark:border-white/10 transition-[width] duration-300 ease-[cubic-bezier(0.25,0.8,0.25,1)] shrink-0 z-50 shadow-[4px_0_24px_rgba(0,0,0,0.02)] overflow-hidden
         ${isSidebarCollapsed ? 'w-[72px]' : 'w-[272px]'}`}>
         <SidebarContent collapsed={isSidebarCollapsed} currentPath={location.pathname}
-          onNavigate={handleNavigation} onHover={handleNavHover} onLeave={() => setHoveredNav(null)} />
+          onNavigate={handleNavigation} onHover={handleNavHover} onLeave={() => setHoveredNav(null)} owner={owner} />
       </aside>
 
       {hoveredNav && isSidebarCollapsed && (
@@ -172,7 +203,7 @@ export default function OwnerLayout() {
             onClick={() => setIsMobileMenuOpen(false)} />
           <aside className="relative w-[272px] max-w-[80vw] h-full bg-white dark:bg-[#121214] shadow-2xl flex flex-col animate-in slide-in-from-left duration-300">
             <SidebarContent collapsed={false} currentPath={location.pathname}
-              onNavigate={handleNavigation} onHover={() => { }} onLeave={() => { }} />
+              onNavigate={handleNavigation} onHover={() => { }} onLeave={() => { }} owner={owner} />
             <button onClick={() => setIsMobileMenuOpen(false)}
               className="absolute top-4 right-4 p-2 text-zinc-400 hover:text-zinc-900 dark:hover:text-white rounded-full hover:bg-zinc-100 dark:hover:bg-white/5 outline-none transition-colors cursor-pointer">
               <X className="h-5 w-5" />
@@ -221,35 +252,38 @@ export default function OwnerLayout() {
             <div className="relative">
               <button onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
                 className="flex items-center gap-3 p-1 pr-2 md:pr-3 rounded-full hover:bg-zinc-100 dark:hover:bg-white/5 transition-colors border border-transparent hover:border-zinc-200 dark:hover:border-white/10 outline-none cursor-pointer">
-                <img src={MOCK_OWNER.avatar} alt="Profile"
+                <img src={owner.avatar} alt="Profile"
                   className="h-8 w-8 md:h-9 md:w-9 rounded-full object-cover border border-zinc-200 dark:border-white/10" />
-                <span className="hidden md:block text-sm font-bold text-zinc-900 dark:text-white">{MOCK_OWNER.name}</span>
+                <span className="hidden md:block text-sm font-bold text-zinc-900 dark:text-white">{owner.name}</span>
                 <ChevronDown className={`h-4 w-4 text-zinc-500 hidden md:block transition-transform duration-300 ${isProfileDropdownOpen ? 'rotate-180' : ''}`} />
               </button>
               {isProfileDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-[#18181b] rounded-2xl shadow-xl border border-zinc-200 dark:border-white/10 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 z-[5000]">
-                  <div className="px-4 py-3 border-b border-zinc-100 dark:border-white/5">
-                    <p className="text-sm font-bold text-zinc-900 dark:text-white">{MOCK_OWNER.name}</p>
-                    <p className="text-xs text-zinc-500 truncate">{MOCK_OWNER.role}</p>
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setIsProfileDropdownOpen(false)} />
+                  <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-[#18181b] rounded-2xl shadow-xl border border-zinc-200 dark:border-white/10 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 z-[5000]">
+                    <div className="px-4 py-3 border-b border-zinc-100 dark:border-white/5">
+                      <p className="text-sm font-bold text-zinc-900 dark:text-white">{owner.name}</p>
+                      <p className="text-xs text-zinc-500 truncate">{owner.role}</p>
+                    </div>
+                    <div className="p-1.5 flex flex-col">
+                      <button onClick={() => handleNavigation("/owner/profile")}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors text-left outline-none cursor-pointer">
+                        <User className="h-4 w-4" /> View Profile
+                      </button>
+                      <button onClick={toggleTheme}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors text-left outline-none cursor-pointer">
+                        {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                        {theme === "dark" ? "Light Mode" : "Dark Mode"}
+                      </button>
+                    </div>
+                    <div className="p-1.5 border-t border-zinc-100 dark:border-white/5">
+                      <button onClick={handleLogout}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-bold text-red-600 dark:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl transition-colors text-left outline-none cursor-pointer">
+                        <LogOut className="h-4 w-4" /> Sign Out
+                      </button>
+                    </div>
                   </div>
-                  <div className="p-1.5 flex flex-col">
-                    <button onClick={() => handleNavigation("/owner/profile")}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors text-left outline-none cursor-pointer">
-                      <User className="h-4 w-4" /> View Profile
-                    </button>
-                    <button onClick={toggleTheme}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-white/5 rounded-xl transition-colors text-left outline-none cursor-pointer">
-                      {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-                      {theme === "dark" ? "Light Mode" : "Dark Mode"}
-                    </button>
-                  </div>
-                  <div className="p-1.5 border-t border-zinc-100 dark:border-white/5">
-                    <button onClick={handleLogout}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-bold text-red-600 dark:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl transition-colors text-left outline-none cursor-pointer">
-                      <LogOut className="h-4 w-4" /> Sign Out
-                    </button>
-                  </div>
-                </div>
+                </>
               )}
             </div>
           </div>

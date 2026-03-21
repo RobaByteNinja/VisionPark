@@ -10,14 +10,26 @@ import {
   Camera, Upload, Eye, EyeOff, RefreshCw, X
 } from "lucide-react";
 
-// --- MOCK DATA ---
-const INITIAL_PROFILE = {
-  name: "Kebede Alemu",
-  email: "kebede.visionpark@gmail.com",
-  phone: "+251 911 234 567",
-  companyName: "Alemu Parking Solutions PLC",
-  tinNumber: "0012345678",
-  avatar: "https://i.pravatar.cc/150?u=kebede"
+// --- INITIALIZATION HELPER ---
+const getInitialProfile = () => {
+  const savedData = localStorage.getItem("vp_owner_data");
+  let parsedData = {};
+  if (savedData) {
+    try {
+      parsedData = JSON.parse(savedData);
+    } catch (e) {
+      console.error("Failed to parse owner data", e);
+    }
+  }
+
+  return {
+    name: parsedData.name || "Kebede Alemu",
+    email: parsedData.email || "kebede.visionpark@gmail.com",
+    phone: parsedData.phone || "+251 911 234 567",
+    companyName: parsedData.companyName || "Alemu Parking Solutions PLC",
+    tinNumber: parsedData.tinNumber || "0012345678",
+    avatar: parsedData.avatar || "https://i.pravatar.cc/150?u=kebede"
+  };
 };
 
 // Reusable Custom Toggle Switch
@@ -53,7 +65,7 @@ const getPasswordStrength = (pass) => {
 };
 
 export default function OwnerProfile() {
-  const [profile, setProfile] = useState(INITIAL_PROFILE);
+  const [profile, setProfile] = useState(getInitialProfile);
   const [passwords, setPasswords] = useState({ current: "", new: "", confirm: "" });
 
   // Password Visibility States
@@ -75,6 +87,12 @@ export default function OwnerProfile() {
   const fileInputRef = useRef(null);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
+
+  // --- SYNC HELPER ---
+  const saveToLocalAndDispatch = (updatedProfile) => {
+    localStorage.setItem("vp_owner_data", JSON.stringify(updatedProfile));
+    window.dispatchEvent(new CustomEvent("vp_owner_profile_updated"));
+  };
 
   // --- CAMERA LOGIC (WebRTC) ---
   const startCamera = async () => {
@@ -108,7 +126,13 @@ export default function OwnerProfile() {
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
       const imageUrl = canvas.toDataURL('image/png');
-      setProfile(prev => ({ ...prev, avatar: imageUrl }));
+
+      setProfile(prev => {
+        const updated = { ...prev, avatar: imageUrl };
+        saveToLocalAndDispatch(updated); // Sync immediately
+        return updated;
+      });
+
       stopCamera();
     }
   };
@@ -126,14 +150,27 @@ export default function OwnerProfile() {
   const handleFileUpload = (e) => {
     const file = e.target.files && e.target.files[0];
     if (file) {
-      setProfile(prev => ({ ...prev, avatar: URL.createObjectURL(file) }));
+      // Use FileReader to get base64 so it can be saved to localStorage
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfile(prev => {
+          const updated = { ...prev, avatar: reader.result };
+          saveToLocalAndDispatch(updated); // Sync immediately
+          return updated;
+        });
+      };
+      reader.readAsDataURL(file);
     }
     setPhotoMenuOpen(false);
     e.target.value = null;
   };
 
   const removePhoto = () => {
-    setProfile(prev => ({ ...prev, avatar: null }));
+    setProfile(prev => {
+      const updated = { ...prev, avatar: null };
+      saveToLocalAndDispatch(updated); // Sync immediately
+      return updated;
+    });
     setPhotoMenuOpen(false);
   };
 
@@ -170,6 +207,8 @@ export default function OwnerProfile() {
   const handleSave = () => {
     setIsSaving(true);
     setTimeout(() => {
+      saveToLocalAndDispatch(profile); // Sync all text changes to the sidebar
+
       setIsSaving(false);
       setSaveSuccess(true);
       setPasswords({ current: "", new: "", confirm: "" });
