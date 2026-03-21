@@ -86,7 +86,7 @@ const getHeatmapColor = (value) => {
   return "bg-red-500";
 };
 
-// Shared Recharts tooltip style — built inside the component so it reads the live theme
+// Shared Recharts tooltip style — built inside the component so it reads the live themes
 
 export default function Analytics() {
   const { theme } = useTheme();
