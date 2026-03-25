@@ -1,16 +1,3 @@
-/**
- * COMPONENT: Operations (Command Center)
- * PURPOSE: Real-time monitoring of live cameras, system health, and incident management.
- *
- * ARCHITECTURE CONNECTIONS
- * Layer 5 (Presentation): React UI providing tabbed operational views and expandable multi-camera tiles.
- * Layer 4 (Application): FastAPI streams Edge AI events via WebSockets to update dashboard state without heavy video loads.
- * Layer 3 (AI Processing): YOLOv8 and EasyOCR run on edge devices, generating JSON event payloads (e.g., vehicle_detected).
- * Layer 2 (Data Layer): Firebase Realtime Database for active alerts; Firestore for incident report storage.
- * Layer 1 (Physical): IP Cameras at the branches capture the raw video; mobile devices used by attendants to submit reports.
- */
-
-// Operations.jsx
 import React, { useState, useEffect } from "react";
 import {
   Cctv, AlertTriangle, FileText, ShieldAlert,
@@ -67,21 +54,36 @@ export default function Operations() {
   const [incidents, setIncidents] = useState(STATIC_INCIDENTS);
   const [debtRadar, setDebtRadar] = useState([]);
 
-  // ── Pull incidents logged by attendants from localStorage ─────────────────
+  // ✅ Pull incidents logged by attendants from localStorage
   useEffect(() => {
-    try {
-      const ownerRaw = localStorage.getItem("vp_owner_incidents");
-      const debtRaw = localStorage.getItem("vp_debt_radar");
+    const loadReports = () => {
+      try {
+        const ownerRaw = localStorage.getItem("vp_owner_incidents");
+        const debtRaw = localStorage.getItem("vp_debt_radar");
 
-      if (ownerRaw) {
-        const parsed = JSON.parse(ownerRaw);
-        setIncidents([...parsed, ...STATIC_INCIDENTS]);
+        if (ownerRaw) {
+          const parsedOwner = JSON.parse(ownerRaw);
+          setIncidents([...parsedOwner, ...STATIC_INCIDENTS]);
+        } else {
+          setIncidents(STATIC_INCIDENTS);
+        }
+
+        if (debtRaw) {
+          setDebtRadar(JSON.parse(debtRaw));
+        } else {
+          setDebtRadar([]);
+        }
+      } catch (err) {
+        console.error("Error loading incidents:", err);
       }
-      if (debtRaw) {
-        setDebtRadar(JSON.parse(debtRaw));
-      }
-    } catch (_) { }
-  }, [activeTab]); // re-read whenever tab switches so new reports appear
+    };
+
+    loadReports();
+
+    // Listen for storage events (if testing across multiple browser tabs)
+    window.addEventListener("storage", loadReports);
+    return () => window.removeEventListener("storage", loadReports);
+  }, [activeTab]);
 
   const handleMarkResolved = (id) => {
     setIncidents(prev => prev.map(i => i.id === id ? { ...i, status: "Resolved" } : i));
@@ -191,8 +193,8 @@ export default function Operations() {
                 <td className="px-6 py-4 text-zinc-500">{alert.time}</td>
                 <td className="px-6 py-4">
                   <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold ${alert.status === 'Active' ? 'bg-red-100   text-red-700   dark:bg-red-500/20   dark:text-red-400' :
-                      alert.status === 'Acknowledged' ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400' :
-                        'bg-zinc-100  text-zinc-700  dark:bg-white/10     dark:text-zinc-300'
+                    alert.status === 'Acknowledged' ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400' :
+                      'bg-zinc-100  text-zinc-700  dark:bg-white/10     dark:text-zinc-300'
                     }`}>{alert.status}</span>
                 </td>
                 <td className="px-6 py-4 text-right">
@@ -220,7 +222,7 @@ export default function Operations() {
               <p className="text-[10px] text-red-500/70 mt-0.5">{debtRadar.length} vehicle{debtRadar.length > 1 ? "s" : ""} flagged for fleeing without payment</p>
             </div>
           </div>
-          <div className="p-4 md:p-5 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+          <div className="p-4 md:p-5 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 custom-scrollbar">
             {debtRadar.map(inc => (
               <div key={inc.id} className="bg-white dark:bg-black/30 border border-red-200 dark:border-red-500/20 rounded-xl p-4 flex flex-col gap-2">
                 <div className="flex items-center justify-between gap-2">
@@ -245,7 +247,7 @@ export default function Operations() {
       )}
 
       {/* Owner Incidents */}
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4 custom-scrollbar">
         {incidents.length === 0 && (
           <div className="text-center py-16 text-zinc-400 text-sm font-medium">No incidents reported yet.</div>
         )}
@@ -255,30 +257,30 @@ export default function Operations() {
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <span className="text-xs font-bold px-2 py-1 rounded-md bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 uppercase tracking-wider">{inc.category}</span>
+                    <span className="text-xs font-bold px-2 py-1 rounded-md bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 uppercase tracking-wider">{inc.category || inc.type}</span>
                     <span className="text-xs text-zinc-500 font-mono">{inc.id}</span>
                   </div>
                   <h3 className="text-base md:text-lg font-bold text-zinc-900 dark:text-white flex items-center gap-2 mt-2 flex-wrap">
                     <MapPin className="h-4 w-4 text-zinc-400 shrink-0" />
-                    <span className="truncate">{inc.branch} ({inc.zone}, {inc.spot})</span>
+                    <span className="truncate">{inc.branch || inc.location || "N/A"} ({inc.zone || "N/A"}, {inc.spot || "N/A"})</span>
                   </h3>
                 </div>
-                <span className={`px-3 py-1 rounded-xl text-xs font-bold border shrink-0 ${inc.status === 'Pending' ? 'bg-amber-50 border-amber-200 text-amber-700 dark:bg-amber-500/10 dark:border-amber-500/30' :
-                    inc.status === 'Forwarded to Authority' ? 'bg-blue-50  border-blue-200  text-blue-700  dark:bg-blue-500/10  dark:border-blue-500/30' :
-                      'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-500/10 dark:border-emerald-500/30'
+                <span className={`px-3 py-1 rounded-xl text-xs font-bold border shrink-0 ${inc.status === 'Pending' || inc.status === 'Pending Review' || inc.status === 'Admin CCTV Review Needed' ? 'bg-amber-50 border-amber-200 text-amber-700 dark:bg-amber-500/10 dark:border-amber-500/30' :
+                  inc.status === 'Forwarded to Authority' ? 'bg-blue-50  border-blue-200  text-blue-700  dark:bg-blue-500/10  dark:border-blue-500/30' :
+                    'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-500/10 dark:border-emerald-500/30'
                   }`}>
                   {inc.status}
                 </span>
               </div>
 
               <p className="text-sm text-zinc-600 dark:text-zinc-300 bg-zinc-50 dark:bg-white/5 p-4 rounded-xl border border-zinc-100 dark:border-white/5 break-words">
-                "{inc.description}"
+                "{inc.description || inc.details}"
               </p>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2">
                 <div>
                   <span className="block text-[10px] uppercase font-bold text-zinc-500 tracking-wider">Date/Time</span>
-                  <span className="text-sm font-medium text-zinc-900 dark:text-white">{inc.date}</span>
+                  <span className="text-sm font-medium text-zinc-900 dark:text-white">{inc.date || inc.time}</span>
                 </div>
                 <div>
                   <span className="block text-[10px] uppercase font-bold text-zinc-500 tracking-wider">Plates Involved</span>
@@ -286,7 +288,9 @@ export default function Operations() {
                     {inc.plates?.map(p => (
                       <span key={p} className="text-xs font-mono font-bold bg-zinc-100 dark:bg-white/10 px-1.5 py-0.5 rounded">{p}</span>
                     ))}
-                    {(!inc.plates || inc.plates.length === 0) && <span className="text-xs text-zinc-400 italic">Unknown</span>}
+                    {(!inc.plates || inc.plates.length === 0) && (
+                      <span className="text-xs font-mono font-bold bg-zinc-100 dark:bg-white/10 px-1.5 py-0.5 rounded">{inc.plate || "UNKNOWN"}</span>
+                    )}
                   </div>
                 </div>
                 <div className="sm:col-span-2">
@@ -306,14 +310,14 @@ export default function Operations() {
             {/* Actions sidebar */}
             <div className="w-full md:w-56 flex flex-col gap-3 shrink-0 border-t md:border-t-0 md:border-l border-zinc-100 dark:border-white/5 pt-4 md:pt-0 md:pl-6">
               <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-500">Actions</h4>
-              {inc.hasVideo ? (
+              {inc.hasVideo || inc.hasPhoto ? (
                 <button type="button" className="w-full flex items-center justify-center gap-2 bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-900 dark:text-white px-4 py-2.5 rounded-xl text-sm font-bold transition-colors outline-none">
                   <Video className="h-4 w-4" /> View Evidence
                 </button>
               ) : (
-                <span className="text-xs text-zinc-400 italic">No video attached</span>
+                <span className="text-xs text-zinc-400 italic">No evidence attached</span>
               )}
-              {inc.status === 'Pending' && (
+              {(inc.status === 'Pending' || inc.status === 'Pending Review' || inc.status === 'Admin CCTV Review Needed') && (
                 <>
                   <button
                     type="button"
@@ -339,6 +343,7 @@ export default function Operations() {
   return (
     <div className="w-full flex flex-col gap-6 animate-in fade-in duration-500 relative">
 
+      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-zinc-900 dark:text-white tracking-tight">Operations Center</h1>
@@ -353,15 +358,15 @@ export default function Operations() {
           { key: "health", label: "System Health", Icon: Activity },
           {
             key: "incidents", label: "Incidents", Icon: FileText,
-            badge: incidents.filter(i => i.status === "Pending").length + debtRadar.length
+            badge: incidents.filter(i => i.status === "Pending" || i.status === "Pending Review" || i.status === "Admin CCTV Review Needed").length + debtRadar.length
           },
         ].map(({ key, label, Icon, badge }) => (
           <button
             key={key}
             onClick={() => setActiveTab(key)}
             className={`flex-1 md:flex-none relative flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all outline-none ${activeTab === key
-                ? 'bg-white dark:bg-zinc-800 text-emerald-600 dark:text-emerald-400 shadow-sm'
-                : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white'
+              ? 'bg-white dark:bg-zinc-800 text-emerald-600 dark:text-emerald-400 shadow-sm'
+              : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white'
               }`}
           >
             <Icon className="h-4 w-4" /> {label}

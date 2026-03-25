@@ -15,6 +15,7 @@ import Login from "./shared/auth/Login";
 import DriverSignUp from "./shared/auth/DriverSignUp";
 import ForgotPassword from "./shared/auth/ForgotPassword";
 import PrivacyPolicy from "./shared/pages/PrivacyPolicy";
+import GuestMap from "./guest/pages/GuestMap"; // <-- Added Guest Map
 
 // --- 3. ADMIN AUTH ---
 import AdminLogin from "./shared/auth/admin/AdminLogin";
@@ -78,7 +79,7 @@ export default function App() {
           <Routes>
 
             {/* ── PUBLIC ROUTES ── */}
-            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route path="/" element={<GuestMap />} /> {/* <-- Set to GuestMap */}
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<DriverSignUp />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />

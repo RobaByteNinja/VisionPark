@@ -48,8 +48,8 @@ const driverIcon = L.divIcon({
 const createIcon = (isFocused, theme) => L.divIcon({
   className: "custom-p-marker",
   html: `<div class="flex h-10 w-10 items-center justify-center rounded-full border-2 ${isFocused
-      ? "border-amber-400 bg-emerald-500 scale-110 z-50 shadow-[0_0_20px_rgba(16,185,129,0.8)]"
-      : `${theme === "dark" ? "border-[#09090b]" : "border-white"} bg-emerald-500/80 shadow-md`
+    ? "border-amber-400 bg-emerald-500 scale-110 z-50 shadow-[0_0_20px_rgba(16,185,129,0.8)]"
+    : `${theme === "dark" ? "border-[#09090b]" : "border-white"} bg-emerald-500/80 shadow-md`
     } transition-all duration-300">
     <span class="text-sm font-bold text-zinc-950">P</span>
   </div>`,
@@ -269,8 +269,8 @@ export default function DriverMap() {
                   key={area.id}
                   onClick={() => handleMarkerClick(area.id)}
                   className={`absolute w-[85vw] max-w-[340px] rounded-3xl p-5 md:p-6 flex gap-4 md:gap-5 cursor-pointer transition-all duration-200 ease-out ${isFocused
-                      ? "bg-white dark:bg-[#1f1f22] border border-emerald-500 shadow-[0_10px_40px_rgba(16,185,129,0.3)] ring-1 ring-emerald-500"
-                      : "bg-white dark:bg-[#1f1f22] border border-zinc-200 dark:border-white/10 shadow-xl"
+                    ? "bg-white dark:bg-[#1f1f22] border border-emerald-500 shadow-[0_10px_40px_rgba(16,185,129,0.3)] ring-1 ring-emerald-500"
+                    : "bg-white dark:bg-[#1f1f22] border border-zinc-200 dark:border-white/10 shadow-xl"
                     }`}
                   style={{
                     transform: `translate3d(calc(${offset * 100}% + ${offset * 20}px), 0, 0) scale(${isFocused ? 1 : 0.85})`,
@@ -352,8 +352,8 @@ export default function DriverMap() {
                     key={spot.id}
                     onClick={() => canSelect && setSelectedSpot(spot)}
                     className={`flex flex-col p-4 rounded-xl border transition-all shrink-0 ${canSelect
-                        ? "border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/5 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 active:scale-[0.98] cursor-pointer"
-                        : "border-zinc-200 dark:border-white/5 bg-zinc-200/50 dark:bg-black/40 opacity-70 cursor-not-allowed"
+                      ? "border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/5 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 active:scale-[0.98] cursor-pointer"
+                      : "border-zinc-200 dark:border-white/5 bg-zinc-200/50 dark:bg-black/40 opacity-70 cursor-not-allowed"
                       }`}
                   >
                     <div className="flex items-center justify-between">

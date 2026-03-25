@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
     ShieldAlert, Ban, Banknote, MapPin,
     Search, Lock, CheckCircle, X,
@@ -45,6 +45,45 @@ const INITIAL_DEBTS = [
 
 export default function DebtEnforcement() {
     const [debts, setDebts] = useState(INITIAL_DEBTS);
+
+    // ✅ Dynamically pull flagged vehicles from LocalStorage
+    useEffect(() => {
+        const loadDebts = () => {
+            const savedData = localStorage.getItem("vp_debt_radar");
+            if (savedData) {
+                try {
+                    const parsed = JSON.parse(savedData);
+
+                    // Map the Incident Logger payload to the Debt Radar format
+                    const formattedSaved = parsed.map(inc => ({
+                        id: inc.id,
+                        plate: inc.plate,
+                        status: "Blocked at Entry", // Default behavior when alerting attendants
+                        location: inc.branch || "Global Watchlist",
+                        debtAmount: inc.amount || 0,
+                        reason: inc.details || inc.type,
+                        vehicleType: "Unknown Category",
+                        isClamped: false,
+                        timeFlagged: inc.time || "Just Now"
+                    }));
+
+                    setDebts([...formattedSaved, ...INITIAL_DEBTS]);
+                } catch (e) {
+                    console.error("Failed to parse debt radar data", e);
+                    setDebts(INITIAL_DEBTS);
+                }
+            } else {
+                setDebts(INITIAL_DEBTS);
+            }
+        };
+
+        loadDebts();
+
+        // Listen for storage events (if testing across tabs)
+        window.addEventListener("storage", loadDebts);
+        return () => window.removeEventListener("storage", loadDebts);
+    }, []);
+
     const [searchQuery, setSearchQuery] = useState("");
     const [filter, setFilter] = useState("All");
 
@@ -90,7 +129,17 @@ export default function DebtEnforcement() {
     const handleCollectDebt = () => {
         setIsProcessing(true);
         setTimeout(() => {
-            setDebts(debts.filter(d => d.id !== selectedVehicle.id)); // Remove from radar once paid
+            // Remove the collected debt from local state
+            const newDebts = debts.filter(d => d.id !== selectedVehicle.id);
+            setDebts(newDebts);
+
+            // Optional: Also remove it from localStorage so it doesn't reappear on refresh
+            try {
+                const rawSaved = JSON.parse(localStorage.getItem("vp_debt_radar") || "[]");
+                const updatedSaved = rawSaved.filter(r => r.id !== selectedVehicle.id);
+                localStorage.setItem("vp_debt_radar", JSON.stringify(updatedSaved));
+            } catch (e) { }
+
             setIsProcessing(false);
             setActiveModal(null);
             showToast(`Success: ${selectedVehicle.debtAmount.toFixed(2)} ETB collected from ${selectedVehicle.plate}. Debt cleared!`);
@@ -155,7 +204,6 @@ export default function DebtEnforcement() {
 
                 {/* Toolbar */}
                 <div className="p-4 md:p-6 border-b border-zinc-100 dark:border-white/5 bg-zinc-50 dark:bg-[#18181b] shrink-0">
-                    {/* ✅ Fully Responsive Flex Container with Gap and Wrap */}
                     <div className="flex flex-col lg:flex-row flex-wrap items-start lg:items-center gap-4 lg:gap-8 w-full">
 
                         <div className="relative w-full lg:max-w-sm shrink-0">
@@ -169,7 +217,6 @@ export default function DebtEnforcement() {
                             />
                         </div>
 
-                        {/* ✅ Filters gracefully wrap to next line if laptop screen is too tight */}
                         <div className="flex flex-row flex-wrap items-center gap-2 bg-white dark:bg-black/40 p-1.5 rounded-xl border border-zinc-200 dark:border-white/10 shadow-sm w-full lg:w-auto">
                             {["All", "Blocked at Entry", "Spotted in Lot"].map(f => (
                                 <button
@@ -190,7 +237,6 @@ export default function DebtEnforcement() {
 
                 {/* List Content */}
                 <div className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar">
-                    {/* ✅ Responsive Grid prevents cards from squishing on laptops */}
                     <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4 md:gap-6">
                         {filteredDebts.length === 0 ? (
                             <div className="col-span-full flex flex-col items-center justify-center py-20 text-zinc-500">
@@ -202,7 +248,7 @@ export default function DebtEnforcement() {
                             filteredDebts.map((vehicle) => {
                                 const isEntry = vehicle.status === "Blocked at Entry";
                                 const isClamped = vehicle.isClamped;
-                                const isCCTV = vehicle.reason.includes("CCTV");
+                                const isCCTV = vehicle.reason?.includes("CCTV");
 
                                 const cardBorder = isClamped ? 'border-amber-200 dark:border-amber-500/30' : 'border-red-200 dark:border-red-500/30';
                                 const cardBg = isClamped ? 'bg-amber-50/50 dark:bg-amber-500/5' : 'bg-white dark:bg-[#18181b]';
@@ -342,6 +388,7 @@ export default function DebtEnforcement() {
                                 >
                                     Cancel
                                 </button>
+
                                 {/* Premium Green for Confirm Action */}
                                 <button
                                     onClick={handleClampVehicle}
@@ -351,6 +398,7 @@ export default function DebtEnforcement() {
                                     {isProcessing ? <span className="animate-pulse">Processing...</span> : "Confirm Clamp"}
                                 </button>
                             </div>
+
                         </div>
                     </div>
                 </div>
