@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Navigation, MapPin, Car, CheckCircle, X, AlertTriangle, Clock } from "lucide-react";
+import { Navigation, MapPin, Car, CheckCircle, X, AlertTriangle, Clock, ExternalLink } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { StatusBadge } from "../../components/ui/StatusBadge";
 
@@ -13,8 +13,9 @@ export default function ActiveSession() {
   const [spotData, setSpotData] = useState(() => JSON.parse(localStorage.getItem("vp_selected_spot")) || { id: "--", floor: "--", deposit: 100 });
   const [areaData, setAreaData] = useState(() => JSON.parse(localStorage.getItem("vp_selected_area")) || { name: "--", lat: 0, lon: 0 });
   const driverPayment = localStorage.getItem("vp_driver_payment") || "Telebirr";
-  
-  const [isNavModalOpen, setIsNavModalOpen] = useState(false);
+
+  // ✅ New state for Google Maps confirmation modal
+  const [pendingMapRoute, setPendingMapRoute] = useState(null);
 
   // --- TIMERS & TRACKING STATE ---
   const [secondsLeft, setSecondsLeft] = useState(() => {
@@ -30,16 +31,16 @@ export default function ActiveSession() {
 
   const [parkedSeconds, setParkedSeconds] = useState(() => {
     if (localStorage.getItem("vp_session_state") === "SystemReceipt") {
-        return parseInt(localStorage.getItem("vp_final_parked_seconds") || "0", 10);
+      return parseInt(localStorage.getItem("vp_final_parked_seconds") || "0", 10);
     }
-    return 0; 
+    return 0;
   });
 
   const [entryTimeStr, setEntryTimeStr] = useState(() => {
     const startTs = localStorage.getItem("vp_session_start_time");
-    return startTs ? new Date(parseInt(startTs, 10)).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "--:--";
+    return startTs ? new Date(parseInt(startTs, 10)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "--:--";
   });
-  
+
   const [exitTimeStr, setExitTimeStr] = useState(() => localStorage.getItem("vp_session_exit_time") || "--:--");
 
   // --- RESERVED COUNTDOWN TIMER ---
@@ -55,7 +56,7 @@ export default function ActiveSession() {
             setSessionState("Expired");
             setSecondsLeft(0);
             localStorage.setItem("vp_session_state", "Expired");
-            window.dispatchEvent(new Event("vp_session_changed")); 
+            window.dispatchEvent(new Event("vp_session_changed"));
           } else {
             setSecondsLeft(remaining);
           }
@@ -72,8 +73,8 @@ export default function ActiveSession() {
       const startTs = localStorage.getItem("vp_session_start_time");
       if (startTs) {
         const startTime = parseInt(startTs, 10);
-        setEntryTimeStr(new Date(startTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}));
-        
+        setEntryTimeStr(new Date(startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+
         // Tick up every second
         timer = setInterval(() => {
           setParkedSeconds(Math.floor((Date.now() - startTime) / 1000));
@@ -94,24 +95,24 @@ export default function ActiveSession() {
 
   const handleSystemTriggeredExit = () => {
     const now = Date.now();
-    const exitTime = new Date(now).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    const exitTime = new Date(now).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const ts = new Date(now).toLocaleString();
-    
+
     // Calculate final duration
     const startTs = localStorage.getItem("vp_session_start_time");
     const finalSecs = startTs ? Math.floor((now - parseInt(startTs, 10)) / 1000) : 0;
-    
+
     setReceiptTimestamp(ts);
     setExitTimeStr(exitTime);
     setParkedSeconds(finalSecs);
-    
+
     localStorage.setItem("vp_session_exit_time", exitTime);
     localStorage.setItem("vp_final_parked_seconds", finalSecs);
     localStorage.setItem("vp_session_state", "SystemReceipt");
     localStorage.setItem("vp_payment_timestamp", ts);
-    
+
     setSessionState("SystemReceipt");
-    window.dispatchEvent(new Event("vp_session_changed")); 
+    window.dispatchEvent(new Event("vp_session_changed"));
   };
 
   // --- FORMATTERS & CALCULATORS ---
@@ -133,10 +134,12 @@ export default function ActiveSession() {
     return Math.max(10, Math.ceil(seconds / 60) * 1);
   };
 
-  const executeNavigation = () => {
-    setIsNavModalOpen(false);
-    const deepLink = `https://www.google.com/maps/dir/?api=1&origin=$$${DRIVER_LOC[0]},${DRIVER_LOC[1]}&destination=${areaData.lat},${areaData.lon}&travelmode=driving`;
-    window.open(deepLink, "_blank");
+  const confirmOpenGoogleMaps = () => {
+    if (pendingMapRoute) {
+      const deepLink = `https://www.google.com/maps/dir/?api=1&origin=$$$${DRIVER_LOC[0]},${DRIVER_LOC[1]}&destination=${pendingMapRoute.lat},${pendingMapRoute.lon}&travelmode=driving`;
+      window.open(deepLink, "_blank", "noopener,noreferrer");
+      setPendingMapRoute(null);
+    }
   };
 
   const closeSession = () => {
@@ -147,10 +150,11 @@ export default function ActiveSession() {
     localStorage.removeItem("vp_final_parked_seconds");
     localStorage.removeItem("vp_selected_area");
     localStorage.removeItem("vp_selected_spot");
-    window.dispatchEvent(new Event("vp_session_changed")); 
+    window.dispatchEvent(new Event("vp_session_changed"));
     navigate("/driver/map");
   };
 
+  // ── No Active Session State ──
   if (sessionState === "Discovery" || sessionState === "PaymentSuccess") {
     return (
       <div className="relative h-full w-full flex flex-col items-center justify-center bg-[#f4f4f5] dark:bg-[#09090b] px-6 text-center transition-colors duration-500">
@@ -160,9 +164,9 @@ export default function ActiveSession() {
         <p className="text-base md:text-lg lg:text-xl font-medium text-zinc-600 dark:text-zinc-400 max-w-sm mx-auto mb-8 leading-relaxed">
           No active session found. Head to the map to reserve a spot.
         </p>
-        <button 
-          type="button" 
-          onClick={() => navigate("/driver/map")} 
+        <button
+          type="button"
+          onClick={() => navigate("/driver/map")}
           className="h-12 md:h-14 lg:h-16 px-8 rounded-xl bg-emerald-500 text-zinc-950 font-bold text-sm md:text-base lg:text-lg tracking-wide uppercase shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_0_30px_rgba(16,185,129,0.5)] hover:bg-emerald-400 active:scale-95 transition-all outline-none cursor-pointer"
         >
           Go to Map
@@ -172,11 +176,11 @@ export default function ActiveSession() {
   }
 
   return (
-    // ✅ Changed min-h to h-full so it perfectly matches DriverLayout constraints
-    <div className="relative h-full w-full overflow-y-auto bg-[#f4f4f5] dark:bg-[#09090b] pt-24 px-4 md:px-8 flex flex-col items-center overscroll-none transition-colors duration-500">
-      
+    // ✅ Main Container: Added custom-scrollbar 
+    <div className="custom-scrollbar relative h-full w-full overflow-y-auto bg-[#f4f4f5] dark:bg-[#09090b] pt-24 px-4 md:px-8 flex flex-col items-center overscroll-none transition-colors duration-500">
+
       <div className="relative z-10 w-full max-w-md md:max-w-3xl lg:max-w-4xl mx-auto flex flex-col gap-6 lg:gap-8">
-        
+
         {/* --- 1. RESERVED STATE --- */}
         {sessionState === "Reserved" && (
           <div className="w-full bg-white dark:bg-[#0f0f12]/95 border border-zinc-200 dark:border-white/5 rounded-3xl p-6 md:p-8 lg:p-10 shadow-xl dark:shadow-2xl transition-all flex flex-col">
@@ -215,10 +219,10 @@ export default function ActiveSession() {
 
                 <div className="flex flex-col sm:flex-row gap-3 md:gap-4 w-full">
                   <button type="button" onClick={handleSimulateArrival} className="w-full sm:flex-[1] h-14 lg:h-16 flex items-center justify-center gap-2 rounded-xl border border-dashed border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-white/5 text-zinc-500 dark:text-zinc-400 font-bold text-xs lg:text-sm tracking-wide uppercase hover:bg-zinc-100 dark:hover:bg-white/10 transition-colors outline-none cursor-pointer">
-                     [Simulate Arrival]
+                    [Simulate Arrival]
                   </button>
 
-                  <button type="button" onClick={() => setIsNavModalOpen(true)} className="w-full sm:flex-[2] h-14 lg:h-16 flex items-center justify-center gap-2 rounded-xl bg-emerald-500 text-zinc-950 font-bold text-sm lg:text-base tracking-wide shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:bg-emerald-400 transition-colors outline-none cursor-pointer">
+                  <button type="button" onClick={() => setPendingMapRoute({ lat: areaData.lat, lon: areaData.lon, name: areaData.name })} className="w-full sm:flex-[2] h-14 lg:h-16 flex items-center justify-center gap-2 rounded-xl bg-emerald-500 text-zinc-950 font-bold text-sm lg:text-base tracking-wide shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:bg-emerald-400 transition-colors outline-none cursor-pointer">
                     <Navigation className="h-5 w-5 md:h-6 md:w-6" /> Navigate
                   </button>
                 </div>
@@ -230,7 +234,7 @@ export default function ActiveSession() {
         {/* --- 2. SECURED STATE (LIVE PARKING) --- */}
         {sessionState === "Secured" && (
           <div className="w-full bg-white dark:bg-[#0f0f12]/95 border border-emerald-500/30 rounded-3xl p-6 md:p-12 shadow-xl dark:shadow-2xl flex flex-col items-center">
-            
+
             <div className="flex w-full items-center justify-between mb-2">
               <div className="min-w-0 pr-4">
                 <h3 className="text-zinc-900 dark:text-white font-bold text-lg md:text-2xl truncate">Spot {spotData.id}</h3>
@@ -246,11 +250,11 @@ export default function ActiveSession() {
               <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-500 uppercase font-bold tracking-widest mb-4">
                 <Clock className="h-4 w-4 md:h-5 md:w-5 animate-spin-slow" /> Time Parked
               </div>
-              
+
               <h1 className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-bold font-mono text-zinc-900 dark:text-white tracking-tight drop-shadow-md mb-8 whitespace-nowrap">
                 {formatParkedTime(parkedSeconds)}
               </h1>
-              
+
               <div className="grid grid-cols-3 gap-2 md:gap-4 w-full text-center bg-zinc-50 dark:bg-black/20 rounded-2xl p-4 md:p-6 border border-zinc-100 dark:border-white/5">
                 <div>
                   <p className="text-[10px] md:text-xs lg:text-sm text-zinc-500 dark:text-zinc-400 uppercase font-bold tracking-wider mb-1">Entry Time</p>
@@ -284,66 +288,98 @@ export default function ActiveSession() {
           </div>
         )}
 
-        {/* ✅ INVISIBLE SPACER TO PUSH CONTENT ABOVE THE NAV BAR */}
+        {/* INVISIBLE SPACER TO PUSH CONTENT ABOVE THE NAV BAR */}
         <div className="h-32 md:h-40 w-full shrink-0"></div>
 
       </div>
 
-      {/* --- 4. RECEIPT MODAL --- */}
+      {/* --- 4. DIGITAL RECEIPT MODAL --- */}
+      {/* ✅ RESTRUCTURED: Flex-col layout prevents scrollbar from going beneath fixed header/footer */}
       {sessionState === "SystemReceipt" && (
-        <div className="fixed inset-0 z-[6000] bg-zinc-900/40 dark:bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="relative w-full max-w-md md:max-w-lg bg-white dark:bg-[#121214] border border-emerald-500/50 rounded-3xl p-6 md:p-8 lg:p-10 shadow-2xl max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-300">
-            <button type="button" onClick={closeSession} className="absolute top-5 right-5 h-8 w-8 flex items-center justify-center rounded-full bg-zinc-100 dark:bg-white/5 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-white/10 hover:text-zinc-900 dark:hover:text-white cursor-pointer outline-none transition-colors"><X className="h-5 w-5" /></button>
-            <div className="flex justify-center mb-4 mt-2"><CheckCircle className="h-16 w-16 md:h-20 md:w-20 text-emerald-500 drop-shadow-[0_0_15px_rgba(16,185,129,0.5)]" /></div>
-            <h2 className="text-xl md:text-2xl lg:text-3xl font-bold text-zinc-900 dark:text-white text-center mb-8">Payment sent successfully</h2>
-            
-            {/* DYNAMIC RECEIPT DATA */}
-            <div className="space-y-4">
-              <div className="flex justify-between text-sm md:text-base lg:text-lg"><span className="text-zinc-500 dark:text-zinc-400">Entry Time</span><span className="font-bold text-zinc-900 dark:text-white">{entryTimeStr}</span></div>
-              <div className="flex justify-between text-sm md:text-base lg:text-lg"><span className="text-zinc-500 dark:text-zinc-400">Exit Time</span><span className="font-bold text-zinc-900 dark:text-white">{exitTimeStr}</span></div>
-              
-              <div className="pt-3 border-t border-zinc-200 dark:border-white/10 flex justify-between items-center text-sm md:text-base lg:text-lg"><span className="text-zinc-500 dark:text-zinc-400">Total Duration</span><span className="font-bold text-zinc-900 dark:text-white font-mono tracking-wider">{formatParkedTime(parkedSeconds)}</span></div>
-              
-              <div className="pt-3 border-t border-zinc-200 dark:border-white/10 flex justify-between text-sm md:text-base lg:text-lg"><span className="text-zinc-500 dark:text-zinc-400">Reservation fee</span><span className="font-bold text-zinc-900 dark:text-white">{spotData.deposit} ETB</span></div>
-              <div className="flex justify-between text-sm md:text-base lg:text-lg"><span className="text-zinc-500 dark:text-zinc-400">Parking fee</span><span className="font-bold text-zinc-900 dark:text-white">{calculateLiveCost(parkedSeconds)} ETB</span></div>
-              
-              <div className="pt-4 border-t border-zinc-200 dark:border-white/10 flex justify-between items-center text-lg md:text-xl lg:text-2xl mt-2"><span className="font-bold text-zinc-900 dark:text-white">Total Paid</span><span className="font-bold text-emerald-600 dark:text-emerald-400">{spotData.deposit + calculateLiveCost(parkedSeconds)} ETB</span></div>
+        <div className="fixed inset-0 z-[6000] bg-zinc-900/60 dark:bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="relative w-full max-w-md md:max-w-lg bg-white dark:bg-[#121214] border border-zinc-200 dark:border-white/10 rounded-3xl shadow-2xl max-h-[85vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-300">
+
+            {/* Modal Header */}
+            <div className="flex justify-between items-center p-6 md:p-8 pb-4 border-b border-zinc-200 dark:border-white/10 shrink-0">
+              <h2 className="text-xl md:text-2xl lg:text-3xl font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+                <CheckCircle className="h-6 w-6 md:h-8 md:w-8 text-emerald-500" />
+                Digital Receipt
+              </h2>
+              <button type="button" onClick={closeSession} className="h-8 w-8 md:h-10 md:w-10 flex items-center justify-center rounded-full bg-zinc-100 dark:bg-white/5 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-white/10 hover:text-zinc-900 dark:hover:text-white cursor-pointer outline-none active:scale-90 transition-transform"><X className="h-5 w-5 md:h-6 md:w-6" /></button>
             </div>
 
-            <div className="flex flex-col gap-3 mt-6 lg:mt-8">
-              <div className="flex items-center justify-between p-4 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20">
-                <div className="flex flex-col">
-                  <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-500">Billed To Merchant</span>
-                  <span className="text-sm md:text-base lg:text-lg font-bold text-zinc-900 dark:text-white">VisionPark System</span>
+            {/* Modal Scrollable Body */}
+            <div className="overflow-y-auto p-6 md:p-8 flex-1 overscroll-contain custom-scrollbar">
+              <div className="flex justify-center mb-4"><CheckCircle className="h-16 w-16 md:h-20 md:w-20 text-emerald-500 drop-shadow-[0_0_15px_rgba(16,185,129,0.5)]" /></div>
+              <h2 className="text-xl md:text-2xl lg:text-3xl font-bold text-zinc-900 dark:text-white text-center mb-8">Payment sent successfully</h2>
+
+              <div className="space-y-4 md:space-y-5">
+                <div className="flex justify-between text-sm md:text-base lg:text-lg"><span className="text-zinc-500 dark:text-zinc-400">Entry Time</span><span className="font-bold text-zinc-900 dark:text-white">{entryTimeStr}</span></div>
+                <div className="flex justify-between text-sm md:text-base lg:text-lg"><span className="text-zinc-500 dark:text-zinc-400">Exit Time</span><span className="font-bold text-zinc-900 dark:text-white">{exitTimeStr}</span></div>
+
+                <div className="pt-3 border-t border-zinc-200 dark:border-white/10 flex justify-between items-center text-sm md:text-base lg:text-lg"><span className="text-zinc-500 dark:text-zinc-400">Total Duration</span><span className="font-bold text-zinc-900 dark:text-white font-mono tracking-wider">{formatParkedTime(parkedSeconds)}</span></div>
+
+                <div className="pt-3 border-t border-zinc-200 dark:border-white/10 flex justify-between text-sm md:text-base lg:text-lg"><span className="text-zinc-500 dark:text-zinc-400">Reservation fee</span><span className="font-bold text-zinc-900 dark:text-white">{spotData.deposit} ETB</span></div>
+                <div className="flex justify-between text-sm md:text-base lg:text-lg"><span className="text-zinc-500 dark:text-zinc-400">Parking fee</span><span className="font-bold text-zinc-900 dark:text-white">{calculateLiveCost(parkedSeconds)} ETB</span></div>
+
+                <div className="pt-4 border-t border-zinc-200 dark:border-white/10 flex justify-between items-center text-lg md:text-xl lg:text-2xl mt-2"><span className="font-bold text-zinc-900 dark:text-white">Total Paid</span><span className="font-bold text-emerald-600 dark:text-emerald-400">{spotData.deposit + calculateLiveCost(parkedSeconds)} ETB</span></div>
+              </div>
+
+              <div className="flex flex-col gap-3 mt-6 lg:mt-8">
+                <div className="flex items-center justify-between p-4 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-500">Billed To Merchant</span>
+                    <span className="text-sm md:text-base lg:text-lg font-bold text-zinc-900 dark:text-white">VisionPark System</span>
+                  </div>
+                  <CheckCircle className="h-5 w-5 md:h-6 md:w-6 text-emerald-500" />
                 </div>
-                <CheckCircle className="h-5 w-5 md:h-6 md:w-6 text-emerald-500" />
-              </div>
 
-              <div className="bg-zinc-50 dark:bg-black/40 rounded-xl p-4 md:p-5 text-left border border-zinc-200 dark:border-white/5">
-                <p className="text-sm md:text-base lg:text-lg text-zinc-500 dark:text-zinc-400 mb-1 flex justify-between gap-4">
-                  <span className="shrink-0">Paid From:</span> <span className="text-zinc-900 dark:text-white font-bold text-right truncate pl-2">{driverPayment} via Chapa</span>
-                </p>
-                <p className="text-sm md:text-base lg:text-lg text-zinc-500 dark:text-zinc-400 flex justify-between gap-4">
-                  <span className="shrink-0">Timestamp:</span> <span className="text-zinc-900 dark:text-white font-bold text-right truncate pl-2">{receiptTimestamp}</span>
-                </p>
+                <div className="bg-zinc-50 dark:bg-black/40 rounded-xl p-4 md:p-5 text-left border border-zinc-200 dark:border-white/5">
+                  <p className="text-sm md:text-base lg:text-lg text-zinc-500 dark:text-zinc-400 mb-1 flex justify-between gap-4">
+                    <span className="shrink-0">Paid From:</span> <span className="text-zinc-900 dark:text-white font-bold text-right truncate pl-2">{driverPayment} via Chapa</span>
+                  </p>
+                  <p className="text-sm md:text-base lg:text-lg text-zinc-500 dark:text-zinc-400 flex justify-between gap-4">
+                    <span className="shrink-0">Time:</span> <span className="text-zinc-900 dark:text-white font-bold text-right truncate pl-2">{receiptTimestamp}</span>
+                  </p>
+                </div>
               </div>
             </div>
 
-            <button type="button" onClick={closeSession} className="w-full h-12 md:h-14 lg:h-16 mt-6 flex items-center justify-center rounded-xl bg-zinc-100 dark:bg-white/10 text-zinc-900 dark:text-white font-bold text-sm md:text-base tracking-wide uppercase hover:bg-zinc-200 dark:hover:bg-white/20 transition-colors outline-none cursor-pointer">Done</button>
+            {/* Modal Footer */}
+            <div className="p-6 md:p-8 pt-4 border-t border-zinc-200 dark:border-white/10 shrink-0">
+              <button type="button" onClick={closeSession} className="w-full h-12 md:h-14 lg:h-16 flex items-center justify-center rounded-xl bg-zinc-100 dark:bg-white/10 text-zinc-900 dark:text-white font-bold text-sm md:text-base tracking-wide uppercase hover:bg-zinc-200 dark:hover:bg-white/20 transition-colors outline-none cursor-pointer">Done</button>
+            </div>
+
           </div>
         </div>
       )}
 
-      {/* --- NAVIGATION MODAL --- */}
-      {isNavModalOpen && (
-        <div className="fixed inset-0 z-[7000] bg-zinc-900/60 dark:bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="relative w-full max-w-sm md:max-w-md lg:max-w-lg bg-white dark:bg-[#121214]/95 border border-zinc-200 dark:border-white/10 rounded-3xl p-8 shadow-2xl text-center animate-in zoom-in-95 duration-200">
-            <Navigation className="h-12 w-12 md:h-16 md:w-16 lg:h-20 lg:w-20 text-blue-500 mx-auto mb-4" />
-            <h2 className="text-xl md:text-2xl lg:text-3xl font-bold text-zinc-900 dark:text-white mb-2">Open Google Maps?</h2>
-            <p className="text-sm md:text-base lg:text-lg text-zinc-500 dark:text-zinc-400 mb-8">You are about to leave VisionPark to get live routing from your current location to {areaData.name}.</p>
-            <div className="flex gap-3">
-              <button type="button" onClick={() => setIsNavModalOpen(false)} className="flex-1 h-12 md:h-14 lg:h-16 rounded-xl border border-zinc-300 dark:border-white/10 text-zinc-700 dark:text-white font-bold text-sm md:text-base hover:bg-zinc-100 dark:hover:bg-white/5 transition outline-none cursor-pointer">Cancel</button>
-              <button type="button" onClick={executeNavigation} className="flex-1 h-12 md:h-14 lg:h-16 rounded-xl bg-blue-600 text-white font-bold text-sm md:text-base hover:bg-blue-500 shadow-[0_0_15px_rgba(37,99,235,0.4)] transition outline-none cursor-pointer">Continue</button>
+      {/* ── EXTERNAL MAP NAVIGATION MODAL ─────────────────────────────────── */}
+      {pendingMapRoute && (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-zinc-900/60 dark:bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-sm bg-white dark:bg-[#18181b] rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-300">
+            <div className="p-6 text-center">
+              <div className="mx-auto w-16 h-16 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-500 rounded-full flex items-center justify-center mb-4 shadow-inner">
+                <Navigation className="h-8 w-8" />
+              </div>
+              <h3 className="font-bold text-xl text-zinc-900 dark:text-white mb-2">Leaving VisionPark</h3>
+              <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-6">
+                You are about to leave the VisionPark app to open Google Maps for directions to <strong className="text-zinc-900 dark:text-zinc-300">{pendingMapRoute.name}</strong>. Do you want to continue?
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setPendingMapRoute(null)}
+                  className="flex-1 py-3 rounded-xl font-bold text-sm bg-zinc-100 hover:bg-zinc-200 text-zinc-700 dark:bg-white/5 dark:hover:bg-white/10 dark:text-zinc-300 transition-colors outline-none cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmOpenGoogleMaps}
+                  className="flex-1 py-3 rounded-xl font-bold text-sm bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/20 transition-all outline-none cursor-pointer flex items-center justify-center gap-2"
+                >
+                  Open Maps <ExternalLink className="h-4 w-4" />
+                </button>
+              </div>
             </div>
           </div>
         </div>

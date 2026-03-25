@@ -103,7 +103,8 @@ export default function Shift() {
 
         return createPortal(
             <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-                <div className="max-w-md w-full bg-white dark:bg-[#18181b] rounded-2xl shadow-2xl flex flex-col border border-transparent dark:border-white/10 overflow-hidden max-h-[95dvh] overflow-y-auto">
+                {/* ✅ Added custom-scrollbar here to apply the thin style */}
+                <div className="max-w-md w-full bg-white dark:bg-[#18181b] rounded-2xl shadow-2xl flex flex-col border border-transparent dark:border-white/10 overflow-hidden max-h-[95dvh] overflow-y-auto custom-scrollbar">
 
                     {/* Header */}
                     <div className="bg-emerald-500 p-8 pt-10 flex flex-col items-center justify-center text-zinc-950 relative shrink-0">

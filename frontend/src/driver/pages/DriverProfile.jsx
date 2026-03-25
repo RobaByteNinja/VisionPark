@@ -3,9 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { Header } from "../../components/layout/Header";
 import { useTheme } from "../../context/ThemeContext";
 import { useScroll } from "../../context/ScrollContext";
-import { 
-  User, Car, CreditCard, Building2, Bell, HelpCircle, 
-  LogOut, Camera, ChevronRight, ChevronLeft, Fingerprint, 
+import {
+  User, Car, CreditCard, Building2, Bell, HelpCircle,
+  LogOut, Camera, ChevronRight, ChevronLeft, Fingerprint,
   Check, Image as ImageIcon, Trash2, X, Edit2
 } from "lucide-react";
 
@@ -25,11 +25,11 @@ export default function DriverProfile() {
   const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [showLiveCamera, setShowLiveCamera] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
-  
+
   // Data pulls from LocalStorage on mount
   const [userName, setUserName] = useState(() => localStorage.getItem("vp_driver_name") || "Abebe Kebede");
   const [userEmail, setUserEmail] = useState(() => localStorage.getItem("vp_driver_email") || "abebe.k@example.com");
-  const [userPhone, setUserPhone] = useState(() => localStorage.getItem("vp_driver_phone") || "+251 91 123 4567"); 
+  const [userPhone, setUserPhone] = useState(() => localStorage.getItem("vp_driver_phone") || "+251 91 123 4567");
   const [profilePhoto, setProfilePhoto] = useState(() => localStorage.getItem("vp_driver_photo") || null);
   const [vehicleType] = useState(() => localStorage.getItem("vp_driver_vehicle") || "Public Transport Vehicles | Upto 12 Seats");
   const [licensePlate] = useState(() => localStorage.getItem("vp_driver_license_plate") || "AA 0123456");
@@ -39,7 +39,7 @@ export default function DriverProfile() {
 
   // Editable Form State
   const [editForm, setEditForm] = useState({ name: userName, email: userEmail, phone: userPhone });
-  
+
   // Isolated Error States for perfect typing experience
   const [editNameError, setEditNameError] = useState("");
   const [editEmailError, setEditEmailError] = useState("");
@@ -90,7 +90,7 @@ export default function DriverProfile() {
       const typos = {
         'gmai.com': 'gmail.com', 'gmal.com': 'gmail.com', 'gmail.co': 'gmail.com', 'gmail.c': 'gmail.com',
         'yaho.com': 'yahoo.com', 'yahoo.co': 'yahoo.com', 'yhoo.com': 'yahoo.com', 'yaho.co': 'yahoo.com',
-        'outloo.com': 'outlook.com', 'outlook.co': 'outlook.com', 
+        'outloo.com': 'outlook.com', 'outlook.co': 'outlook.com',
         'hotmail.co': 'hotmail.com', 'hotmal.com': 'hotmail.com'
       };
 
@@ -140,13 +140,13 @@ export default function DriverProfile() {
     }
 
     // Clear error instantly while typing a valid prefix
-    setEditPhoneError(""); 
+    setEditPhoneError("");
 
     // Debounce the "Incomplete" warning
     const timer = setTimeout(() => {
       const remaining = expectedLength - phoneRaw.length;
       setEditPhoneError(`Incomplete number. Needs ${remaining} more digits.`);
-    }, 1200); 
+    }, 1200);
 
     return () => clearTimeout(timer);
   }, [editForm.phone]);
@@ -154,17 +154,17 @@ export default function DriverProfile() {
   // --- EDIT PROFILE SAVE LOGIC ---
   const handleSaveProfile = () => {
     if (editNameError || editEmailError || editPhoneError) return;
-    
+
     // Save to local storage
     localStorage.setItem("vp_driver_name", editForm.name.trim());
     localStorage.setItem("vp_driver_email", editForm.email.trim());
-    localStorage.setItem("vp_driver_phone", editForm.phone.trim()); 
-    
+    localStorage.setItem("vp_driver_phone", editForm.phone.trim());
+
     // Update local state
     setUserName(editForm.name.trim());
     setUserEmail(editForm.email.trim());
-    setUserPhone(editForm.phone.trim()); 
-    
+    setUserPhone(editForm.phone.trim());
+
     // Hide Modal & Broadcast to Header
     setShowEditProfile(false);
     window.dispatchEvent(new Event("vp_profile_updated"));
@@ -207,21 +207,21 @@ export default function DriverProfile() {
       canvas.width = videoRef.current.videoWidth;
       canvas.height = videoRef.current.videoHeight;
       const ctx = canvas.getContext("2d");
-      
+
       ctx.translate(canvas.width, 0);
       ctx.scale(-1, 1);
       ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-      
+
       const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
-      
+
       try {
         localStorage.setItem("vp_driver_photo", dataUrl);
         setProfilePhoto(dataUrl);
-        window.dispatchEvent(new Event("vp_photo_updated")); 
+        window.dispatchEvent(new Event("vp_photo_updated"));
       } catch (e) {
         alert("Photo is too large to save in local demo storage.");
       }
-      
+
       stopCamera();
     }
   };
@@ -248,17 +248,17 @@ export default function DriverProfile() {
           const scaleSize = MAX_WIDTH / img.width;
           canvas.width = MAX_WIDTH;
           canvas.height = img.height * scaleSize;
-          
+
           const ctx = canvas.getContext("2d");
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          
+
           const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.7);
-          
+
           try {
             localStorage.setItem("vp_driver_photo", compressedDataUrl);
             setProfilePhoto(compressedDataUrl);
-            window.dispatchEvent(new Event("vp_photo_updated")); 
-          } catch(err) {
+            window.dispatchEvent(new Event("vp_photo_updated"));
+          } catch (err) {
             alert("File is too large to save.");
           }
           setShowPhotoModal(false);
@@ -271,7 +271,7 @@ export default function DriverProfile() {
   const handleRemovePhoto = () => {
     setProfilePhoto(null);
     localStorage.removeItem("vp_driver_photo");
-    window.dispatchEvent(new Event("vp_photo_updated")); 
+    window.dispatchEvent(new Event("vp_photo_updated"));
     setShowPhotoModal(false);
   };
 
@@ -292,7 +292,7 @@ export default function DriverProfile() {
         localStorage.removeItem(key);
       }
     });
-    window.dispatchEvent(new Event("vp_photo_updated")); 
+    window.dispatchEvent(new Event("vp_photo_updated"));
     window.dispatchEvent(new Event("vp_profile_updated"));
     navigate("/login", { replace: true });
   };
@@ -301,7 +301,8 @@ export default function DriverProfile() {
     return (
       <div className="relative h-[100dvh] w-full overflow-hidden bg-[#f4f4f5] dark:bg-[#09090b] flex flex-col">
         <Header />
-        <div className="flex-1 overflow-y-auto pt-24 px-4 md:px-8 pb-32 md:pb-40 transition-colors duration-500 overscroll-contain" onScroll={handleScroll}>
+        {/* ✅ Added "auth-page" class */}
+        <div className="auth-page flex-1 overflow-y-auto pt-24 px-4 md:px-8 pb-32 md:pb-40 transition-colors duration-500 overscroll-contain" onScroll={handleScroll}>
           <div className="w-full max-w-2xl lg:max-w-3xl mx-auto flex flex-col">
             <div className="flex items-center gap-4 mb-6 md:mb-8">
               <button onClick={() => setActiveView("main")} className="h-10 w-10 md:h-12 md:w-12 flex items-center justify-center rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white hover:bg-zinc-300 dark:hover:bg-zinc-700 transition outline-none cursor-pointer"><ChevronLeft className="h-6 w-6 md:h-7 md:w-7" /></button>
@@ -333,9 +334,10 @@ export default function DriverProfile() {
   return (
     <div className="relative h-[100dvh] w-full overflow-hidden bg-[#f4f4f5] dark:bg-[#09090b] flex flex-col">
       <Header />
-      <div className="flex-1 overflow-y-auto pt-24 px-4 md:px-8 pb-32 md:pb-40 transition-colors duration-500 overscroll-contain" onScroll={handleScroll}>
+      {/* ✅ Added "auth-page" class */}
+      <div className="auth-page flex-1 overflow-y-auto pt-24 px-4 md:px-8 pb-32 md:pb-40 transition-colors duration-500 overscroll-contain" onScroll={handleScroll}>
         <div className="w-full max-w-2xl lg:max-w-3xl mx-auto flex flex-col">
-          
+
           {/* PROFILE HEADER SECTION */}
           <div className="relative flex flex-col items-center mb-8 md:mb-10">
             <div className="relative mb-4 md:mb-6 group cursor-pointer" onClick={() => setShowPhotoModal(true)}>
@@ -346,12 +348,12 @@ export default function DriverProfile() {
                 <Camera className="h-4 w-4 md:h-5 md:w-5" />
               </div>
             </div>
-            
+
             <input type="file" ref={galleryInputRef} onChange={handleGalleryUpload} accept="image/*" className="hidden" />
 
             <div className="flex items-center gap-3">
               <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-zinc-900 dark:text-white tracking-tight">{userName}</h2>
-              <button 
+              <button
                 onClick={openEditModal}
                 className="p-1.5 md:p-2 bg-zinc-200 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white rounded-full transition-colors outline-none"
               >
@@ -362,7 +364,7 @@ export default function DriverProfile() {
           </div>
 
           <div className="flex flex-col gap-6 md:gap-8">
-            
+
             {/* VISIONPARK WALLET CARD */}
             <div className="w-full bg-gradient-to-br from-emerald-400 to-emerald-600 dark:from-emerald-500 dark:to-emerald-700 rounded-2xl md:rounded-3xl p-6 md:p-8 shadow-lg shadow-emerald-500/20 text-white flex justify-between items-center transform transition-transform hover:scale-[1.02]">
               <div>
@@ -382,7 +384,7 @@ export default function DriverProfile() {
                 </div>
                 <span className="font-mono font-bold text-zinc-500 dark:text-zinc-400 text-sm md:text-base lg:text-lg uppercase">{licensePlate}</span>
               </div>
-              
+
               <div className="w-full flex items-center justify-between p-4 md:p-6 gap-4">
                 <div className="flex items-center gap-4 shrink-0">
                   <div className="h-9 w-9 md:h-12 md:w-12 rounded-xl bg-emerald-500 flex items-center justify-center shrink-0 shadow-sm"><Car className="h-5 w-5 md:h-6 md:w-6 text-white" /></div>
@@ -431,18 +433,18 @@ export default function DriverProfile() {
                 </div>
               </button>
             </div>
-            
+
           </div>
         </div>
       </div>
 
       {/* --- EDIT PROFILE MODAL --- */}
       {showEditProfile && (
-        <div 
+        <div
           className="fixed inset-0 z-[6000] flex items-center justify-center bg-zinc-900/60 dark:bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200"
           onClick={() => setShowEditProfile(false)}
         >
-          <div 
+          <div
             className="w-full max-w-sm bg-white dark:bg-[#121214] rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-300 border border-zinc-200 dark:border-white/10"
             onClick={(e) => e.stopPropagation()}
           >
@@ -452,18 +454,18 @@ export default function DriverProfile() {
                 <X className="h-5 w-5 md:h-6 md:w-6" />
               </button>
             </div>
-            
+
             <div className="p-5 md:p-6 flex flex-col gap-5">
               <div className="space-y-1.5">
                 <label className="text-xs font-bold uppercase tracking-wider text-zinc-500 flex justify-between">
                   Full Name {editNameError && <span className="text-red-500 text-[10px] mt-0.5 normal-case tracking-normal">{editNameError}</span>}
                 </label>
-                <input 
-                  type="text" 
-                  value={editForm.name} 
-                  onChange={(e) => setEditForm({...editForm, name: e.target.value})} 
+                <input
+                  type="text"
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                   className={`w-full bg-zinc-50 dark:bg-white/5 border text-sm rounded-xl px-4 py-3.5 outline-none transition-colors text-zinc-900 dark:text-white 
-                    ${editNameError ? 'border-red-500/50 focus:border-red-500 focus:shadow-[0_0_15px_rgba(239,68,68,0.2)]' : 'border-zinc-200 dark:border-white/10 focus:border-emerald-500'}`} 
+                    ${editNameError ? 'border-red-500/50 focus:border-red-500 focus:shadow-[0_0_15px_rgba(239,68,68,0.2)]' : 'border-zinc-200 dark:border-white/10 focus:border-emerald-500'}`}
                 />
               </div>
 
@@ -471,30 +473,30 @@ export default function DriverProfile() {
                 <label className="text-xs font-bold uppercase tracking-wider text-zinc-500 flex justify-between">
                   Email Address {editEmailError && <span className="text-red-500 text-[10px] mt-0.5 normal-case tracking-normal">{editEmailError}</span>}
                 </label>
-                <input 
-                  type="email" 
-                  value={editForm.email} 
-                  onChange={(e) => setEditForm({...editForm, email: e.target.value})} 
+                <input
+                  type="email"
+                  value={editForm.email}
+                  onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
                   className={`w-full bg-zinc-50 dark:bg-white/5 border text-sm rounded-xl px-4 py-3.5 outline-none transition-colors text-zinc-900 dark:text-white 
-                    ${editEmailError ? 'border-red-500/50 focus:border-red-500 focus:shadow-[0_0_15px_rgba(239,68,68,0.2)]' : 'border-zinc-200 dark:border-white/10 focus:border-emerald-500'}`} 
+                    ${editEmailError ? 'border-red-500/50 focus:border-red-500 focus:shadow-[0_0_15px_rgba(239,68,68,0.2)]' : 'border-zinc-200 dark:border-white/10 focus:border-emerald-500'}`}
                 />
               </div>
-              
+
               <div className="space-y-1.5">
                 <label className="text-xs font-bold uppercase tracking-wider text-zinc-500 flex justify-between">
                   Phone Number {editPhoneError && <span className="text-red-500 text-[10px] mt-0.5 normal-case tracking-normal">{editPhoneError}</span>}
                 </label>
-                <input 
-                  type="tel" 
-                  value={editForm.phone} 
-                  onChange={(e) => setEditForm({...editForm, phone: e.target.value})} 
+                <input
+                  type="tel"
+                  value={editForm.phone}
+                  onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
                   className={`w-full bg-zinc-50 dark:bg-white/5 border text-sm rounded-xl px-4 py-3.5 outline-none font-mono transition-colors text-zinc-900 dark:text-white 
-                    ${editPhoneError ? 'border-red-500/50 focus:border-red-500 focus:shadow-[0_0_15px_rgba(239,68,68,0.2)]' : 'border-zinc-200 dark:border-white/10 focus:border-emerald-500'}`} 
+                    ${editPhoneError ? 'border-red-500/50 focus:border-red-500 focus:shadow-[0_0_15px_rgba(239,68,68,0.2)]' : 'border-zinc-200 dark:border-white/10 focus:border-emerald-500'}`}
                 />
               </div>
 
-              <button 
-                onClick={handleSaveProfile} 
+              <button
+                onClick={handleSaveProfile}
                 disabled={!!editNameError || !!editEmailError || !!editPhoneError}
                 className="w-full mt-2 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold py-3.5 rounded-xl transition-all active:scale-95 shadow-lg shadow-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 text-base outline-none cursor-pointer"
               >
@@ -507,11 +509,11 @@ export default function DriverProfile() {
 
       {/* --- PHOTO UPLOAD MODAL --- */}
       {showPhotoModal && (
-        <div 
+        <div
           className="fixed inset-0 z-[6000] flex items-center justify-center bg-zinc-900/60 dark:bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200"
           onClick={() => setShowPhotoModal(false)}
         >
-          <div 
+          <div
             className="w-full max-w-sm bg-white dark:bg-[#121214] rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-300 border border-zinc-200 dark:border-white/10"
             onClick={(e) => e.stopPropagation()}
           >
@@ -521,10 +523,10 @@ export default function DriverProfile() {
                 <X className="h-5 w-5 md:h-6 md:w-6" />
               </button>
             </div>
-            
+
             <div className="p-3 md:p-4 space-y-1 md:space-y-2">
-              <button 
-                onClick={startCamera} 
+              <button
+                onClick={startCamera}
                 className="w-full flex items-center gap-4 p-4 hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors active:scale-[0.98] outline-none cursor-pointer rounded-xl text-zinc-900 dark:text-white font-medium text-base md:text-lg"
               >
                 <div className="h-10 w-10 md:h-12 md:w-12 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center shrink-0">
@@ -532,9 +534,9 @@ export default function DriverProfile() {
                 </div>
                 Take a Photo
               </button>
-              
-              <button 
-                onClick={() => galleryInputRef.current?.click()} 
+
+              <button
+                onClick={() => galleryInputRef.current?.click()}
                 className="w-full flex items-center gap-4 p-4 hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors active:scale-[0.98] outline-none cursor-pointer rounded-xl text-zinc-900 dark:text-white font-medium text-base md:text-lg"
               >
                 <div className="h-10 w-10 md:h-12 md:w-12 rounded-full bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center shrink-0">
@@ -545,8 +547,8 @@ export default function DriverProfile() {
 
               {profilePhoto && (
                 <div className="pt-2 mt-2 border-t border-zinc-100 dark:border-white/5">
-                  <button 
-                    onClick={handleRemovePhoto} 
+                  <button
+                    onClick={handleRemovePhoto}
                     className="w-full flex items-center gap-4 p-4 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors active:scale-[0.98] outline-none cursor-pointer rounded-xl text-red-600 dark:text-red-500 font-medium text-base md:text-lg"
                   >
                     <div className="h-10 w-10 md:h-12 md:w-12 rounded-full bg-red-50 dark:bg-red-500/10 flex items-center justify-center shrink-0">
@@ -564,27 +566,27 @@ export default function DriverProfile() {
       {/* --- LIVE CAMERA MODAL UI --- */}
       {showLiveCamera && (
         <div className="fixed inset-0 z-[7000] bg-black flex flex-col animate-in fade-in duration-300">
-          
+
           <div className="flex items-center justify-between p-6 md:p-8 w-full absolute top-0 z-10 bg-gradient-to-b from-black/80 to-transparent">
             <h3 className="text-white font-bold text-lg md:text-xl drop-shadow-md">Take Photo</h3>
             <button onClick={stopCamera} className="p-2 text-white hover:bg-white/20 rounded-full transition-colors outline-none cursor-pointer active:scale-90">
               <X className="h-6 w-6 md:h-8 md:w-8" />
             </button>
           </div>
-          
+
           <div className="flex-1 relative flex items-center justify-center bg-black overflow-hidden">
-            <video 
-              ref={videoRef} 
-              autoPlay 
-              playsInline 
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
               muted
-              className="w-full h-full object-cover scale-x-[-1]" 
+              className="w-full h-full object-cover scale-x-[-1]"
             />
           </div>
 
           <div className="p-8 md:p-12 w-full absolute bottom-0 z-10 bg-gradient-to-t from-black/80 to-transparent flex justify-center items-center">
-            <button 
-              onClick={capturePhoto} 
+            <button
+              onClick={capturePhoto}
               className="h-20 w-20 md:h-24 md:w-24 rounded-full border-[4px] border-white/50 flex items-center justify-center hover:bg-white/20 active:scale-90 transition-all outline-none cursor-pointer group"
             >
               <div className="h-16 w-16 md:h-20 md:w-20 bg-white rounded-full shadow-[0_0_20px_rgba(255,255,255,0.5)] group-hover:shadow-[0_0_30px_rgba(255,255,255,0.8)] transition-shadow"></div>
