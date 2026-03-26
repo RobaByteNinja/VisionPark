@@ -14,7 +14,6 @@ export default function ActiveSession() {
   const [areaData, setAreaData] = useState(() => JSON.parse(localStorage.getItem("vp_selected_area")) || { name: "--", lat: 0, lon: 0 });
   const driverPayment = localStorage.getItem("vp_driver_payment") || "Telebirr";
 
-  // ✅ New state for Google Maps confirmation modal
   const [pendingMapRoute, setPendingMapRoute] = useState(null);
 
   // --- TIMERS & TRACKING STATE ---
@@ -43,7 +42,22 @@ export default function ActiveSession() {
 
   const [exitTimeStr, setExitTimeStr] = useState(() => localStorage.getItem("vp_session_exit_time") || "--:--");
 
-  // --- RESERVED COUNTDOWN TIMER ---
+  // --- NATIVE OS NOTIFICATION HELPER ---
+  const sendOSNotification = (title, body) => {
+    if (!("Notification" in window)) return;
+
+    if (Notification.permission === "granted") {
+      new Notification(title, { body, icon: "/favicon.ico" }); // Optional: Add your app icon path here
+    } else if (Notification.permission !== "denied") {
+      Notification.requestPermission().then(permission => {
+        if (permission === "granted") {
+          new Notification(title, { body, icon: "/favicon.ico" });
+        }
+      });
+    }
+  };
+
+  // --- RESERVED COUNTDOWN TIMER & GLOBAL ALERTS ---
   useEffect(() => {
     let timer;
     if (sessionState === "Reserved") {
@@ -51,11 +65,27 @@ export default function ActiveSession() {
         const endTimeStr = localStorage.getItem("vp_session_end_time");
         if (endTimeStr) {
           const remaining = Math.floor((parseInt(endTimeStr, 10) - Date.now()) / 1000);
+
+          // Trigger OS Notifications at specific intervals
+          if (remaining === 300) {
+            sendOSNotification(
+              "VisionPark Alert: 5 Mins Left!",
+              `Your reservation at ${areaData.name} expires in 5 minutes. Please arrive soon.`
+            );
+          }
+          if (remaining === 180) {
+            sendOSNotification(
+              "VisionPark Alert: 3 Mins Left!",
+              `Hurry! Only 3 minutes left to claim Spot ${spotData.id} at ${areaData.name}.`
+            );
+          }
+
           if (remaining <= 0) {
             clearInterval(timer);
             setSessionState("Expired");
             setSecondsLeft(0);
             localStorage.setItem("vp_session_state", "Expired");
+            sendOSNotification("Reservation Expired", "Your parking reservation time has run out. The spot is now free.");
             window.dispatchEvent(new Event("vp_session_changed"));
           } else {
             setSecondsLeft(remaining);
@@ -64,7 +94,7 @@ export default function ActiveSession() {
       }, 1000);
     }
     return () => clearInterval(timer);
-  }, [sessionState]);
+  }, [sessionState, areaData.name, spotData.id]);
 
   // --- SECURED (LIVE PARKING) TIMER ---
   useEffect(() => {
@@ -84,13 +114,14 @@ export default function ActiveSession() {
     return () => clearInterval(timer);
   }, [sessionState]);
 
-  // --- DEV TRIGGERS (TO BE REMOVED WHEN AI CONNECTED) ---
+  // --- DEV TRIGGERS ---
   const handleSimulateArrival = () => {
     const now = Date.now();
     localStorage.setItem("vp_session_start_time", now);
     localStorage.setItem("vp_session_state", "Secured");
     setSessionState("Secured");
     window.dispatchEvent(new Event("vp_session_changed"));
+    sendOSNotification("VisionPark", "Vehicle detected at entry. Parking session started.");
   };
 
   const handleSystemTriggeredExit = () => {
@@ -98,7 +129,6 @@ export default function ActiveSession() {
     const exitTime = new Date(now).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const ts = new Date(now).toLocaleString();
 
-    // Calculate final duration
     const startTs = localStorage.getItem("vp_session_start_time");
     const finalSecs = startTs ? Math.floor((now - parseInt(startTs, 10)) / 1000) : 0;
 
@@ -113,6 +143,7 @@ export default function ActiveSession() {
 
     setSessionState("SystemReceipt");
     window.dispatchEvent(new Event("vp_session_changed"));
+    sendOSNotification("VisionPark", "Vehicle exit detected. Digital receipt has been generated.");
   };
 
   // --- FORMATTERS & CALCULATORS ---
@@ -129,9 +160,16 @@ export default function ActiveSession() {
     return `${h} : ${m} : ${s}`;
   };
 
-  // Live parking cost: 1 ETB per minute (Minimum 10 ETB charge)
   const calculateLiveCost = (seconds) => {
     return Math.max(10, Math.ceil(seconds / 60) * 1);
+  };
+
+  // Ask for notification permissions when they attempt to navigate away
+  const handleNavigateClick = () => {
+    if ("Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+    setPendingMapRoute({ lat: areaData.lat, lon: areaData.lon, name: areaData.name });
   };
 
   const confirmOpenGoogleMaps = () => {
@@ -176,7 +214,6 @@ export default function ActiveSession() {
   }
 
   return (
-    // ✅ Main Container: Added custom-scrollbar 
     <div className="custom-scrollbar relative h-full w-full overflow-y-auto bg-[#f4f4f5] dark:bg-[#09090b] pt-24 px-4 md:px-8 flex flex-col items-center overscroll-none transition-colors duration-500">
 
       <div className="relative z-10 w-full max-w-md md:max-w-3xl lg:max-w-4xl mx-auto flex flex-col gap-6 lg:gap-8">
@@ -222,7 +259,7 @@ export default function ActiveSession() {
                     [Simulate Arrival]
                   </button>
 
-                  <button type="button" onClick={() => setPendingMapRoute({ lat: areaData.lat, lon: areaData.lon, name: areaData.name })} className="w-full sm:flex-[2] h-14 lg:h-16 flex items-center justify-center gap-2 rounded-xl bg-emerald-500 text-zinc-950 font-bold text-sm lg:text-base tracking-wide shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:bg-emerald-400 transition-colors outline-none cursor-pointer">
+                  <button type="button" onClick={handleNavigateClick} className="w-full sm:flex-[2] h-14 lg:h-16 flex items-center justify-center gap-2 rounded-xl bg-emerald-500 text-zinc-950 font-bold text-sm lg:text-base tracking-wide shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:bg-emerald-400 transition-colors outline-none cursor-pointer">
                     <Navigation className="h-5 w-5 md:h-6 md:w-6" /> Navigate
                   </button>
                 </div>
@@ -245,7 +282,6 @@ export default function ActiveSession() {
 
             <div className="w-full border-t border-zinc-100 dark:border-white/5 my-6"></div>
 
-            {/* LIVE PARKING TIMER */}
             <div className="text-center flex flex-col justify-center items-center w-full">
               <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-500 uppercase font-bold tracking-widest mb-4">
                 <Clock className="h-4 w-4 md:h-5 md:w-5 animate-spin-slow" /> Time Parked
@@ -288,18 +324,15 @@ export default function ActiveSession() {
           </div>
         )}
 
-        {/* INVISIBLE SPACER TO PUSH CONTENT ABOVE THE NAV BAR */}
         <div className="h-32 md:h-40 w-full shrink-0"></div>
 
       </div>
 
       {/* --- 4. DIGITAL RECEIPT MODAL --- */}
-      {/* ✅ RESTRUCTURED: Flex-col layout prevents scrollbar from going beneath fixed header/footer */}
       {sessionState === "SystemReceipt" && (
         <div className="fixed inset-0 z-[6000] bg-zinc-900/60 dark:bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="relative w-full max-w-md md:max-w-lg bg-white dark:bg-[#121214] border border-zinc-200 dark:border-white/10 rounded-3xl shadow-2xl max-h-[85vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-300">
 
-            {/* Modal Header */}
             <div className="flex justify-between items-center p-6 md:p-8 pb-4 border-b border-zinc-200 dark:border-white/10 shrink-0">
               <h2 className="text-xl md:text-2xl lg:text-3xl font-bold text-zinc-900 dark:text-white flex items-center gap-2">
                 <CheckCircle className="h-6 w-6 md:h-8 md:w-8 text-emerald-500" />
@@ -308,7 +341,6 @@ export default function ActiveSession() {
               <button type="button" onClick={closeSession} className="h-8 w-8 md:h-10 md:w-10 flex items-center justify-center rounded-full bg-zinc-100 dark:bg-white/5 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-white/10 hover:text-zinc-900 dark:hover:text-white cursor-pointer outline-none active:scale-90 transition-transform"><X className="h-5 w-5 md:h-6 md:w-6" /></button>
             </div>
 
-            {/* Modal Scrollable Body */}
             <div className="overflow-y-auto p-6 md:p-8 flex-1 overscroll-contain custom-scrollbar">
               <div className="flex justify-center mb-4"><CheckCircle className="h-16 w-16 md:h-20 md:w-20 text-emerald-500 drop-shadow-[0_0_15px_rgba(16,185,129,0.5)]" /></div>
               <h2 className="text-xl md:text-2xl lg:text-3xl font-bold text-zinc-900 dark:text-white text-center mb-8">Payment sent successfully</h2>
