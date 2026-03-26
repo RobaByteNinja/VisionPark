@@ -46,11 +46,17 @@ const FEATURES = [
     { icon: ShieldCheck, title: "Smart Enforcement", desc: "Automated Debt Radar catches repeat offenders and logs property damage instantly, keeping the lot safe and fair." }
 ];
 
+// FIXED: True Haversine formula converting degrees to radians
 const mockHaversineDistance = (lat1, lon1, lat2, lon2) => {
-    const R = 6371;
-    const x = (lon2 - lon1) * Math.cos((lat1 + lat2) / 2);
-    const y = (lat2 - lat1);
-    return Math.sqrt(x * x + y * y) * R;
+    const toRad = x => (x * Math.PI) / 180;
+    const R = 6371; // Earth's radius in km
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
 };
 
 const driverIcon = L.divIcon({
@@ -276,7 +282,6 @@ export default function GuestMap() {
                         setSelectedRegion("ALL");
                         showToast("Location found, but outside major network regions. Showing National map.", "success");
                     }
-                    setIsRegionMenuOpen(false);
                 },
                 (error) => {
                     showToast("Location access denied. Please check your browser settings or select manually.", "error");
@@ -472,7 +477,6 @@ export default function GuestMap() {
                         </p>
 
                         <div className="flex justify-center items-center gap-3 w-full max-w-md mx-auto relative z-50">
-
                             <button
                                 onClick={handleLocateMe}
                                 className="h-[52px] w-[52px] md:h-[60px] md:w-[60px] flex items-center justify-center rounded-xl md:rounded-2xl bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border border-zinc-200 dark:border-white/10 text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 shadow-sm cursor-pointer transition-colors shrink-0"
@@ -570,7 +574,7 @@ export default function GuestMap() {
                                                             onClick={(e) => { e.stopPropagation(); setPendingMapRoute({ lat: area.lat, lon: area.lon, name: area.name }); }}
                                                             className="h-10 w-12 flex items-center justify-center rounded-xl border border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-white hover:bg-zinc-100 dark:hover:bg-white/10 active:scale-90 transition-all outline-none cursor-pointer shrink-0"
                                                         >
-                                                            <Navigation className="h-4 w-4 md:h-5 md:w-5 text-emerald-500" />
+                                                            <Navigation className="h-4 w-4 md:h-5 w-5 text-emerald-500" />
                                                         </button>
                                                         <button
                                                             onClick={(e) => { e.stopPropagation(); setFocusedAreaId(area.id); setShowAuthModal(true); }}
