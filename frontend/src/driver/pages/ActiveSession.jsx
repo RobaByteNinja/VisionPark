@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Navigation, MapPin, Car, CheckCircle, X, AlertTriangle, Clock, ExternalLink } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { StatusBadge } from "../../components/ui/StatusBadge";
@@ -15,6 +15,9 @@ export default function ActiveSession() {
   const driverPayment = localStorage.getItem("vp_driver_payment") || "Telebirr";
 
   const [pendingMapRoute, setPendingMapRoute] = useState(null);
+
+  // Track which notifications have already been sent to prevent spamming
+  const notifiedMilestones = useRef(new Set());
 
   // --- TIMERS & TRACKING STATE ---
   const [secondsLeft, setSecondsLeft] = useState(() => {
@@ -46,8 +49,11 @@ export default function ActiveSession() {
   const sendOSNotification = (title, body) => {
     if (!("Notification" in window)) return;
 
+    // ONLY send OS notification if the user is outside the app (e.g. in Google Maps)
+    if (!document.hidden) return;
+
     if (Notification.permission === "granted") {
-      new Notification(title, { body, icon: "/favicon.ico" }); // Optional: Add your app icon path here
+      new Notification(title, { body, icon: "/favicon.ico" });
     } else if (Notification.permission !== "denied") {
       Notification.requestPermission().then(permission => {
         if (permission === "granted") {
@@ -66,26 +72,27 @@ export default function ActiveSession() {
         if (endTimeStr) {
           const remaining = Math.floor((parseInt(endTimeStr, 10) - Date.now()) / 1000);
 
-          // Trigger OS Notifications at specific intervals
-          if (remaining === 300) {
-            sendOSNotification(
-              "VisionPark Alert: 5 Mins Left!",
-              `Your reservation at ${areaData.name} expires in 5 minutes. Please arrive soon.`
-            );
-          }
-          if (remaining === 180) {
-            sendOSNotification(
-              "VisionPark Alert: 3 Mins Left!",
-              `Hurry! Only 3 minutes left to claim Spot ${spotData.id} at ${areaData.name}.`
-            );
-          }
+          // MILESTONES: 5m (300s), 3m (180s), 2m (120s), 1m (60s)
+          const milestones = [
+            { time: 300, title: "5 Mins Left!", body: `Your reservation at ${areaData.name} expires in 5 minutes.` },
+            { time: 180, title: "3 Mins Left!", body: `Hurry! Only 3 minutes left to claim Spot ${spotData.id}.` },
+            { time: 120, title: "2 Mins Left!", body: `Warning: 2 minutes remaining! Your spot will be released soon.` },
+            { time: 60, title: "1 Min Left!", body: `Final Notice: 1 minute left! Spot ${spotData.id} is about to expire.` }
+          ];
+
+          milestones.forEach(m => {
+            // Use a 5-second window to catch background-throttled ticks
+            if (remaining <= m.time && remaining > m.time - 5 && !notifiedMilestones.current.has(m.time)) {
+              sendOSNotification(`VisionPark Alert: ${m.title}`, m.body);
+              notifiedMilestones.current.add(m.time); // Mark as sent
+            }
+          });
 
           if (remaining <= 0) {
             clearInterval(timer);
             setSessionState("Expired");
             setSecondsLeft(0);
             localStorage.setItem("vp_session_state", "Expired");
-            sendOSNotification("Reservation Expired", "Your parking reservation time has run out. The spot is now free.");
             window.dispatchEvent(new Event("vp_session_changed"));
           } else {
             setSecondsLeft(remaining);
@@ -121,7 +128,6 @@ export default function ActiveSession() {
     localStorage.setItem("vp_session_state", "Secured");
     setSessionState("Secured");
     window.dispatchEvent(new Event("vp_session_changed"));
-    sendOSNotification("VisionPark", "Vehicle detected at entry. Parking session started.");
   };
 
   const handleSystemTriggeredExit = () => {
@@ -143,7 +149,6 @@ export default function ActiveSession() {
 
     setSessionState("SystemReceipt");
     window.dispatchEvent(new Event("vp_session_changed"));
-    sendOSNotification("VisionPark", "Vehicle exit detected. Digital receipt has been generated.");
   };
 
   // --- FORMATTERS & CALCULATORS ---
@@ -282,6 +287,7 @@ export default function ActiveSession() {
 
             <div className="w-full border-t border-zinc-100 dark:border-white/5 my-6"></div>
 
+            {/* LIVE PARKING TIMER */}
             <div className="text-center flex flex-col justify-center items-center w-full">
               <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-500 uppercase font-bold tracking-widest mb-4">
                 <Clock className="h-4 w-4 md:h-5 md:w-5 animate-spin-slow" /> Time Parked
@@ -377,7 +383,6 @@ export default function ActiveSession() {
               </div>
             </div>
 
-            {/* Modal Footer */}
             <div className="p-6 md:p-8 pt-4 border-t border-zinc-200 dark:border-white/10 shrink-0">
               <button type="button" onClick={closeSession} className="w-full h-12 md:h-14 lg:h-16 flex items-center justify-center rounded-xl bg-zinc-100 dark:bg-white/10 text-zinc-900 dark:text-white font-bold text-sm md:text-base tracking-wide uppercase hover:bg-zinc-200 dark:hover:bg-white/20 transition-colors outline-none cursor-pointer">Done</button>
             </div>
