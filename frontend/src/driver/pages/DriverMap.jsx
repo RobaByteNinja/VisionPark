@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, memo } from "react";
+import React, { useState, useEffect, useMemo, useCallback, memo, useRef } from "react";
 import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
 import L from "leaflet";
 import {
@@ -9,7 +9,7 @@ import { useTheme } from "../../context/ThemeContext";
 import { Header } from "../../components/layout/Header";
 import { useNavigate } from "react-router-dom";
 
-const DRIVER_LOC = [9.0000, 38.7700];
+const DEFAULT_LOC = [9.0249, 38.7468]; // Addis Ababa Center
 const PAYMENT_OPTIONS = ["Telebirr", "CBE", "COOP", "Bank of Abyssinia"];
 
 const generateSpots = () => [
@@ -18,29 +18,53 @@ const generateSpots = () => [
   { id: "B-01", status: "Secured", floor: "Level 1", deposit: 100, vehicleType: "Public Transport Vehicles | Upto 12 Seats" },
 ];
 
+// --- EXPANDED NATIONAL DATABASE (With Spots included) ---
 const INITIAL_AREAS = [
-  { id: "PA-01", name: "Megenagna SMART", lat: 9.0206, lon: 38.7996, price: 35.0, availableSpaces: 17, spots: generateSpots() },
-  { id: "PA-02", name: "Meskel Square", lat: 9.0104, lon: 38.7611, price: 35.0, availableSpaces: 24, spots: generateSpots() },
-  { id: "PA-03", name: "Bole Int. Airport", lat: 8.9837, lon: 38.7963, price: 50.0, availableSpaces: 112, spots: generateSpots() },
-  { id: "PA-04", name: "Edna Mall", lat: 8.9971, lon: 38.7866, price: 40.0, availableSpaces: 5, spots: generateSpots() },
-  { id: "PA-05", name: "Dembel City Center", lat: 9.0049, lon: 38.7668, price: 30.0, availableSpaces: 41, spots: generateSpots() },
-  { id: "PA-06", name: "Millennium Hall", lat: 8.9902, lon: 38.7895, price: 45.0, availableSpaces: 80, spots: generateSpots() },
-  { id: "PA-07", name: "Hilton Addis Ababa", lat: 9.0186, lon: 38.7646, price: 60.0, availableSpaces: 12, spots: generateSpots() },
+  { id: "PA-01", region: "Addis Ababa", name: "Megenagna SMART", lat: 9.0206, lon: 38.7996, price: 35.0, availableSpaces: 17, spots: generateSpots() },
+  { id: "PA-02", region: "Addis Ababa", name: "Meskel Square", lat: 9.0104, lon: 38.7611, price: 35.0, availableSpaces: 24, spots: generateSpots() },
+  { id: "PA-03", region: "Addis Ababa", name: "Bole Int. Airport", lat: 8.9837, lon: 38.7963, price: 50.0, availableSpaces: 112, spots: generateSpots() },
+  { id: "PA-04", region: "Addis Ababa", name: "Edna Mall", lat: 8.9971, lon: 38.7866, price: 40.0, availableSpaces: 5, spots: generateSpots() },
+  { id: "PA-05", region: "Addis Ababa", name: "Dembel City Center", lat: 9.0049, lon: 38.7668, price: 30.0, availableSpaces: 41, spots: generateSpots() },
+  { id: "PA-DD1", region: "Dire Dawa", name: "Dire Dawa Train Station", lat: 9.5931, lon: 41.8591, price: 25.0, availableSpaces: 45, spots: generateSpots() },
+  { id: "PA-DD2", region: "Dire Dawa", name: "Ashawa Market Parking", lat: 9.6001, lon: 41.8500, price: 20.0, availableSpaces: 12, spots: generateSpots() },
+  { id: "PA-OR1", region: "Oromia", name: "Adama Bus Terminal", lat: 8.5414, lon: 39.2689, price: 25.0, availableSpaces: 30, spots: generateSpots() },
+  { id: "PA-OR2", region: "Oromia", name: "Adama Post Office", lat: 8.5480, lon: 39.2740, price: 20.0, availableSpaces: 8, spots: generateSpots() },
+  { id: "PA-AM1", region: "Amhara", name: "Lake Tana Shore Parking", lat: 11.5940, lon: 37.3875, price: 30.0, availableSpaces: 50, spots: generateSpots() },
+  { id: "PA-TG1", region: "Tigray", name: "Romanat Square", lat: 13.4967, lon: 39.4753, price: 20.0, availableSpaces: 22, spots: generateSpots() },
+  { id: "PA-SM1", region: "Somali", name: "Jigjiga City Center", lat: 9.3541, lon: 42.7956, price: 15.0, availableSpaces: 60, spots: generateSpots() },
+  { id: "PA-SD1", region: "Sidama", name: "Piassa Hawassa", lat: 7.0504, lon: 38.4690, price: 25.0, availableSpaces: 18, spots: generateSpots() },
+  { id: "PA-SD2", region: "Sidama", name: "Hawassa Lake View", lat: 7.0450, lon: 38.4600, price: 35.0, availableSpaces: 40, spots: generateSpots() },
 ];
 
+const REGIONS = [
+  { id: "Addis Ababa", label: "Addis Ababa", group: "FEDERAL", center: [9.0249, 38.7468] },
+  { id: "Dire Dawa", label: "Dire Dawa", group: "FEDERAL", center: [9.5931, 41.8591] },
+  { id: "Oromia", label: "Oromia Region (Adama)", group: "MAJOR", center: [8.5414, 39.2689] },
+  { id: "Amhara", label: "Amhara Region (Bahir Dar)", group: "MAJOR", center: [11.5940, 37.3875] },
+  { id: "Tigray", label: "Tigray Region (Mekelle)", group: "MAJOR", center: [13.4967, 39.4753] },
+  { id: "Somali", label: "Somali Region (Jigjiga)", group: "MAJOR", center: [9.3541, 42.7956] },
+  { id: "Sidama", label: "Sidama Region (Hawassa)", group: "MAJOR", center: [7.0504, 38.4690] },
+];
+
+// True Haversine formula converting degrees to radians for accurate distance
 const mockHaversineDistance = (lat1, lon1, lat2, lon2) => {
-  const R = 6371;
-  const x = (lon2 - lon1) * Math.cos((lat1 + lat2) / 2);
-  const y = (lat2 - lat1);
-  return Math.sqrt(x * x + y * y) * R;
+  const toRad = x => (x * Math.PI) / 180;
+  const R = 6371; // Earth's radius in km
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
 };
 
-// ─── ICONS — defined at module level, never recreated ─────────────────────────
+// ─── ICONS ────────────────────────────────────────────────────────
 const driverIcon = L.divIcon({
   className: "custom-driver-marker",
   html: `<div class="relative flex h-8 w-8 items-center justify-center">
-    <div class="absolute inset-0 rounded-full bg-blue-500 animate-ping opacity-40"></div>
-    <div class="h-4 w-4 rounded-full bg-blue-600 border-2 border-white shadow-md z-10"></div>
+    <div class="absolute inset-0 rounded-full bg-emerald-500 animate-ping opacity-40"></div>
+    <div class="h-4 w-4 rounded-full bg-emerald-600 border-2 border-white shadow-md z-10 flex items-center justify-center"></div>
   </div>`,
   iconSize: [32, 32],
 });
@@ -56,66 +80,82 @@ const createIcon = (isFocused, theme) => L.divIcon({
   iconSize: [40, 40],
 });
 
-// ─── MAP CAMERA — inside map context ─────────────────────────────────────────
-function MapCamera({ lat, lon }) {
+// ─── MAP CAMERA ────────────────────────────────────────────────────────
+function MapCamera({ center, zoom }) {
   const map = useMap();
   useEffect(() => {
-    if (lat && lon) {
-      map.setView([lat, lon], 14, { animate: true, duration: 0.5 });
+    if (center && center.length === 2 && !isNaN(center[0]) && !isNaN(center[1])) {
+      map.flyTo(center, zoom, { animate: true, duration: 1.5 });
     }
-  }, [lat, lon, map]);
+  }, [center[0], center[1], zoom, map]);
   return null;
 }
 
-// ─── THE MAP — memo() means it NEVER re-renders unless its own props change ───
-const ParkingMap = memo(({ areas, focusedAreaId, tileUrl, onMarkerClick }) => {
+// ─── THE MAP ────────────────────────────────────────────────────────
+const ParkingMap = memo(({ areas, focusedAreaId, tileUrl, onMarkerClick, userLocation, selectedRegion }) => {
   const normalIcon = useMemo(() => createIcon(false, tileUrl.includes("dark") ? "dark" : "light"), [tileUrl]);
   const focusedIcon = useMemo(() => createIcon(true, tileUrl.includes("dark") ? "dark" : "light"), [tileUrl]);
+
   const focusedArea = areas.find(a => a.id === focusedAreaId);
+
+  let mapCenter = userLocation;
+  let mapZoom = 13;
+
+  if (selectedRegion === "ALL") {
+    mapCenter = [9.145, 40.4896];
+    mapZoom = 6;
+  } else if (focusedArea) {
+    mapCenter = [focusedArea.lat, focusedArea.lon];
+    mapZoom = 14;
+  }
 
   return (
     <MapContainer
-      center={DRIVER_LOC}
-      zoom={13}
+      center={mapCenter}
+      zoom={mapZoom}
       zoomControl={false}
       preferCanvas={true}
       scrollWheelZoom={true}
       doubleClickZoom={true}
-      className="h-full w-full outline-none"
+      className="h-full w-full outline-none z-0"
     >
       <TileLayer
+        attribution='© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors'
         url={tileUrl}
         detectRetina={false}
         keepBuffer={4}
         updateWhenIdle={true}
         updateWhenZooming={false}
       />
-      <Marker position={DRIVER_LOC} icon={driverIcon} zIndexOffset={1000} />
+      <Marker position={userLocation} icon={driverIcon} zIndexOffset={1000} />
       {areas.map((area) => (
         <Marker
           key={area.id}
           position={[area.lat, area.lon]}
-          icon={area.id === focusedAreaId ? focusedIcon : normalIcon}
-          eventHandlers={{ click: () => onMarkerClick(area.id) }}
+          icon={area.id === focusedAreaId && selectedRegion !== "ALL" ? focusedIcon : normalIcon}
+          eventHandlers={{ click: () => onMarkerClick(area.id, area.region) }}
         />
       ))}
-      {focusedArea && <MapCamera lat={focusedArea.lat} lon={focusedArea.lon} />}
+      <MapCamera center={mapCenter} zoom={mapZoom} />
     </MapContainer>
   );
 });
 
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 export default function DriverMap() {
-  const { theme } = useTheme();
+  const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
 
+  const [userLocation, setUserLocation] = useState(DEFAULT_LOC);
+  const [selectedRegion, setSelectedRegion] = useState("ALL");
   const [areas, setAreas] = useState([]);
   const [focusedAreaId, setFocusedAreaId] = useState(null);
+
   const [selectedArea, setSelectedArea] = useState(null);
   const [selectedSpot, setSelectedSpot] = useState(null);
   const [uiState, setUiState] = useState("Discovery");
 
-  // New state for Google Maps confirmation modal
+  const [isRegionMenuOpen, setIsRegionMenuOpen] = useState(false);
   const [pendingMapRoute, setPendingMapRoute] = useState(null);
 
   const driverVehicle = localStorage.getItem("vp_driver_vehicle") || "Public Transport Vehicles | Upto 12 Seats";
@@ -126,7 +166,16 @@ export default function DriverMap() {
   const [touchStartX, setTouchStartX] = useState(null);
   const [touchEndX, setTouchEndX] = useState(null);
 
-  // Tile URL — memoised so TileLayer never remounts
+  const [toast, setToast] = useState({ message: "", type: "success" });
+
+  const regionModalRef = useRef(null);
+  const mapRouteModalRef = useRef(null);
+
+  const showToast = (message, type = "success") => {
+    setToast({ message, type });
+    setTimeout(() => setToast({ message: "", type: "success" }), 4000);
+  };
+
   const mapTileUrl = useMemo(() =>
     theme === "dark"
       ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
@@ -134,27 +183,127 @@ export default function DriverMap() {
     [theme]);
 
   useEffect(() => {
-    let minDist = Infinity, nearestId = null;
-    const sorted = INITIAL_AREAS.map((area) => {
-      const dist = mockHaversineDistance(DRIVER_LOC[0], DRIVER_LOC[1], area.lat, area.lon);
-      if (dist < minDist) { minDist = dist; nearestId = area.id; }
-      return { ...area, distance: dist };
-    }).sort((a, b) => a.distance - b.distance);
-    setAreas(sorted);
-    setFocusedAreaId(nearestId);
+    if (isRegionMenuOpen) regionModalRef.current?.showModal();
+    else regionModalRef.current?.close();
+  }, [isRegionMenuOpen]);
+
+  useEffect(() => {
+    if (pendingMapRoute) mapRouteModalRef.current?.showModal();
+    else mapRouteModalRef.current?.close();
+  }, [pendingMapRoute]);
+
+  // GPS Auto-Detection - Forces fresh location fetch
+  useEffect(() => {
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
+          setUserLocation([lat, lon]);
+
+          let closestRegion = "ALL";
+          let minDistance = Infinity;
+
+          REGIONS.forEach(r => {
+            const d = mockHaversineDistance(lat, lon, r.center[0], r.center[1]);
+            if (d < minDistance) {
+              minDistance = d;
+              closestRegion = r.id;
+            }
+          });
+
+          if (minDistance < 150) setSelectedRegion(closestRegion);
+          else setSelectedRegion("ALL");
+        },
+        (error) => {
+          console.warn("Geolocation failed. Defaulting to Addis Ababa.");
+          setUserLocation(DEFAULT_LOC);
+          setSelectedRegion("Addis Ababa");
+        },
+        // maximumAge: 0 forces the browser to not use cache and get a fresh GPS lock
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+      );
+    }
   }, []);
+
+  // Filter & Haversine Sorting logic
+  useEffect(() => {
+    let filteredAreas = INITIAL_AREAS;
+    if (selectedRegion !== "ALL") {
+      filteredAreas = INITIAL_AREAS.filter(area => area.region === selectedRegion);
+      const sorted = filteredAreas.map((area) => {
+        const dist = mockHaversineDistance(userLocation[0], userLocation[1], area.lat, area.lon);
+        return { ...area, distance: dist };
+      }).sort((a, b) => a.distance - b.distance);
+
+      setAreas(sorted);
+      if (sorted.length > 0) setFocusedAreaId(sorted[0].id);
+      else setFocusedAreaId(null);
+    } else {
+      setAreas(INITIAL_AREAS);
+      setFocusedAreaId(null);
+    }
+  }, [userLocation, selectedRegion]);
+
+  const handleRegionChange = (val) => {
+    setSelectedRegion(val);
+    setIsRegionMenuOpen(false);
+  };
+
+  const handleLocateMe = () => {
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
+          setUserLocation([lat, lon]);
+
+          let closestRegion = "ALL";
+          let minDistance = Infinity;
+
+          REGIONS.forEach(r => {
+            const d = mockHaversineDistance(lat, lon, r.center[0], r.center[1]);
+            if (d < minDistance) {
+              minDistance = d;
+              closestRegion = r.id;
+            }
+          });
+
+          if (minDistance < 150) {
+            setSelectedRegion(closestRegion);
+            showToast(`Location found! Closest region: ${REGIONS.find(r => r.id === closestRegion)?.label}`, "success");
+          } else {
+            setSelectedRegion("ALL");
+            showToast("Location found, but outside major network regions. Showing National map.", "success");
+          }
+        },
+        (error) => {
+          showToast("Location access denied or timed out. Please check your browser settings.", "error");
+        },
+        // maximumAge: 0 forces fresh location
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+      );
+    } else {
+      showToast("Geolocation is not supported by your browser.", "error");
+    }
+  };
+
+  const handleMarkerClick = useCallback((areaId, region) => {
+    if (selectedRegion === "ALL") {
+      setSelectedRegion(region);
+    }
+    setFocusedAreaId(areaId);
+    setSelectedArea(null);
+    setSelectedSpot(null);
+  }, [selectedRegion]);
 
   const activeIndex = areas.findIndex(a => a.id === focusedAreaId);
   const safeActiveIndex = activeIndex >= 0 ? activeIndex : 0;
 
-  const handleMarkerClick = useCallback((areaId) => {
-    setFocusedAreaId(areaId);
-    setSelectedArea(null);
-    setSelectedSpot(null);
-  }, []);
-
   const handleNext = useCallback(() => {
+    if (selectedRegion === "ALL") return;
     setAreas(prev => {
+      if (prev.length <= 1) return prev;
       const idx = prev.findIndex(a => a.id === focusedAreaId);
       const safe = idx >= 0 ? idx : 0;
       const next = (safe + 1) % prev.length;
@@ -163,10 +312,12 @@ export default function DriverMap() {
       setSelectedSpot(null);
       return prev;
     });
-  }, [focusedAreaId]);
+  }, [focusedAreaId, selectedRegion]);
 
   const handlePrev = useCallback(() => {
+    if (selectedRegion === "ALL") return;
     setAreas(prev => {
+      if (prev.length <= 1) return prev;
       const idx = prev.findIndex(a => a.id === focusedAreaId);
       const safe = idx >= 0 ? idx : 0;
       const prev2 = (safe - 1 + prev.length) % prev.length;
@@ -175,9 +326,10 @@ export default function DriverMap() {
       setSelectedSpot(null);
       return prev;
     });
-  }, [focusedAreaId]);
+  }, [focusedAreaId, selectedRegion]);
 
   const getOffset = (index) => {
+    if (areas.length === 0) return 0;
     let offset = index - safeActiveIndex;
     const half = Math.floor(areas.length / 2);
     if (offset > half) offset -= areas.length;
@@ -189,7 +341,7 @@ export default function DriverMap() {
   const onTouchMove = (e) => { e.stopPropagation(); setTouchEndX(e.targetTouches[0].clientX); };
   const onTouchEnd = (e) => {
     e.stopPropagation();
-    if (!touchStartX || !touchEndX) return;
+    if (!touchStartX || !touchEndX || selectedRegion === "ALL") return;
     const d = touchStartX - touchEndX;
     if (d > 50) handleNext();
     if (d < -50) handlePrev();
@@ -221,7 +373,7 @@ export default function DriverMap() {
 
   const confirmOpenGoogleMaps = () => {
     if (pendingMapRoute) {
-      window.open(`https://www.google.com/maps/dir/?api=1&origin=${DRIVER_LOC[0]},${DRIVER_LOC[1]}&destination=${pendingMapRoute.lat},${pendingMapRoute.lon}&travelmode=driving`, "_blank");
+      window.open(`https://www.google.com/maps/dir/?api=1&origin=${userLocation[0]},${userLocation[1]}&destination=${pendingMapRoute.lat},${pendingMapRoute.lon}&travelmode=driving`, "_blank", "noopener,noreferrer");
       setPendingMapRoute(null);
     }
   };
@@ -235,22 +387,106 @@ export default function DriverMap() {
 
   return (
     <div className="relative h-[100dvh] w-full overflow-hidden bg-zinc-100 dark:bg-[#09090b]">
+
+      {/* ── CUSTOM STYLES FOR SCROLLBAR & LEAFLET ATTRIBUTION ─────────── */}
+      <style>{`
+          .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+          .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+          .custom-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(161, 161, 170, 0.4); border-radius: 10px; }
+          .dark .custom-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(82, 82, 91, 0.4); }
+          .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: rgba(161, 161, 170, 0.8); }
+          .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: rgba(82, 82, 91, 0.8); }
+
+          .leaflet-bottom.leaflet-right {
+              bottom: 24px !important;
+              right: 24px !important;
+          }
+          .leaflet-control-attribution {
+              border-radius: 6px !important;
+              padding: 3px 8px !important;
+              background-color: rgba(255,255,255,0.9) !important;
+              backdrop-filter: blur(4px);
+              box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+              font-weight: 500;
+              font-size: 10px !important;
+          }
+          .dark .leaflet-control-attribution {
+              background-color: rgba(24,24,27,0.9) !important;
+              color: #a1a1aa !important;
+          }
+          .dark .leaflet-control-attribution a {
+              color: #34d399 !important;
+          }
+
+          @media (max-width: 768px) {
+              .leaflet-bottom.leaflet-right {
+                  bottom: 16px !important;
+                  right: 16px !important;
+              }
+              .leaflet-control-attribution {
+                  font-size: 8px !important;
+                  padding: 2px 6px !important;
+                  max-width: 140px;
+                  white-space: normal;
+                  text-align: right;
+              }
+          }
+      `}</style>
+
       <Header />
 
-      {/* MAP — isolated in memo, never re-renders on carousel swipe */}
+      {/* ── TOAST NOTIFICATIONS ── */}
+      {toast.message && (
+        <div className={`fixed top-20 md:top-24 left-1/2 -translate-x-1/2 w-[92vw] max-w-[340px] md:max-w-max font-bold text-xs md:text-sm px-4 md:px-6 py-3 md:py-3.5 rounded-xl md:rounded-2xl shadow-2xl z-[8000] animate-in slide-in-from-top-4 flex items-center gap-3 text-left md:text-center ${toast.type === "error" ? "bg-red-600 text-white" : "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900"}`}>
+          {toast.type === "error" ? <AlertTriangle className="h-5 w-5 shrink-0" /> : <CheckCircle className="h-5 w-5 text-emerald-500 shrink-0" />}
+          <span className="leading-snug">{toast.message}</span>
+        </div>
+      )}
+
+      {/* ── FLOATING REGION CONTROL OVERLAY ── */}
+      <div className="absolute top-20 md:top-24 left-0 w-full z-[1000] px-4 md:px-8 pointer-events-none flex justify-center">
+        <div className="flex items-center gap-3 w-full max-w-[380px] pointer-events-auto">
+          <button
+            onClick={handleLocateMe}
+            className="h-[48px] w-[48px] md:h-[54px] md:w-[54px] rounded-xl md:rounded-2xl bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl shadow-lg flex items-center justify-center text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 border border-zinc-200 dark:border-white/10 shrink-0 transition-colors"
+            title="Locate Me (GPS)"
+          >
+            <Navigation className="h-5 w-5" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsRegionMenuOpen(true)}
+            className="flex-1 h-[48px] md:h-[54px] rounded-xl md:rounded-2xl bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl shadow-lg flex items-center justify-between px-4 md:px-5 border border-zinc-200 dark:border-white/10 hover:bg-white dark:hover:bg-zinc-800 transition-colors"
+          >
+            <div className="flex items-center gap-2.5 truncate">
+              <MapPin className="h-4 w-4 md:h-5 md:w-5 text-emerald-500 shrink-0" />
+              <span className="font-bold text-xs md:text-sm text-zinc-900 dark:text-white truncate">
+                {selectedRegion === "ALL" ? "National (All Regions)" : REGIONS.find(r => r.id === selectedRegion)?.label || selectedRegion}
+              </span>
+            </div>
+            <div className="bg-zinc-100 dark:bg-white/10 p-1 rounded-md shrink-0">
+              <ChevronDown className="h-3 w-3 md:h-4 md:w-4 text-zinc-400" />
+            </div>
+          </button>
+        </div>
+      </div>
+
       <div className="absolute inset-0 z-0">
         <ParkingMap
           areas={areas}
           focusedAreaId={focusedAreaId}
           tileUrl={mapTileUrl}
           onMarkerClick={handleMarkerClick}
+          userLocation={userLocation}
+          selectedRegion={selectedRegion}
         />
       </div>
 
       {/* ── CAROUSEL ──────────────────────────────────────────────────────── */}
-      {!selectedArea && (
+      {!selectedArea && selectedRegion !== "ALL" && (
         <div
-          className="absolute bottom-24 md:bottom-28 w-full z-[1000] h-[280px] flex items-center justify-center overflow-hidden"
+          className="absolute bottom-24 md:bottom-28 w-full z-[1000] h-[220px] md:h-[280px] flex items-center justify-center overflow-hidden animate-in slide-in-from-bottom-10 fade-in duration-500"
           onTouchStart={onTouchStart}
           onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
@@ -260,6 +496,12 @@ export default function DriverMap() {
           </button>
 
           <div className="relative w-full max-w-[340px] h-full flex items-center justify-center">
+            {areas.length === 0 && (
+              <div className="bg-white/90 dark:bg-zinc-900/90 p-4 md:p-5 rounded-2xl shadow-xl backdrop-blur-xl border border-zinc-200 dark:border-white/10 font-bold text-xs md:text-sm text-center text-zinc-700 dark:text-zinc-300 flex flex-col items-center gap-2 md:gap-3 mx-4">
+                <AlertTriangle className="h-6 w-6 md:h-8 md:w-8 text-amber-500" />
+                No parking areas currently registered in this region.
+              </div>
+            )}
             {areas.map((area, index) => {
               const offset = getOffset(index);
               const absOffset = Math.abs(offset);
@@ -267,7 +509,7 @@ export default function DriverMap() {
               return (
                 <div
                   key={area.id}
-                  onClick={() => handleMarkerClick(area.id)}
+                  onClick={() => handleMarkerClick(area.id, area.region)}
                   className={`absolute w-[85vw] max-w-[340px] rounded-3xl p-5 md:p-6 flex gap-4 md:gap-5 cursor-pointer transition-all duration-200 ease-out ${isFocused
                     ? "bg-white dark:bg-[#1f1f22] border border-emerald-500 shadow-[0_10px_40px_rgba(16,185,129,0.3)] ring-1 ring-emerald-500"
                     : "bg-white dark:bg-[#1f1f22] border border-zinc-200 dark:border-white/10 shadow-xl"
@@ -283,7 +525,7 @@ export default function DriverMap() {
                   <div className="mt-1 flex-shrink-0">
                     <Building2 className={`h-6 w-6 md:h-7 md:w-7 ${isFocused ? "text-emerald-500" : "text-zinc-400 dark:text-zinc-500"}`} />
                   </div>
-                  <div className="flex-1 flex flex-col">
+                  <div className="flex-1 flex flex-col min-w-0">
                     <h3 className={`font-bold text-lg md:text-xl leading-tight mb-2 truncate ${isFocused ? "text-zinc-900 dark:text-white" : "text-zinc-700 dark:text-zinc-300"}`}>
                       {area.name}
                     </h3>
@@ -293,28 +535,23 @@ export default function DriverMap() {
                         <span className="text-red-500 font-bold">P</span> {area.availableSpaces} Spaces
                       </span>
                     </div>
-                    <div className="flex items-center gap-1.5 mb-4 text-zinc-500 dark:text-zinc-400 text-sm font-medium">
-                      <Navigation className="h-4 w-4 text-emerald-500" fill="currentColor" />
-                      {area.distance?.toFixed(2)} Km away
+                    <div className="flex items-center gap-1.5 mb-4 text-zinc-500 dark:text-zinc-400 text-xs md:text-sm font-medium">
+                      <Navigation className="h-3 w-3 md:h-4 md:w-4 text-emerald-500 shrink-0" fill="currentColor" />
+                      <span className="truncate">{area.distance?.toFixed(2)} Km away</span>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 mt-auto">
                       <button
                         onClick={(e) => { e.stopPropagation(); setPendingMapRoute({ lat: area.lat, lon: area.lon, name: area.name }); }}
-                        className="h-10 w-12 flex items-center justify-center rounded-xl border border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-white hover:bg-zinc-100 dark:hover:bg-white/10 active:scale-90 transition-all outline-none cursor-pointer"
+                        className="h-10 w-12 flex items-center justify-center rounded-xl border border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-white hover:bg-zinc-100 dark:hover:bg-white/10 active:scale-90 transition-all outline-none cursor-pointer shrink-0"
                       >
                         <Navigation className="h-5 w-5" />
                       </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); setFocusedAreaId(area.id); setSelectedArea(area); setSelectedSpot(null); setUiState("Discovery"); }}
-                        className="flex-1 h-10 rounded-xl bg-zinc-900 dark:bg-[#27272a] text-white font-bold text-sm hover:bg-zinc-800 dark:hover:bg-white/10 active:scale-95 transition-all outline-none cursor-pointer"
+                        className="flex-1 h-10 rounded-xl bg-zinc-900 dark:bg-[#27272a] text-white font-bold text-sm hover:bg-zinc-800 dark:hover:bg-white/10 active:scale-95 transition-all outline-none cursor-pointer shadow-sm"
                       >
                         Check In
                       </button>
-                    </div>
-                  </div>
-                  <div className="flex-shrink-0 flex items-start justify-end">
-                    <div className={`h-10 w-10 border-[3px] rounded-full rounded-tr-none rotate-45 flex items-center justify-center shadow-lg ${isFocused ? "bg-[#121214] border-emerald-400" : "bg-[#121214] border-amber-400"}`}>
-                      <Car className={`h-5 w-5 -rotate-45 ${isFocused ? "text-emerald-400" : "text-amber-400"}`} />
                     </div>
                   </div>
                 </div>
@@ -330,6 +567,45 @@ export default function DriverMap() {
 
       {/* ── FLOATING MODALS ───────────────────────────────────────────────── */}
 
+      {/* 0. NATIVE REGION DIALOG */}
+      <dialog
+        ref={regionModalRef}
+        onClose={() => setIsRegionMenuOpen(false)}
+        onClick={(e) => { if (e.target === regionModalRef.current) setIsRegionMenuOpen(false); }}
+        className="p-0 m-auto bg-transparent border-none w-[92vw] md:w-full max-w-sm overflow-visible backdrop:bg-zinc-900/60 dark:backdrop:bg-black/80 backdrop:backdrop-blur-md transition-all"
+      >
+        <div className="w-full bg-white dark:bg-[#121214] rounded-2xl md:rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-zinc-200 dark:border-white/10 max-h-[75vh] md:max-h-[80vh] animate-in zoom-in-95 duration-300">
+          <div className="flex items-center justify-between p-4 md:p-5 border-b border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-[#18181b] shrink-0">
+            <h3 className="font-bold text-zinc-900 dark:text-white flex items-center gap-2 text-sm md:text-base">
+              <MapPin className="h-4 w-4 md:h-5 md:w-5 text-emerald-500" />
+              Select Region
+            </h3>
+            <button onClick={() => setIsRegionMenuOpen(false)} className="p-1.5 hover:bg-zinc-200 dark:hover:bg-white/10 rounded-lg transition-colors outline-none cursor-pointer">
+              <X className="h-4 w-4 md:h-5 md:w-5 text-zinc-500 dark:text-zinc-400" />
+            </button>
+          </div>
+          <div className="overflow-y-auto custom-scrollbar p-3 space-y-1.5 bg-white dark:bg-[#121214]">
+            <button onClick={() => handleRegionChange("ALL")} className={`w-full px-4 py-3 md:py-3.5 text-left text-xs md:text-sm font-bold rounded-xl transition-colors outline-none cursor-pointer ${selectedRegion === "ALL" ? "text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-500/20" : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"}`}>
+              National (All Regions)
+            </button>
+
+            <div className="pt-3 md:pt-4 pb-1.5 md:pb-2 px-3 text-[9px] md:text-[10px] font-black text-zinc-500 tracking-widest uppercase">Federal Cities</div>
+            {REGIONS.filter(r => r.group === "FEDERAL").map(r => (
+              <button key={r.id} onClick={() => handleRegionChange(r.id)} className={`w-full px-4 py-3 md:py-3.5 text-left text-xs md:text-sm font-bold rounded-xl transition-colors outline-none cursor-pointer ${selectedRegion === r.id ? "text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-500/20" : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"}`}>
+                {r.label}
+              </button>
+            ))}
+
+            <div className="pt-3 md:pt-4 pb-1.5 md:pb-2 px-3 text-[9px] md:text-[10px] font-black text-zinc-500 tracking-widest uppercase">Major Regions</div>
+            {REGIONS.filter(r => r.group === "MAJOR").map(r => (
+              <button key={r.id} onClick={() => handleRegionChange(r.id)} className={`w-full px-4 py-3 md:py-3.5 text-left text-xs md:text-sm font-bold rounded-xl transition-colors outline-none cursor-pointer ${selectedRegion === r.id ? "text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-500/20" : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"}`}>
+                {r.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </dialog>
+
       {/* 1. DISCOVERY PANEL */}
       {selectedArea && !selectedSpot && uiState === "Discovery" && (
         <div className="fixed inset-0 z-[6000] flex items-center justify-center bg-zinc-900/60 dark:bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setSelectedArea(null)}>
@@ -342,7 +618,7 @@ export default function DriverMap() {
                 <X className="h-5 w-5 md:h-6 md:w-6" />
               </button>
             </div>
-            {/* ✅ Custom Scrollbar applied to list */}
+
             <div className="p-5 md:p-6 overflow-y-auto overscroll-contain flex-1 flex flex-col gap-3 custom-scrollbar">
               {selectedArea.spots.map((spot) => {
                 const isCompatible = spot.vehicleType === driverVehicle;
@@ -386,7 +662,6 @@ export default function DriverMap() {
               </button>
             </div>
 
-            {/* ✅ Custom Scrollbar applied here */}
             <div className="p-5 md:p-6 overflow-y-auto overscroll-contain flex-1 space-y-6 custom-scrollbar">
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-zinc-100 dark:bg-black/40 rounded-xl p-4 border border-zinc-200 dark:border-white/5">
@@ -488,35 +763,33 @@ export default function DriverMap() {
       )}
 
       {/* ── EXTERNAL MAP NAVIGATION MODAL ─────────────────────────────────── */}
-      {pendingMapRoute && (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-zinc-900/60 dark:bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-sm bg-white dark:bg-[#18181b] rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-300">
-            <div className="p-6 text-center">
-              <div className="mx-auto w-16 h-16 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-500 rounded-full flex items-center justify-center mb-4 shadow-inner">
-                <Navigation className="h-8 w-8" />
-              </div>
-              <h3 className="font-bold text-xl text-zinc-900 dark:text-white mb-2">Leaving VisionPark</h3>
-              <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-6">
-                You are about to leave the VisionPark app to open Google Maps for directions to <strong className="text-zinc-900 dark:text-zinc-300">{pendingMapRoute.name}</strong>. Do you want to continue?
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setPendingMapRoute(null)}
-                  className="flex-1 py-3 rounded-xl font-bold text-sm bg-zinc-100 hover:bg-zinc-200 text-zinc-700 dark:bg-white/5 dark:hover:bg-white/10 dark:text-zinc-300 transition-colors outline-none cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={confirmOpenGoogleMaps}
-                  className="flex-1 py-3 rounded-xl font-bold text-sm bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/20 transition-all outline-none cursor-pointer flex items-center justify-center gap-2"
-                >
-                  Open Maps <ExternalLink className="h-4 w-4" />
-                </button>
-              </div>
+      <dialog
+        ref={mapRouteModalRef}
+        onClose={() => setPendingMapRoute(null)}
+        onClick={(e) => { if (e.target === mapRouteModalRef.current) setPendingMapRoute(null); }}
+        className="p-0 m-auto bg-transparent border-none w-[92vw] md:w-full max-w-sm overflow-visible backdrop:bg-zinc-900/60 dark:backdrop:bg-black/80 backdrop:backdrop-blur-md transition-all"
+      >
+        <div className="w-full bg-white dark:bg-[#18181b] rounded-2xl md:rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-zinc-200 dark:border-white/10 animate-in zoom-in-95 duration-300">
+          <div className="p-5 md:p-6 text-center bg-white dark:bg-[#18181b]">
+            <div className="mx-auto w-14 w-14 md:h-16 md:w-16 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-500 rounded-full flex items-center justify-center mb-4 shadow-inner">
+              <Navigation className="h-6 w-6 md:h-8 md:w-8" />
+            </div>
+            <h3 className="font-bold text-lg md:text-xl text-zinc-900 dark:text-white mb-2">Leaving VisionPark</h3>
+            <p className="text-xs md:text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-6 px-2">
+              You are about to leave the VisionPark app to open Google Maps for directions to <strong className="text-zinc-900 dark:text-zinc-300">{pendingMapRoute?.name}</strong>. Do you want to continue?
+            </p>
+            <div className="flex gap-2 md:gap-3">
+              <button onClick={() => setPendingMapRoute(null)} className="flex-1 py-3 md:py-3.5 rounded-xl font-bold text-xs md:text-sm bg-zinc-100 hover:bg-zinc-200 text-zinc-700 dark:bg-white/5 dark:hover:bg-white/10 dark:text-zinc-300 transition-colors outline-none cursor-pointer">
+                Cancel
+              </button>
+              <button onClick={confirmOpenGoogleMaps} className="flex-1 py-3 md:py-3.5 rounded-xl font-bold text-xs md:text-sm bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/20 transition-all outline-none cursor-pointer flex items-center justify-center gap-2">
+                Open Maps <ExternalLink className="h-4 w-4 shrink-0" />
+              </button>
             </div>
           </div>
         </div>
-      )}
+      </dialog>
+
     </div>
   );
 }
