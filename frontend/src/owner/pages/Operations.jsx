@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import {
   Cctv, AlertTriangle, FileText, ShieldAlert,
-  CheckCircle, Clock, Maximize2, Video,
-  Activity, MapPin, ChevronRight, Share, Radar
+  CheckCircle, Clock, Maximize2, Video, Camera,
+  Activity, MapPin, ChevronRight, Share, Radar, X
 } from "lucide-react";
 
 const CAMERA_BRANCHES = [
@@ -33,43 +33,80 @@ const SYSTEM_ALERTS = [
 
 const STATIC_INCIDENTS = [
   {
-    id: "inc_001", branch: "Bole Airport Parking", zone: "Zone A", spot: "A12",
-    date: "2026-03-10 14:30", plates: ["AA-12345", "OR-98765"], category: "Property Damage",
-    description: "Minor collision while reversing out of spot A12.",
-    attendantName: "Kebede Alemu", attendantId: "1234 5678 9012 3456",
-    status: "Pending", hasVideo: true
+    id: "INC-601", branch: "Current Branch", zone: "N/A", spot: "N/A",
+    date: "3/25/2026, 8:26:19 PM", plates: ["124243"], category: "Property Damage",
+    description: "Hit: 124243",
+    attendantName: "Attendant", attendantId: null,
+    status: "Pending Review", hasVideo: true, hasPhoto: false, file: null
   },
   {
-    id: "inc_002", branch: "Piazza Street Parking", zone: "Street Level", spot: "S05",
-    date: "2026-03-09 09:15", plates: ["DR-55521"], category: "Dispute",
+    id: "INC-602", branch: "Piazza Street Parking", zone: "Street Level", spot: "S05",
+    date: "3/25/2026, 9:15:00 AM", plates: ["DR-55521"], category: "Customer Dispute",
     description: "Driver refused to pay overstay penalty of 105 ETB.",
-    attendantName: "Sara Tadesse", attendantId: "9876 5432 1098 7654",
-    status: "Forwarded to Authority", hasVideo: false
+    attendantName: "Sara Tadesse", attendantId: null,
+    status: "Pending", hasVideo: false, hasPhoto: false, file: null
   }
 ];
 
 export default function Operations() {
-  const [activeTab, setActiveTab] = useState("matrix");
+  const [activeTab, setActiveTab] = useState("incidents");
   const [expandedBranch, setExpandedBranch] = useState(null);
-  const [incidents, setIncidents] = useState(STATIC_INCIDENTS);
+  const [incidents, setIncidents] = useState([]);
   const [debtRadar, setDebtRadar] = useState([]);
 
-  // ✅ Pull incidents logged by attendants from localStorage
+  // Modal state for viewing files
+  const [evidenceModal, setEvidenceModal] = useState(null);
+
+  // Pull incidents logged by attendants from localStorage
   useEffect(() => {
     const loadReports = () => {
       try {
         const ownerRaw = localStorage.getItem("vp_owner_incidents");
         const debtRaw = localStorage.getItem("vp_debt_radar");
 
+        // Use a Map to ensure unique IDs across static and local storage data
+        const uniqueIncidentsMap = new Map();
+
+        // 1. Add static incidents first
+        STATIC_INCIDENTS.forEach(inc => uniqueIncidentsMap.set(inc.id, inc));
+
+        // 2. Add/Overwrite with local storage incidents
         if (ownerRaw) {
           const parsedOwner = JSON.parse(ownerRaw);
-          setIncidents([...parsedOwner, ...STATIC_INCIDENTS]);
-        } else {
-          setIncidents(STATIC_INCIDENTS);
+          parsedOwner.forEach(inc => {
+            const isVideoFile = inc.file && inc.file.startsWith('data:video');
+            const isImageFile = inc.file && inc.file.startsWith('data:image');
+
+            uniqueIncidentsMap.set(inc.id, {
+              ...inc,
+              category: inc.type === "Property Damage" ? "Property Damage" :
+                inc.type === "Customer Dispute" ? "Customer Dispute" : inc.type,
+              status: inc.status === "Admin CCTV Review Needed" ? "Pending Review" : inc.status,
+              hasVideo: !!inc.hasVideo || isVideoFile,
+              hasPhoto: !!inc.hasPhoto || isImageFile,
+              file: inc.file || null
+            });
+          });
         }
 
+        setIncidents(Array.from(uniqueIncidentsMap.values()));
+
+        // 3. Handle Debt Radar Deduplication
         if (debtRaw) {
-          setDebtRadar(JSON.parse(debtRaw));
+          const uniqueDebtMap = new Map();
+          const parsedDebt = JSON.parse(debtRaw);
+
+          parsedDebt.forEach(d => {
+            const isVideoFile = d.file && d.file.startsWith('data:video');
+            const isImageFile = d.file && d.file.startsWith('data:image');
+            uniqueDebtMap.set(d.id, {
+              ...d,
+              hasVideo: !!d.hasVideo || isVideoFile,
+              hasPhoto: !!d.hasPhoto || isImageFile,
+              file: d.file || null
+            });
+          });
+          setDebtRadar(Array.from(uniqueDebtMap.values()));
         } else {
           setDebtRadar([]);
         }
@@ -79,18 +116,33 @@ export default function Operations() {
     };
 
     loadReports();
-
-    // Listen for storage events (if testing across multiple browser tabs)
     window.addEventListener("storage", loadReports);
     return () => window.removeEventListener("storage", loadReports);
   }, [activeTab]);
 
-  const handleMarkResolved = (id) => {
-    setIncidents(prev => prev.map(i => i.id === id ? { ...i, status: "Resolved" } : i));
+  const handleDismissDebtRadar = (id) => {
+    setDebtRadar(prev => prev.filter(d => d.id !== id));
+    try {
+      const rawSaved = JSON.parse(localStorage.getItem("vp_debt_radar") || "[]");
+      const updatedSaved = rawSaved.filter(r => r.id !== id);
+      localStorage.setItem("vp_debt_radar", JSON.stringify(updatedSaved));
+    } catch (e) { }
   };
 
-  const handleForward = (id) => {
-    setIncidents(prev => prev.map(i => i.id === id ? { ...i, status: "Forwarded to Authority" } : i));
+  const handleMarkResolved = (inc) => {
+    if (inc.isDebtRadar) {
+      handleDismissDebtRadar(inc.id);
+    } else {
+      setIncidents(prev => prev.map(i => i.id === inc.id ? { ...i, status: "Resolved" } : i));
+    }
+  };
+
+  const handleForward = (inc) => {
+    if (inc.isDebtRadar) {
+      setDebtRadar(prev => prev.map(i => i.id === inc.id ? { ...i, status: "Forwarded to Authority" } : i));
+    } else {
+      setIncidents(prev => prev.map(i => i.id === inc.id ? { ...i, status: "Forwarded to Authority" } : i));
+    }
   };
 
   // ── Live Matrix ────────────────────────────────────────────────────────────
@@ -147,13 +199,6 @@ export default function Operations() {
                       </span>
                     )}
                   </div>
-                  {cam.status === 'Live' && (
-                    <div className="absolute bottom-3 left-3">
-                      <span className="px-2 py-1 bg-black/60 backdrop-blur-md rounded-md border border-white/10 text-[10px] font-mono text-emerald-400 flex items-center gap-1">
-                        [AI] YOLOv8 Active
-                      </span>
-                    </div>
-                  )}
                 </div>
               ))}
             </div>
@@ -192,9 +237,9 @@ export default function Operations() {
                 </td>
                 <td className="px-6 py-4 text-zinc-500">{alert.time}</td>
                 <td className="px-6 py-4">
-                  <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold ${alert.status === 'Active' ? 'bg-red-100   text-red-700   dark:bg-red-500/20   dark:text-red-400' :
+                  <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold ${alert.status === 'Active' ? 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400' :
                     alert.status === 'Acknowledged' ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400' :
-                      'bg-zinc-100  text-zinc-700  dark:bg-white/10     dark:text-zinc-300'
+                      'bg-zinc-100 text-zinc-700 dark:bg-white/10 dark:text-zinc-300'
                     }`}>{alert.status}</span>
                 </td>
                 <td className="px-6 py-4 text-right">
@@ -209,141 +254,227 @@ export default function Operations() {
   );
 
   // ── Incidents tab ──────────────────────────────────────────────────────────
-  const renderIncidents = () => (
-    <div className="flex flex-col gap-6 animate-in fade-in duration-300">
+  const renderIncidents = () => {
 
-      {/* Debt Radar section — only shown when there are fleeing vehicle reports */}
-      {debtRadar.length > 0 && (
-        <div className="bg-red-50 dark:bg-red-500/5 border border-red-200 dark:border-red-500/20 rounded-2xl overflow-hidden">
-          <div className="flex items-center gap-3 px-5 md:px-6 py-4 border-b border-red-200 dark:border-red-500/20 bg-red-100/50 dark:bg-red-500/10">
-            <Radar className="h-5 w-5 text-red-500 shrink-0" />
-            <div>
-              <h3 className="font-black text-red-700 dark:text-red-400 text-sm uppercase tracking-wider">Debt Radar — Global Watchlist</h3>
-              <p className="text-[10px] text-red-500/70 mt-0.5">{debtRadar.length} vehicle{debtRadar.length > 1 ? "s" : ""} flagged for fleeing without payment</p>
+    const formattedDebtRadar = debtRadar.map(d => ({
+      id: d.id,
+      branch: d.branch || "Current Branch",
+      zone: d.zone || "N/A",
+      spot: d.spot || "N/A",
+      date: d.time || d.timeFlagged || new Date().toLocaleString(),
+      plates: [d.plate],
+      category: "Fled Without Payment",
+      description: d.details || d.reason || `Vehicle fled without paying.`,
+      amount: d.amount || d.debtAmount,
+      attendantName: d.attendantName || "Attendant",
+      status: d.status || "Pending",
+      hasVideo: d.hasVideo || false,
+      hasPhoto: d.hasPhoto || false,
+      file: d.file || null,
+      isDebtRadar: true
+    }));
+
+    // FINAL Deduplication before rendering (Ensures no crashes)
+    const uniqueCombinedMap = new Map();
+    [...formattedDebtRadar, ...incidents].forEach(inc => {
+      if (!uniqueCombinedMap.has(inc.id)) {
+        uniqueCombinedMap.set(inc.id, inc);
+      }
+    });
+
+    const combinedList = Array.from(uniqueCombinedMap.values());
+
+    return (
+      <div className="flex flex-col gap-6 animate-in fade-in duration-300">
+
+        {/* --- INFORMATIVE GLANCE VIEW --- */}
+        {debtRadar.length > 0 && (
+          <div className="bg-red-50 dark:bg-red-500/5 border border-red-200 dark:border-red-500/20 rounded-2xl overflow-hidden">
+            <div className="flex items-center gap-3 px-5 md:px-6 py-4 border-b border-red-200 dark:border-red-500/20 bg-red-100/50 dark:bg-red-500/10">
+              <Radar className="h-5 w-5 text-red-500 shrink-0" />
+              <div>
+                <h3 className="font-black text-red-700 dark:text-red-400 text-sm uppercase tracking-wider">Debt Radar — Global Watchlist</h3>
+                <p className="text-[10px] text-red-500/70 mt-0.5">{debtRadar.length} vehicle{debtRadar.length > 1 ? "s" : ""} flagged. Require action below.</p>
+              </div>
+            </div>
+
+            <div className="p-4 md:p-5 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+              {debtRadar.map(inc => (
+                <div key={`glance-${inc.id}`} className="bg-white dark:bg-black/30 border border-red-200 dark:border-red-500/20 rounded-xl p-3 md:p-4 flex flex-col gap-2 min-w-0">
+
+                  <div className="flex items-center justify-between gap-2 w-full min-w-0">
+                    <span className="font-mono font-black text-xs md:text-sm text-red-700 dark:text-red-400 bg-red-100 dark:bg-red-500/20 px-2 py-0.5 rounded tracking-widest truncate min-w-0">
+                      {inc.plate}
+                    </span>
+                    <span className="text-[10px] md:text-xs font-bold text-red-500 shrink-0 whitespace-nowrap">
+                      {(inc.amount || inc.debtAmount)?.toFixed(2)} ETB
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 text-[10px] md:text-xs font-medium text-zinc-600 dark:text-zinc-400 min-w-0">
+                    <MapPin className="h-3 w-3 shrink-0" />
+                    <span className="truncate">{inc.branch || "Current Branch"}</span>
+                  </div>
+
+                  {(inc.details || inc.reason) && (
+                    <p className="text-[10px] md:text-xs text-zinc-500 dark:text-zinc-400 line-clamp-1 italic min-w-0">
+                      "{inc.details || inc.reason}"
+                    </p>
+                  )}
+
+                  <div className="flex items-center justify-between pt-2 mt-1 border-t border-red-100 dark:border-red-500/10 min-w-0 gap-2">
+                    <span className="text-[9px] md:text-[10px] text-zinc-400 flex items-center gap-1 truncate">
+                      <Clock className="h-2.5 w-2.5 shrink-0" />
+                      <span className="truncate">{inc.time || inc.timeFlagged}</span>
+                    </span>
+                    <span className="text-[9px] md:text-[10px] font-bold text-red-400 animate-pulse shrink-0 whitespace-nowrap">
+                      Action Required ↓
+                    </span>
+                  </div>
+
+                </div>
+              ))}
             </div>
           </div>
-          <div className="p-4 md:p-5 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 custom-scrollbar">
-            {debtRadar.map(inc => (
-              <div key={inc.id} className="bg-white dark:bg-black/30 border border-red-200 dark:border-red-500/20 rounded-xl p-4 flex flex-col gap-2">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-mono font-black text-sm text-red-700 dark:text-red-400 bg-red-100 dark:bg-red-500/20 px-2 py-0.5 rounded tracking-widest truncate">
-                    {inc.plate}
-                  </span>
-                  <span className="text-[10px] font-bold text-red-500 shrink-0">{inc.amount?.toFixed(2)} ETB</span>
-                </div>
-                {inc.details && <p className="text-[10px] text-zinc-500 dark:text-zinc-400 line-clamp-2">{inc.details}</p>}
-                <div className="flex items-center justify-between pt-2 border-t border-red-100 dark:border-red-500/10">
-                  <span className="text-[9px] font-bold uppercase tracking-widest text-red-500 flex items-center gap-1">
-                    <Radar className="h-2.5 w-2.5" /> Global Watchlist Active
-                  </span>
-                  <span className="text-[9px] text-zinc-400 flex items-center gap-1">
-                    <Clock className="h-2.5 w-2.5" /> {inc.time}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Owner Incidents */}
-      <div className="flex flex-col gap-4 custom-scrollbar">
-        {incidents.length === 0 && (
-          <div className="text-center py-16 text-zinc-400 text-sm font-medium">No incidents reported yet.</div>
         )}
-        {incidents.map(inc => (
-          <div key={inc.id} className="bg-white dark:bg-[#121214] rounded-2xl border border-zinc-200 dark:border-white/5 shadow-sm p-5 md:p-6 flex flex-col md:flex-row gap-6">
-            <div className="flex-1 space-y-4 min-w-0">
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <span className="text-xs font-bold px-2 py-1 rounded-md bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 uppercase tracking-wider">{inc.category || inc.type}</span>
-                    <span className="text-xs text-zinc-500 font-mono">{inc.id}</span>
-                  </div>
-                  <h3 className="text-base md:text-lg font-bold text-zinc-900 dark:text-white flex items-center gap-2 mt-2 flex-wrap">
-                    <MapPin className="h-4 w-4 text-zinc-400 shrink-0" />
-                    <span className="truncate">{inc.branch || inc.location || "N/A"} ({inc.zone || "N/A"}, {inc.spot || "N/A"})</span>
-                  </h3>
-                </div>
-                <span className={`px-3 py-1 rounded-xl text-xs font-bold border shrink-0 ${inc.status === 'Pending' || inc.status === 'Pending Review' || inc.status === 'Admin CCTV Review Needed' ? 'bg-amber-50 border-amber-200 text-amber-700 dark:bg-amber-500/10 dark:border-amber-500/30' :
-                  inc.status === 'Forwarded to Authority' ? 'bg-blue-50  border-blue-200  text-blue-700  dark:bg-blue-500/10  dark:border-blue-500/30' :
-                    'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-500/10 dark:border-emerald-500/30'
-                  }`}>
-                  {inc.status}
-                </span>
-              </div>
 
-              <p className="text-sm text-zinc-600 dark:text-zinc-300 bg-zinc-50 dark:bg-white/5 p-4 rounded-xl border border-zinc-100 dark:border-white/5 break-words">
-                "{inc.description || inc.details}"
-              </p>
+        {/* --- MAIN INCIDENTS LIST --- */}
+        <div className="flex flex-col gap-4">
+          {combinedList.length === 0 && (
+            <div className="text-center py-16 text-zinc-400 text-sm font-medium">No incidents reported yet.</div>
+          )}
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2">
-                <div>
-                  <span className="block text-[10px] uppercase font-bold text-zinc-500 tracking-wider">Date/Time</span>
-                  <span className="text-sm font-medium text-zinc-900 dark:text-white">{inc.date || inc.time}</span>
-                </div>
-                <div>
-                  <span className="block text-[10px] uppercase font-bold text-zinc-500 tracking-wider">Plates Involved</span>
-                  <div className="flex flex-wrap gap-1 mt-0.5">
-                    {inc.plates?.map(p => (
-                      <span key={p} className="text-xs font-mono font-bold bg-zinc-100 dark:bg-white/10 px-1.5 py-0.5 rounded">{p}</span>
-                    ))}
-                    {(!inc.plates || inc.plates.length === 0) && (
-                      <span className="text-xs font-mono font-bold bg-zinc-100 dark:bg-white/10 px-1.5 py-0.5 rounded">{inc.plate || "UNKNOWN"}</span>
-                    )}
-                  </div>
-                </div>
-                <div className="sm:col-span-2">
-                  <span className="block text-[10px] uppercase font-bold text-zinc-500 tracking-wider mb-0.5">Reported By</span>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-medium text-zinc-900 dark:text-white">{inc.attendantName || "Attendant"}</span>
-                    {inc.attendantId && (
-                      <span className="text-[10px] font-mono text-zinc-400 bg-zinc-100 dark:bg-white/5 px-1.5 py-0.5 rounded">
-                        ID: {inc.attendantId.slice(-4)}
+          {combinedList.map(inc => {
+            const isDamage = inc.category === 'Property Damage';
+            const isDispute = inc.category === 'Customer Dispute';
+
+            let badgeBg = "bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-500";
+            if (isDamage) badgeBg = "bg-amber-100 dark:bg-[#452a0a] text-amber-800 dark:text-[#f59e0b]";
+            if (isDispute) badgeBg = "bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-500";
+
+            let statusPill = "border border-amber-200 dark:border-[#78350f] text-amber-700 dark:text-[#f59e0b]";
+            if (inc.status === "Forwarded to Authority") statusPill = "border border-blue-200 dark:border-blue-900 text-blue-700 dark:text-blue-500";
+            if (inc.status === "Resolved") statusPill = "border border-emerald-200 dark:border-emerald-900 text-emerald-700 dark:text-emerald-500";
+
+            // Determine Media Button State
+            const hasMedia = inc.hasVideo || inc.hasPhoto || !!inc.file;
+            let mediaIcon = <FileText className="h-4 w-4" />;
+            let mediaText = "No Evidence Attached";
+
+            if (hasMedia) {
+              if (inc.hasVideo && inc.hasPhoto) {
+                mediaIcon = <Video className="h-4 w-4" />;
+                mediaText = "View Media (Video & Photo)";
+              } else if (inc.hasVideo) {
+                mediaIcon = <Video className="h-4 w-4" />;
+                mediaText = "View Video Evidence";
+              } else if (inc.hasPhoto) {
+                mediaIcon = <Camera className="h-4 w-4" />;
+                mediaText = "View Photo Evidence";
+              } else {
+                mediaIcon = <Camera className="h-4 w-4" />;
+                mediaText = "View Evidence File";
+              }
+            }
+
+            return (
+              <div key={inc.id} className="bg-white dark:bg-[#121214] rounded-2xl border border-zinc-200 dark:border-white/5 shadow-sm p-5 md:p-6 flex flex-col md:flex-row gap-6 relative">
+
+                {/* Left Side: Details */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap items-start justify-between gap-4 mb-3">
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <span className={`text-[10px] md:text-xs font-black px-2 py-1 rounded-[4px] uppercase tracking-wider ${badgeBg}`}>
+                        {inc.category}
                       </span>
+                      <span className="text-xs text-zinc-500 font-mono tracking-widest">{inc.id}</span>
+                    </div>
+                    <span className={`px-4 py-1.5 rounded-full text-xs font-bold ${statusPill}`}>
+                      {inc.status}
+                    </span>
+                  </div>
+
+                  <h3 className="text-lg md:text-xl font-bold text-zinc-900 dark:text-white flex items-center gap-2 mb-4">
+                    <MapPin className="h-5 w-5 text-zinc-400 shrink-0" />
+                    <span className="truncate">{inc.branch} ({inc.zone}, {inc.spot})</span>
+                  </h3>
+
+                  <div className="bg-zinc-100 dark:bg-[#18181b] p-4 rounded-xl mb-4 border border-zinc-200 dark:border-transparent">
+                    <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300 break-words">
+                      "{inc.description}"
+                    </p>
+                    {inc.amount > 0 && (
+                      <p className="text-sm font-black text-red-600 dark:text-red-400 mt-2">
+                        Unpaid Debt: {inc.amount.toFixed(2)} ETB
+                      </p>
                     )}
                   </div>
-                </div>
-              </div>
-            </div>
 
-            {/* Actions sidebar */}
-            <div className="w-full md:w-56 flex flex-col gap-3 shrink-0 border-t md:border-t-0 md:border-l border-zinc-100 dark:border-white/5 pt-4 md:pt-0 md:pl-6">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-500">Actions</h4>
-              {inc.hasVideo || inc.hasPhoto ? (
-                <button type="button" className="w-full flex items-center justify-center gap-2 bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-900 dark:text-white px-4 py-2.5 rounded-xl text-sm font-bold transition-colors outline-none">
-                  <Video className="h-4 w-4" /> View Evidence
-                </button>
-              ) : (
-                <span className="text-xs text-zinc-400 italic">No evidence attached</span>
-              )}
-              {(inc.status === 'Pending' || inc.status === 'Pending Review' || inc.status === 'Admin CCTV Review Needed') && (
-                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 mt-6">
+                    <div>
+                      <span className="block text-[10px] uppercase font-bold text-zinc-500 tracking-widest mb-1.5">Date/Time</span>
+                      <span className="text-xs md:text-sm font-bold text-zinc-900 dark:text-white">{inc.date}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[10px] uppercase font-bold text-zinc-500 tracking-widest mb-1.5">Plates Involved</span>
+                      <div className="flex flex-wrap gap-2">
+                        {inc.plates.map(p => (
+                          <span key={p} className="text-[11px] md:text-xs font-mono font-bold bg-zinc-200 dark:bg-[#18181b] text-zinc-900 dark:text-white px-2 py-1 rounded">
+                            {p}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="block text-[10px] uppercase font-bold text-zinc-500 tracking-widest mb-1.5">Reported By</span>
+                      <span className="text-xs md:text-sm font-bold text-zinc-900 dark:text-white">{inc.attendantName}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="hidden md:block w-px bg-zinc-200 dark:bg-zinc-800" />
+
+                {/* Right Side: Action Buttons */}
+                <div className="w-full md:w-56 flex flex-col gap-3 shrink-0 border-t md:border-t-0 border-zinc-100 dark:border-white/5 pt-5 md:pt-0 pl-0 md:pl-4">
+                  <h4 className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-1">Actions</h4>
+
                   <button
                     type="button"
-                    onClick={() => handleForward(inc.id)}
-                    className="w-full flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-400 text-white px-4 py-2.5 rounded-xl text-sm font-bold transition-colors shadow-lg shadow-blue-500/20 outline-none mt-auto">
-                    <Share className="h-4 w-4" /> Forward to Authority
+                    onClick={() => hasMedia && setEvidenceModal(inc)}
+                    className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-bold transition-all outline-none border ${hasMedia ? 'bg-white hover:bg-zinc-50 border-zinc-300 text-zinc-900 dark:bg-[#18181b] dark:border-[#27272a] dark:hover:bg-[#27272a] dark:text-white cursor-pointer' : 'bg-zinc-50 border-zinc-200 text-zinc-400 dark:bg-black/30 dark:border-zinc-800 dark:text-zinc-600 cursor-not-allowed'}`}>
+                    {mediaIcon} <span className="truncate">{mediaText}</span>
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => handleMarkResolved(inc.id)}
-                    className="w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 px-4 py-2.5 rounded-xl text-sm font-bold transition-colors shadow-lg shadow-emerald-500/20 outline-none">
-                    <CheckCircle className="h-4 w-4" /> Mark Resolved
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-        ))}
+
+                  {inc.status !== 'Resolved' && (
+                    <div className="flex flex-col gap-3 mt-auto pt-4 md:pt-0">
+                      <button
+                        type="button"
+                        onClick={() => handleForward(inc)}
+                        className="w-full flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-3 rounded-xl text-sm font-bold transition-all outline-none">
+                        <Share className="h-4 w-4" /> Forward to Authority
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleMarkResolved(inc)}
+                        className="w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-zinc-950 px-4 py-3 rounded-xl text-sm font-bold transition-all outline-none">
+                        <CheckCircle className="h-4 w-4" /> Mark Resolved
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+              </div>
+            );
+          })}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="w-full flex flex-col gap-6 animate-in fade-in duration-500 relative">
 
-      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-zinc-900 dark:text-white tracking-tight">Operations Center</h1>
@@ -351,7 +482,6 @@ export default function Operations() {
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="flex p-1 bg-zinc-200/50 dark:bg-[#121214] rounded-2xl w-full md:w-max border border-zinc-200 dark:border-white/5">
         {[
           { key: "matrix", label: "Live Matrix", Icon: Cctv },
@@ -384,6 +514,43 @@ export default function Operations() {
         {activeTab === "health" && renderSystemHealth()}
         {activeTab === "incidents" && renderIncidents()}
       </div>
+
+      {/* ── EVIDENCE VIEW MODAL ── */}
+      {evidenceModal && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setEvidenceModal(null)}>
+          <div className="bg-white dark:bg-[#121214] rounded-2xl border border-zinc-200 dark:border-white/10 w-full max-w-3xl shadow-2xl overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 md:p-5 border-b border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/5">
+              <h3 className="font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+                {evidenceModal.hasVideo ? <Video className="h-5 w-5 text-blue-500" /> : <Camera className="h-5 w-5 text-emerald-500" />}
+                Evidence Review: {evidenceModal.id}
+              </h3>
+              <button onClick={() => setEvidenceModal(null)} className="p-1.5 hover:bg-zinc-200 dark:hover:bg-white/10 rounded-lg transition-colors outline-none cursor-pointer">
+                <X className="h-5 w-5 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white" />
+              </button>
+            </div>
+
+            <div className="p-4 md:p-6 bg-zinc-100 dark:bg-black flex items-center justify-center min-h-[300px] max-h-[75vh] overflow-hidden">
+              {evidenceModal.file && evidenceModal.file !== "MOCK_FILE_TOO_LARGE" ? (
+                evidenceModal.file.startsWith('data:video') ? (
+                  <video src={evidenceModal.file} controls autoPlay className="max-w-full max-h-[60vh] rounded-lg shadow-lg" />
+                ) : (
+                  <img src={evidenceModal.file} alt="Incident Evidence" className="max-w-full max-h-[60vh] object-contain rounded-lg shadow-lg" />
+                )
+              ) : (
+                <div className="text-zinc-500 flex flex-col items-center gap-3 text-center">
+                  {evidenceModal.hasVideo ? <Video className="h-12 w-12 opacity-20" /> : <Camera className="h-12 w-12 opacity-20" />}
+                  <div>
+                    <p className="font-bold text-zinc-700 dark:text-zinc-300">Media Retrieved via Edge Node</p>
+                    <p className="text-xs mt-1 max-w-sm">
+                      Simulation: The {evidenceModal.hasVideo ? "Video" : "Photo"} file is securely stored on the local edge server. No file data was found in local storage cache.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

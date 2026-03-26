@@ -79,6 +79,9 @@ src/
 │       ├── DriverHistory.jsx                   - Interactive timeline feed of a driver's past parking usage
 │       ├── DriverMap.jsx                       - Web map for locating branches, zones, and picking specific spots
 │       └── DriverProfile.jsx                   - Preferences screen for managing driver and vehicle data
+├── guest/
+│   └── pages/
+│       └── GuestMap.jsx                        - Public interactive map for anonymous users discovering parking spots
 ├── lib/
 │   └── utils.js                                - Shared helpers like Tailwind class merging (cn)
 ├── owner/
@@ -166,6 +169,16 @@ Global configuration page for managing individual demographic information, conne
 1. **Photo Upload & Compression**: Secure localized browser rendering and compression utilizing the canvas API to save the driver's display identity.
 2. **Data Manipulation Modal**: An overlay enabling fast and verified modification of standard strings (Name, Phone, Plate) that directly syncs with `localStorage`.
 3. **Preferences**: Modulators allowing rapid toggles between favored transaction methods and managing external linked bank credentials.
+
+## Guest Module
+
+### GuestMap — `src/guest/pages/GuestMap.jsx`
+**Primary Purpose**  
+Provides a public-facing, interactive web map allowing unauthenticated users to discover parking branches, check real-time availability, and view pricing before signing up for the platform.
+
+**Key Features & Sections**
+1. **Interactive Discovery**: Leaflet-based map displaying all active parking branches and available capacity.
+2. **Promotional Conversion**: Read-only detailed spot view that encourages user registration to book real-time parking spaces.
 
 ## Owner Module
 

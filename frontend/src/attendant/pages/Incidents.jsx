@@ -3,7 +3,7 @@ import {
     ShieldAlert, AlertTriangle, FileText,
     CarFront, Banknote, Camera, Video, Edit3,
     CheckCircle, Globe, Hash, Send, Clock,
-    Plus, Trash2, X, RefreshCcw, Radar
+    Plus, Trash2, X, RefreshCcw
 } from "lucide-react";
 
 // --- MOCK RECENT INCIDENTS ---
@@ -37,7 +37,11 @@ const pushToOwnerIncidents = (incident) => {
     try {
         const existing = JSON.parse(localStorage.getItem("vp_owner_incidents") || "[]");
         localStorage.setItem("vp_owner_incidents", JSON.stringify([incident, ...existing]));
-    } catch (_) { }
+        return true;
+    } catch (e) {
+        console.error("Local Storage Error:", e);
+        return false;
+    }
 };
 
 const pushToDebtRadar = (incident) => {
@@ -72,10 +76,34 @@ export default function IncidentLogger() {
     const handleRemoveDamagedPlate = (i) => { const p = [...damagedPlates]; p.splice(i, 1); setDamagedPlates(p); };
     const handleDamagedPlateChange = (i, v) => { const p = [...damagedPlates]; p[i] = v.toUpperCase(); setDamagedPlates(p); };
 
+    // Handles file upload with a 1.5MB safeguard to prevent localStorage from crashing
     const handleFileUpload = (e, type) => {
         const files = Array.from(e.target.files);
         if (!files.length) return;
-        setMediaFiles(prev => [...prev, ...files.map(f => ({ id: Math.random().toString(36).substr(2, 9), name: f.name, type }))]);
+
+        files.forEach(file => {
+            if (file.size > 1.5 * 1024 * 1024) {
+                showToast(`${file.name} is too large for the local prototype cache. Sending a mock reference instead.`, "error");
+                setMediaFiles(prev => [...prev, {
+                    id: Math.random().toString(36).substr(2, 9),
+                    name: file.name,
+                    type,
+                    data: "MOCK_FILE_TOO_LARGE"
+                }]);
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                setMediaFiles(prev => [...prev, {
+                    id: Math.random().toString(36).substr(2, 9),
+                    name: file.name,
+                    type,
+                    data: event.target.result
+                }]);
+            };
+            reader.readAsDataURL(file);
+        });
         e.target.value = null;
     };
 
@@ -112,7 +140,6 @@ export default function IncidentLogger() {
                 detailsText = valid.length ? `Hit: ${valid.join(", ")}. ${description}` : description || "Property Damage";
             }
 
-            // ── decide destination ─────────────────────────────────────────────
             const destination = isFleeingType(incidentType) ? "debt_radar" : "owner";
 
             const status = isUnknown
@@ -130,7 +157,6 @@ export default function IncidentLogger() {
                 time: "Just Now",
                 status,
                 destination,
-                // Extra fields populated to match the Owner's Operations Center interface
                 branch: "Bole Premium Lot",
                 zone: "Main Gate",
                 spot: "N/A",
@@ -142,15 +168,23 @@ export default function IncidentLogger() {
                 description: detailsText,
                 hasVideo: mediaFiles.some(m => m.type === "video"),
                 hasPhoto: mediaFiles.some(m => m.type === "photo"),
+                file: mediaFiles.length > 0 ? mediaFiles[0].data : null,
                 attendantName: "Kebede Alemu",
                 attendantId: "1234 5678 9012 3456"
             };
 
-            // ── route to correct backend store ────────────────────────────────
-            if (destination === "debt_radar") {
+            // Route to Owner's main incident list
+            const saveSuccess = pushToOwnerIncidents(newIncident);
+
+            if (!saveSuccess) {
+                showToast("CRITICAL ERROR: Browser storage is full. Please clear cache or upload a smaller file.", "error");
+                setIsSubmitting(false);
+                return;
+            }
+
+            // Route to Debt Radar if applicable
+            if (isFleeingType(incidentType)) {
                 pushToDebtRadar(newIncident);
-            } else {
-                pushToOwnerIncidents(newIncident);
             }
 
             setIncidents(prev => [newIncident, ...prev]);
@@ -242,7 +276,6 @@ export default function IncidentLogger() {
                                         value={offenderPlate}
                                         onChange={e => setOffenderPlate(e.target.value.toUpperCase())}
                                         placeholder={incidentType === "Property Damage" ? "ENTER PLATE OR 'UNKNOWN'" : "E.G. AA 12345"}
-                                        // ✅ Fully responsive placeholder classes added here
                                         className={`h-12 md:h-14 pl-12 pr-4 font-mono font-black text-sm md:text-lg w-full ${glassGreenInputStyles} placeholder:text-[10px] md:placeholder:text-xs lg:placeholder:text-sm placeholder:tracking-tight placeholder:font-sans placeholder:font-semibold`}
                                     />
                                 </div>
