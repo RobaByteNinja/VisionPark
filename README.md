@@ -1,11 +1,11 @@
 ````markdown
-# VisionPark Frontend
+VisionPark Frontend
 
 VisionPark is a premium, AI-powered parking management system interface that offers distinct, tailor-made experiences to drivers, lot owners, and parking attendants. This React-based frontend dynamically routes users to feature-rich dashboards catering to spot reservation, real-time operational monitoring, and business analytics.
 
 ---
 
-## 🛠️ Tech Stack
+🛠️ Tech Stack
 * React (v19.2.0) utilizing `useState` and `useEffect` hooks
 * React DOM (v19.2.0)
 * React Router DOM (v7.13.1) for navigation and programmatic redirects
@@ -13,12 +13,12 @@ VisionPark is a premium, AI-powered parking management system interface that off
 * Vite (v7.3.1)
 * Lucide React (v0.575.0) for icons
 * Leaflet & React-Leaflet (v1.9.4 & v5.0.0) for interactive maps
-* Radix UI components**, **clsx**, **tailwind-merge**, and **tailwindcss-animate** for styling and UI primitives
+* Radix UI components, clsx, tailwind-merge, and tailwindcss-animate for styling and UI primitives
 * next-themes (v0.4.6) for dark/light mode context
 
 ---
 
-## 📂 Full Project Structure
+📂 Full Project Structure
 
 ```text
 src/
