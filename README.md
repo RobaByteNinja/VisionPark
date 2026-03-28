@@ -6,15 +6,15 @@ VisionPark is a premium, AI-powered parking management system interface that off
 ---
 
 ## 🛠️ Tech Stack
-* **React** (v19.2.0) utilizing `useState` and `useEffect` hooks
-* **React DOM** (v19.2.0)
-* **React Router DOM** (v7.13.1) for navigation and programmatic redirects
-* **Tailwind CSS** (v3.4.19)
-* **Vite** (v7.3.1)
-* **Lucide React** (v0.575.0) for icons
-* **Leaflet & React-Leaflet** (v1.9.4 & v5.0.0) for interactive maps
-* **Radix UI components**, **clsx**, **tailwind-merge**, and **tailwindcss-animate** for styling and UI primitives
-* **next-themes** (v0.4.6) for dark/light mode context
+* React (v19.2.0) utilizing `useState` and `useEffect` hooks
+* React DOM (v19.2.0)
+* React Router DOM (v7.13.1) for navigation and programmatic redirects
+* Tailwind CSS (v3.4.19)
+* Vite (v7.3.1)
+* Lucide React (v0.575.0) for icons
+* Leaflet & React-Leaflet (v1.9.4 & v5.0.0) for interactive maps
+* Radix UI components**, **clsx**, **tailwind-merge**, and **tailwindcss-animate** for styling and UI primitives
+* next-themes (v0.4.6) for dark/light mode context
 
 ---
 
