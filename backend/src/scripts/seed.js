@@ -1,0 +1,159 @@
+const mongoose = require("mongoose");
+const { connectMongo, disconnectMongo } = require("../database/mongo");
+const { logger } = require("../common/logger");
+const { ParkingLot } = require("../modules/parking/models/parking-lot.model");
+const { ParkingZone } = require("../modules/parking/models/parking-zone.model");
+const { ParkingSpot } = require("../modules/parking/models/parking-spot.model");
+const { ParkingSession } = require("../modules/sessions/models/parking-session.model");
+
+const upsertUser = async ({ email, name, role }) => {
+  const users = mongoose.connection.collection("users");
+  const result = await users.findOneAndUpdate(
+    { email },
+    {
+      $set: {
+        email,
+        name,
+        role,
+        updatedAt: new Date(),
+      },
+      $setOnInsert: {
+        createdAt: new Date(),
+      },
+    },
+    { upsert: true, returnDocument: "after" }
+  );
+  return result.value;
+};
+
+const ensureSampleSession = async ({ driverId, lotId, zoneId, spotId, state, expiresAt, tag }) => {
+  const existing = await ParkingSession.findOne({
+    driverId,
+    lotId,
+    zoneId,
+    spotId,
+    closeReason: tag,
+  });
+  if (existing) return existing;
+
+  return ParkingSession.create({
+    driverId,
+    lotId,
+    zoneId,
+    spotId,
+    state,
+    expiresAt,
+    reservedAt: new Date(),
+    closeReason: tag,
+  });
+};
+
+const run = async () => {
+  await connectMongo();
+  logger.info("Seeding demo data started", { module: "scripts.seed" });
+
+  const owner = await upsertUser({
+    email: "owner@visionpark.demo",
+    name: "Demo Owner",
+    role: "owner",
+  });
+  const driver = await upsertUser({
+    email: "driver@visionpark.demo",
+    name: "Demo Driver",
+    role: "driver",
+  });
+  await upsertUser({
+    email: "attendant@visionpark.demo",
+    name: "Demo Attendant",
+    role: "attendant",
+  });
+
+  let lot = await ParkingLot.findOne({ ownerId: owner._id, name: "VisionPark Demo Lot" });
+  if (!lot) {
+    lot = await ParkingLot.create({
+      ownerId: owner._id,
+      name: "VisionPark Demo Lot",
+      region: "Addis Ababa",
+      city: "Addis Ababa",
+      address: "Bole Atlas",
+      isActive: true,
+    });
+  }
+
+  const zoneNames = ["Zone-A", "Zone-B"];
+  const zones = [];
+  for (const name of zoneNames) {
+    let zone = await ParkingZone.findOne({ lotId: lot._id, name });
+    if (!zone) {
+      zone = await ParkingZone.create({
+        lotId: lot._id,
+        name,
+        category: "car",
+      });
+    }
+    zones.push(zone);
+  }
+
+  const spotDefinitions = [
+    { zoneId: zones[0]._id, code: "A-01" },
+    { zoneId: zones[0]._id, code: "A-02" },
+    { zoneId: zones[1]._id, code: "B-01" },
+    { zoneId: zones[1]._id, code: "B-02" },
+  ];
+
+  const spots = [];
+  for (const def of spotDefinitions) {
+    let spot = await ParkingSpot.findOne({
+      lotId: lot._id,
+      zoneId: def.zoneId,
+      code: def.code,
+    });
+    if (!spot) {
+      spot = await ParkingSpot.create({
+        lotId: lot._id,
+        zoneId: def.zoneId,
+        code: def.code,
+        category: "car",
+      });
+    }
+    spots.push(spot);
+  }
+
+  await ensureSampleSession({
+    driverId: driver._id,
+    lotId: lot._id,
+    zoneId: zones[0]._id,
+    spotId: spots[0]._id,
+    state: "reserved",
+    expiresAt: new Date(Date.now() + 20 * 60 * 1000),
+    tag: "seed:reserved",
+  });
+
+  await ensureSampleSession({
+    driverId: driver._id,
+    lotId: lot._id,
+    zoneId: zones[0]._id,
+    spotId: spots[1]._id,
+    state: "secured",
+    expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    tag: "seed:secured",
+  });
+
+  logger.info("Seeding demo data completed", {
+    module: "scripts.seed",
+    ownerId: String(owner._id),
+    driverId: String(driver._id),
+    lotId: String(lot._id),
+    zones: zones.map((z) => String(z._id)),
+    spots: spots.map((s) => String(s._id)),
+  });
+};
+
+run()
+  .catch((error) => {
+    logger.error("Seed script failed", { module: "scripts.seed", error });
+    process.exitCode = 1;
+  })
+  .finally(async () => {
+    await disconnectMongo();
+  });
