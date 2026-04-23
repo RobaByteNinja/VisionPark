@@ -20,5 +20,13 @@
   "devDependencies": {
     "jest": "^29.7.0",
     "supertest": "^7.0.0"
-  }
+  },
+  "description": "Node.js + MongoDB backend for VisionPark with sessions, parking, operations, realtime forwarding, and AI event ingestion (simulation-ready).",
+  "directories": {
+    "test": "tests"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
 }

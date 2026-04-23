@@ -9,6 +9,7 @@ const { sessionRoutes } = require("../modules/sessions");
 const { parkingRoutes } = require("../modules/parking");
 const { operationsRoutes } = require("../modules/operations");
 const { aiRoutes } = require("../modules/ai-ingestion");
+const { userRoutes } = require("../modules/users");
 const { ParkingSession } = require("../modules/sessions/models/parking-session.model");
 const { ParkingSpot } = require("../modules/parking/models/parking-spot.model");
 const { Incident } = require("../modules/operations/models/incident.model");
@@ -116,6 +117,7 @@ const createApp = () => {
   app.use("/api/parking", parkingRoutes);
   app.use("/api/operations", operationsRoutes);
   app.use("/api/ai", aiRoutes);
+  app.use("/api/users", userRoutes);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

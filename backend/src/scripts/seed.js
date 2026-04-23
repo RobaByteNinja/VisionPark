@@ -8,7 +8,7 @@ const { ParkingSession } = require("../modules/sessions/models/parking-session.m
 
 const upsertUser = async ({ email, name, role }) => {
   const users = mongoose.connection.collection("users");
-  const result = await users.findOneAndUpdate(
+  await users.findOneAndUpdate(
     { email },
     {
       $set: {
@@ -23,7 +23,11 @@ const upsertUser = async ({ email, name, role }) => {
     },
     { upsert: true, returnDocument: "after" }
   );
-  return result.value;
+
+  // Some driver versions can return null-ish wrappers for upserts;
+  // always fetch directly so seed stays deterministic.
+  const doc = await users.findOne({ email });
+  return doc;
 };
 
 const ensureSampleSession = async ({ driverId, lotId, zoneId, spotId, state, expiresAt, tag }) => {
