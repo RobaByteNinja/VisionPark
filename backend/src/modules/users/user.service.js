@@ -3,6 +3,125 @@ const { ValidationError, ConflictError, NotFoundError } = require("../../common/
 const { hashPassword, toSafeUser } = require("../auth/auth.utils");
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const hasValue = (value) =>
+  value !== undefined && value !== null && String(value).trim().length > 0;
+
+const sanitizeRoleProfiles = (role, payload = {}) => {
+  const hasDriverProfile = payload.driverProfile !== undefined;
+  const hasOwnerProfile = payload.ownerProfile !== undefined;
+  const hasAttendantProfile = payload.attendantProfile !== undefined;
+
+  if (role === "driver") {
+    if (
+      !hasDriverProfile ||
+      !payload.driverProfile ||
+      typeof payload.driverProfile !== "object"
+    ) {
+      throw new ValidationError("driverProfile is required when role is driver.");
+    }
+    if (!hasValue(payload.driverProfile.licensePlate)) {
+      throw new ValidationError(
+        "driverProfile.licensePlate is required when role is driver."
+      );
+    }
+    if (hasOwnerProfile || hasAttendantProfile) {
+      throw new ValidationError("Only driverProfile is allowed when role is driver.");
+    }
+    return {
+      driverProfile: {
+        phone: hasValue(payload.driverProfile.phone)
+          ? String(payload.driverProfile.phone).trim()
+          : null,
+        licensePlate: String(payload.driverProfile.licensePlate).trim(),
+        vehicleType: hasValue(payload.driverProfile.vehicleType)
+          ? String(payload.driverProfile.vehicleType).trim()
+          : null,
+        licenseType: hasValue(payload.driverProfile.licenseType)
+          ? String(payload.driverProfile.licenseType).trim()
+          : null,
+        region: hasValue(payload.driverProfile.region)
+          ? String(payload.driverProfile.region).trim()
+          : null,
+      },
+      ownerProfile: null,
+      attendantProfile: null,
+    };
+  }
+
+  if (role === "owner") {
+    if (
+      !hasOwnerProfile ||
+      !payload.ownerProfile ||
+      typeof payload.ownerProfile !== "object"
+    ) {
+      throw new ValidationError("ownerProfile is required when role is owner.");
+    }
+    if (hasDriverProfile || hasAttendantProfile) {
+      throw new ValidationError("Only ownerProfile is allowed when role is owner.");
+    }
+    return {
+      driverProfile: null,
+      ownerProfile: {
+        phone: hasValue(payload.ownerProfile.phone)
+          ? String(payload.ownerProfile.phone).trim()
+          : null,
+        companyName: hasValue(payload.ownerProfile.companyName)
+          ? String(payload.ownerProfile.companyName).trim()
+          : null,
+        tinNumber: hasValue(payload.ownerProfile.tinNumber)
+          ? String(payload.ownerProfile.tinNumber).trim()
+          : null,
+      },
+      attendantProfile: null,
+    };
+  }
+
+  if (role === "attendant") {
+    if (
+      !hasAttendantProfile ||
+      !payload.attendantProfile ||
+      typeof payload.attendantProfile !== "object"
+    ) {
+      throw new ValidationError("attendantProfile is required when role is attendant.");
+    }
+    if (hasDriverProfile || hasOwnerProfile) {
+      throw new ValidationError("Only attendantProfile is allowed when role is attendant.");
+    }
+    const ownerId = payload.attendantProfile.ownerId;
+    const branchId = payload.attendantProfile.branchId;
+    if (!hasValue(ownerId) || !hasValue(branchId)) {
+      throw new ValidationError(
+        "attendantProfile.ownerId and attendantProfile.branchId are required when role is attendant."
+      );
+    }
+    return {
+      driverProfile: null,
+      ownerProfile: null,
+      attendantProfile: {
+        ownerId,
+        branchId,
+        phone: hasValue(payload.attendantProfile.phone)
+          ? String(payload.attendantProfile.phone).trim()
+          : null,
+        shiftStart: hasValue(payload.attendantProfile.shiftStart)
+          ? String(payload.attendantProfile.shiftStart).trim()
+          : null,
+        shiftEnd: hasValue(payload.attendantProfile.shiftEnd)
+          ? String(payload.attendantProfile.shiftEnd).trim()
+          : null,
+      },
+    };
+  }
+
+  if (hasDriverProfile || hasOwnerProfile || hasAttendantProfile) {
+    throw new ValidationError("Role admin does not accept role-specific profiles.");
+  }
+  return {
+    driverProfile: null,
+    ownerProfile: null,
+    attendantProfile: null,
+  };
+};
 
 class UserService {
   async createUser(payload) {
@@ -25,6 +144,10 @@ class UserService {
 
     const passwordHash = await hashPassword(password);
     const normalizedEmail = String(email).trim().toLowerCase();
+    const { driverProfile, ownerProfile, attendantProfile } = sanitizeRoleProfiles(
+      role,
+      payload || {}
+    );
 
     try {
       const user = await User.create({
@@ -33,6 +156,9 @@ class UserService {
         role,
         passwordHash,
         status: "active",
+        driverProfile,
+        ownerProfile,
+        attendantProfile,
       });
       return toSafeUser(user);
     } catch (error) {
