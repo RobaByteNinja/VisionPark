@@ -1,16 +1,38 @@
 const { Server } = require("socket.io");
+const jwt = require("jsonwebtoken");
 const { registerDomainEventRouter } = require("./event-router");
 const { logger } = require("../common/logger");
 const { markRealtimeInitialized, setRealtimeConnectedClients } = require("../app/runtime-state");
+const { env } = require("../config/env");
 
-const parseIdentity = (socket) => {
+const extractToken = (socket) => {
   const auth = socket.handshake?.auth || {};
   const query = socket.handshake?.query || {};
+  const rawHeader = socket.handshake?.headers?.authorization || "";
+  const [scheme, headerToken] = String(rawHeader).split(/\s+/);
+  if (auth.token) return String(auth.token);
+  if (auth.accessToken) return String(auth.accessToken);
+  if (query.token) return String(query.token);
+  if (scheme === "Bearer" && headerToken) return String(headerToken);
+  return null;
+};
+
+const parseIdentity = (socket) => {
+  const token = extractToken(socket);
+  if (!token) {
+    throw new Error("Missing socket auth token.");
+  }
+  const decoded = jwt.verify(token, env.jwtSecret);
+  if (!decoded?.userId || !decoded?.role) {
+    throw new Error("Invalid socket token payload.");
+  }
+  const userId = String(decoded.userId);
+  const role = String(decoded.role);
   return {
-    userId: auth.userId || query.userId || null,
-    ownerId: auth.ownerId || query.ownerId || null,
-    branchId: auth.branchId || query.branchId || null,
-    role: auth.role || query.role || null,
+    userId,
+    role,
+    ownerId: role === "owner" ? userId : null,
+    branchId: role === "attendant" ? userId : null,
   };
 };
 
@@ -23,10 +45,30 @@ const createRealtimeServer = (httpServer) => {
 
   const detachDomainRouter = registerDomainEventRouter(io);
 
+  io.use((socket, next) => {
+    try {
+      const identity = parseIdentity(socket);
+      socket.data.identity = identity;
+      return next();
+    } catch (error) {
+      logger.warn("Socket auth rejected", {
+        module: "realtime.socket-server",
+        socketId: socket.id,
+        reason: error?.message || "invalid_token",
+      });
+      return next(new Error("Unauthorized"));
+    }
+  });
+
   io.on("connection", (socket) => {
     setRealtimeConnectedClients(io.of("/").sockets.size);
 
-    const { userId, ownerId, branchId, role } = parseIdentity(socket);
+    const {
+      userId = null,
+      ownerId = null,
+      branchId = null,
+      role = null,
+    } = socket.data.identity || {};
     const joinedRooms = new Set();
 
     const joinRoom = (room) => {

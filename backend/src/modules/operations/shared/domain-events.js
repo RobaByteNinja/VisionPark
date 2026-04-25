@@ -1,4 +1,5 @@
 const { EventEmitter } = require("events");
+const { logger } = require("../../../common/logger");
 
 const DOMAIN_EVENTS = {
   SESSION_RESERVED: "session.reserved",
@@ -35,8 +36,19 @@ class DomainEventBus extends EventEmitter {
     const enrichedPayload = eventId
       ? { ...(payload || {}), eventId }
       : payload;
-    this.emit(eventName, enrichedPayload);
-    return true;
+    try {
+      this.emit(eventName, enrichedPayload);
+      return true;
+    } catch (error) {
+      // Never let a listener exception crash request/job flows.
+      logger.error("Domain event listener failed", {
+        module: "operations.domain-events",
+        eventName,
+        eventId,
+        error,
+      });
+      return false;
+    }
   }
 
   clearSeenEventIdsForTests() {

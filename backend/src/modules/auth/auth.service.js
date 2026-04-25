@@ -6,6 +6,7 @@ const {
   ConflictError,
   NotFoundError,
   UnauthorizedError,
+  ForbiddenError,
 } = require("../../common/errors");
 const { hashPassword, comparePassword, toSafeUser } = require("./auth.utils");
 
@@ -39,6 +40,9 @@ const validateRegisterPayload = (data) => {
 class AuthService {
   async registerUser(data) {
     const { email, password, name, role } = validateRegisterPayload(data);
+    if (role === "admin") {
+      throw new ForbiddenError("Self-registration for admin role is not allowed.");
+    }
 
     const passwordHash = await hashPassword(password);
     try {

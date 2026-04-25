@@ -7,12 +7,31 @@ const { markJobsInitialized, markJobHeartbeat } = require("../app/runtime-state"
 const reservationExpiryJob = new ReservationExpiryJob();
 const reconciliationJob = new ReconciliationJob();
 
+const sanitizeIntervalMs = (value, fallback, name) => {
+  const n = Number(value);
+  // Guard against NaN, negatives, and zero/near-zero loops that can peg CPU.
+  if (!Number.isFinite(n) || n < 1000) {
+    logger.warn("Invalid job interval; using fallback", {
+      module: "jobs.index",
+      name,
+      provided: value,
+      fallback,
+    });
+    return fallback;
+  }
+  return n;
+};
+
 const startJobs = (options = {}) => {
-  const reservationIntervalMs = Number(
-    options.reservationIntervalMs || env.reservationExpiryJobMs
+  const reservationIntervalMs = sanitizeIntervalMs(
+    options.reservationIntervalMs || env.reservationExpiryJobMs,
+    15000,
+    "reservationExpiryJobMs"
   );
-  const reconciliationIntervalMs = Number(
-    options.reconciliationIntervalMs || env.reconciliationJobMs
+  const reconciliationIntervalMs = sanitizeIntervalMs(
+    options.reconciliationIntervalMs || env.reconciliationJobMs,
+    30000,
+    "reconciliationJobMs"
   );
 
   markJobsInitialized();
@@ -39,6 +58,7 @@ const startJobs = (options = {}) => {
       });
     });
   }, reservationIntervalMs);
+  reservationTimer.unref();
 
   const reconciliationTimer = setInterval(() => {
     markJobHeartbeat();
@@ -49,6 +69,7 @@ const startJobs = (options = {}) => {
       });
     });
   }, reconciliationIntervalMs);
+  reconciliationTimer.unref();
 
   return {
     stop() {

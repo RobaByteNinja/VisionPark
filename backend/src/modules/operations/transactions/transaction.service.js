@@ -44,6 +44,11 @@ class TransactionService {
 
     const session = await ParkingSession.findById(sessionId);
     if (!session) throw new NotFoundError("Session not found.");
+    if (String(session.driverId) !== String(driverId)) {
+      throw new ConflictError(
+        "Transaction driverId must match the session driver."
+      );
+    }
 
     const existing = await Transaction.findOne({ sessionId, idempotencyKey });
     if (existing) return existing;
