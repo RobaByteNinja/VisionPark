@@ -49,9 +49,10 @@ npm run seed
 
 This creates/upserts:
 
-- demo owner
-- demo driver
-- demo attendant
+- demo admin (`admin@visionpark.demo`)
+- demo owner (`owner@visionpark.demo`)
+- demo attendant (`attendant@visionpark.demo`)
+- demo drivers (`driver1@visionpark.demo`, `driver2@visionpark.demo`)
 - demo lot, zones, spots
 - demo reserved/secured sessions
 
@@ -130,3 +131,13 @@ curl -X POST http://localhost:4000/api/ai/events \
 - **AI ingestion**: validates external AI signals and maps via existing services only
 - **Realtime**: forwards domain events to Socket.IO rooms
 - **Jobs**: reservation expiry + consistency reconciliation
+
+## Manual Postman Checklist (Auth)
+
+1. Register users (`/api/auth/register`) or use seed users, then login (`/api/auth/login`) and save tokens by role.
+2. As owner token, create lot via `POST /api/parking/lots` with `ownerId` equal to the owner's user id.
+3. As owner token, create zone and spot via `POST /api/parking/zones` then `POST /api/parking/spots`.
+4. As driver token, reserve with `POST /api/sessions/reservations` (driverId must match token user).
+5. As attendant token, secure the session with `POST /api/sessions/:sessionId/secure`.
+6. As attendant token, apply enforcement block with `POST /api/operations/enforcements`.
+7. As driver token (or admin), close with `POST /api/sessions/:sessionId/close`.

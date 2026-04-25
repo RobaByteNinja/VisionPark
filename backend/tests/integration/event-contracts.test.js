@@ -19,6 +19,7 @@ const TEST_MONGO_URI =
   process.env.TEST_MONGO_URI || "mongodb://127.0.0.1:27017/visionpark_integration_test";
 
 const app = createApp();
+jest.setTimeout(30000);
 
 const createInventory = async () => seedOwnerInventory(app);
 

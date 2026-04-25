@@ -57,14 +57,24 @@ const run = async () => {
   await connectMongo();
   logger.info("Seeding demo data started", { module: "scripts.seed" });
 
+  const admin = await upsertUser({
+    email: "admin@visionpark.demo",
+    name: "Demo Admin",
+    role: "admin",
+  });
   const owner = await upsertUser({
     email: "owner@visionpark.demo",
     name: "Demo Owner",
     role: "owner",
   });
-  const driver = await upsertUser({
-    email: "driver@visionpark.demo",
-    name: "Demo Driver",
+  const driver1 = await upsertUser({
+    email: "driver1@visionpark.demo",
+    name: "Demo Driver 1",
+    role: "driver",
+  });
+  const driver2 = await upsertUser({
+    email: "driver2@visionpark.demo",
+    name: "Demo Driver 2",
     role: "driver",
   });
   await upsertUser({
@@ -125,7 +135,7 @@ const run = async () => {
   }
 
   await ensureSampleSession({
-    driverId: driver._id,
+    driverId: driver1._id,
     lotId: lot._id,
     zoneId: zones[0]._id,
     spotId: spots[0]._id,
@@ -135,7 +145,7 @@ const run = async () => {
   });
 
   await ensureSampleSession({
-    driverId: driver._id,
+    driverId: driver2._id,
     lotId: lot._id,
     zoneId: zones[0]._id,
     spotId: spots[1]._id,
@@ -146,8 +156,9 @@ const run = async () => {
 
   logger.info("Seeding demo data completed", {
     module: "scripts.seed",
+    adminId: String(admin._id),
     ownerId: String(owner._id),
-    driverId: String(driver._id),
+    driverIds: [String(driver1._id), String(driver2._id)],
     lotId: String(lot._id),
     zones: zones.map((z) => String(z._id)),
     spots: spots.map((s) => String(s._id)),

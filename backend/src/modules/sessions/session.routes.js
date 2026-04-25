@@ -13,7 +13,7 @@ const router = express.Router();
 router.post(
   "/reservations",
   authenticate,
-  authorize("driver"),
+  authorize("driver", "admin"),
   requireBodyDriverIdMatchesAuthUser,
   controller.createReservation
 );
