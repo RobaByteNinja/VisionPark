@@ -1,9 +1,11 @@
 const express = require("express");
+const cors = require("cors");
 const { requestContext } = require("./middleware/request-context");
 const { errorHandler, notFoundHandler } = require("./middleware/error-handler");
 const { logger } = require("../common/logger");
 const mongoose = require("mongoose");
 const { getRuntimeState } = require("./runtime-state");
+const { env } = require("../config/env");
 
 const { sessionRoutes } = require("../modules/sessions");
 const { parkingRoutes } = require("../modules/parking");
@@ -20,7 +22,29 @@ const createApp = () => {
   const app = express();
   app.disable("x-powered-by");
 
+  const corsOptions = {
+    origin(origin, callback) {
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      if (
+        env.corsAllowedOrigins.includes("*") ||
+        env.corsAllowedOrigins.includes(origin)
+      ) {
+        return callback(null, true);
+      }
+
+      return callback(new Error("Not allowed by CORS"));
+    },
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
+  };
+
   // Core middleware pipeline
+  app.use(cors(corsOptions));
+  app.options("*", cors(corsOptions));
   app.use(express.json({ limit: "1mb" }));
   app.use(express.urlencoded({ extended: true, limit: "1mb" }));
   app.use(requestContext);

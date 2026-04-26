@@ -73,6 +73,12 @@ if (!parsedPort) {
   throw new ValidationError("PORT must be a valid integer between 1 and 65535.");
 }
 
+const rawCorsAllowedOrigins = process.env.CORS_ALLOWED_ORIGINS || "*";
+const corsAllowedOrigins = rawCorsAllowedOrigins
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
 const env = {
   nodeEnv,
   isProduction: nodeEnv === "production",
@@ -87,6 +93,7 @@ const env = {
   jwtSecret: requireString(rawJwtSecret, "JWT_SECRET"),
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || "1d",
   aiApiKey: requireString(rawAiApiKey, "AI_API_KEY"),
+  corsAllowedOrigins,
 };
 
 module.exports = { env };
