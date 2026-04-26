@@ -19,6 +19,10 @@ const seedOwnerInventory = async (app) => {
     region: "Addis Ababa",
     city: "Addis Ababa",
     address: "Test Address",
+    location: {
+      type: "Point",
+      coordinates: [38.7578, 8.9806],
+    },
   });
   expect(lotRes.status).toBe(201);
 
