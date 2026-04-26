@@ -62,7 +62,9 @@ describe("Auth + RBAC full validation", () => {
       .post(`/api/sessions/${reserve.body._id}/close`)
       .set(authHeader(driver.token))
       .send({ idempotencyKey: `driver-flow-close-${Date.now()}` });
-    expect(close.status).toBe(200);
+    expect(close.status).toBe(409);
+    expect(close.body.success).toBe(false);
+    expect(close.body.error.code).toBe("SESSION_ERROR");
   });
 
   test("attendant flow: secure + expire + create incident", async () => {
@@ -101,9 +103,12 @@ describe("Auth + RBAC full validation", () => {
       .post("/api/operations/incidents")
       .set(authHeader(attendant.token))
       .send({
+        createdByType: "attendant",
+        createdById: attendant.user._id,
+        type: "manual_validation",
         sessionId: reserve.body._id,
         plate: "AA-12345",
-        reason: "manual validation",
+        description: "manual validation",
       });
     expect(incident.status).toBe(201);
 

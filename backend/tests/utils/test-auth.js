@@ -1,4 +1,6 @@
 const request = require("supertest");
+const { User } = require("../../src/modules/users/models/user.model");
+const { hashPassword } = require("../../src/modules/auth/auth.utils");
 
 const DEFAULT_PASSWORD = "testpassword12";
 const DEFAULT_OWNER_ID = "507f1f77bcf86cd799439011";
@@ -60,8 +62,28 @@ const registerAndLogin = async (app, payload) => {
   const normalized = withRoleDefaults(payload);
   const { email, password = DEFAULT_PASSWORD } = normalized;
   const reg = await registerUser(app, normalized);
-  if (reg.res.status !== 201) {
+  if (reg.res.status !== 201 && !(normalized.role === "admin" && reg.res.status === 403)) {
     throw new Error(`register failed: ${reg.res.status} ${JSON.stringify(reg.res.body)}`);
+  }
+  if (normalized.role === "admin" && reg.res.status === 403) {
+    const normalizedEmail = String(email).trim().toLowerCase();
+    const passwordHash = await hashPassword(password);
+    await User.findOneAndUpdate(
+      { email: normalizedEmail },
+      {
+        $set: {
+          name: normalized.name,
+          email: normalizedEmail,
+          role: "admin",
+          passwordHash,
+          status: "active",
+          driver: null,
+          owner: null,
+          attendant: null,
+        },
+      },
+      { upsert: true }
+    );
   }
   const res = await loginUser(app, { email, password });
   if (res.status !== 200) {
