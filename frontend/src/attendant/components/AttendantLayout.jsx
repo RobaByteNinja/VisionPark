@@ -6,6 +6,7 @@ import {
   LogOut, PanelLeft, Car, Moon, Sun
 } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
+import { useAuth } from "../../context/AuthContext";
 
 const NAVIGATION = [
   { name: "Live Grid & Map", path: "/attendant/dashboard", icon: Grid },
@@ -108,6 +109,7 @@ export default function AttendantLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
+  const auth = useAuth();
 
   useEffect(() => {
     localStorage.setItem("visionpark_attendant_sidebar_collapsed", isSidebarCollapsed);
@@ -131,7 +133,8 @@ export default function AttendantLayout() {
   };
 
   const handleLogout = () => {
-    navigate("/login");
+    auth.logout();
+    navigate("/login", { replace: true });
   };
 
   const handleNavHover = (e, name, isCollapsed) => {

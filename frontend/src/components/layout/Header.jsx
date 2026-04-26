@@ -2,11 +2,13 @@ import React, { useState, useEffect, useRef } from "react";
 import { Car, Moon, Sun, User, Clock, Bell, ChevronDown, LogOut } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTheme } from "../../context/ThemeContext";
+import { useAuth } from "../../context/AuthContext";
 
 export function Header() {
   const location = useLocation();
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
+  const auth = useAuth();
 
   // Route checkers
   const isDriverApp = location.pathname.includes("/driver") || location.pathname.includes("/profile") || location.pathname.includes("/session");
@@ -147,14 +149,7 @@ export function Header() {
   };
 
   const handleLogout = () => {
-    Object.keys(localStorage).forEach(key => {
-      const persistentKeys = ["vp_theme", "vp_driver_photo", "vp_driver_name", "vp_driver_email", "vp_driver_vehicle", "vp_driver_license_plate", "vp_driver_payment", "vp_driver_account"];
-      if (key.startsWith("vp_") && !persistentKeys.includes(key)) {
-        localStorage.removeItem(key);
-      }
-    });
-    window.dispatchEvent(new Event("vp_photo_updated"));
-    window.dispatchEvent(new Event("vp_profile_updated"));
+    auth.logout();
     setDropdownOpen(false);
     navigate("/login", { replace: true });
   };

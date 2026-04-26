@@ -6,6 +6,7 @@ import {
   X, Bell, ChevronDown, LogOut, Moon, Sun, Car, PanelLeft
 } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
+import { useAuth } from "../../context/AuthContext";
 
 const NAVIGATION = [
   {
@@ -154,6 +155,7 @@ export default function OwnerLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
+  const auth = useAuth();
 
   useEffect(() => {
     localStorage.setItem("visionpark_sidebar_collapsed", isSidebarCollapsed);
@@ -166,7 +168,11 @@ export default function OwnerLayout() {
   }, [location.pathname]);
 
   const handleNavigation = (path) => { setHoveredNav(null); navigate(path); };
-  const handleLogout = () => { setIsProfileDropdownOpen(false); navigate("/login"); };
+  const handleLogout = () => {
+    auth.logout();
+    setIsProfileDropdownOpen(false);
+    navigate("/login", { replace: true });
+  };
   const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark");
   const handleNavHover = (e, name, isCollapsed) => {
     if (!isCollapsed) return;
