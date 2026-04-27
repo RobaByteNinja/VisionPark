@@ -2,6 +2,18 @@ const { ParkingService } = require("./parking.service");
 
 const parkingService = new ParkingService();
 
+const listLots = async (req, res, next) => {
+  try {
+    const lots = await parkingService.listLots({
+      role: req.user.role,
+      userId: req.user.userId,
+    });
+    return res.status(200).json(lots);
+  } catch (error) {
+    return next(error);
+  }
+};
+
 const createLot = async (req, res, next) => {
   try {
     const lot = await parkingService.createLot({
@@ -83,6 +95,7 @@ const deriveSpotStatus = async (req, res, next) => {
 };
 
 module.exports = {
+  listLots,
   createLot,
   createZone,
   createSpot,

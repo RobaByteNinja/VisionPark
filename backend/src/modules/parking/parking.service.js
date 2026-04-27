@@ -18,6 +18,16 @@ class ParkingService {
     logger.warn(message, { module: "parking.service", ...context });
   }
 
+  async listLots({ role, userId }) {
+    if (role === "admin") {
+      return ParkingLot.find({}).sort({ name: 1 }).lean();
+    }
+    if (role === "owner") {
+      return ParkingLot.find({ ownerId: userId }).sort({ name: 1 }).lean();
+    }
+    throw new ParkingError("Only owners and admins can list lots.", 403);
+  }
+
   async createLot(payload) {
     const { ownerId, name, region, city, address } = payload;
     if (!ownerId || !name || !region || !city || !address) {
