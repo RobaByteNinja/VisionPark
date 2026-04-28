@@ -25,7 +25,10 @@ class ParkingService {
     if (role === "owner") {
       return ParkingLot.find({ ownerId: userId }).sort({ name: 1 }).lean();
     }
-    throw new ParkingError("Only owners and admins can list lots.", 403);
+    if (role === "driver") {
+      return ParkingLot.find({}).sort({ name: 1 }).lean();
+    }
+    throw new ParkingError("Only owners, admins, and drivers can list lots.", 403);
   }
 
   async createLot(payload) {
@@ -99,11 +102,14 @@ class ParkingService {
     const lot = await ParkingLot.findById(lotId).select("ownerId");
     if (!lot) throw new NotFoundError("Lot not found.");
 
+    if (role === "driver") {
+      return ParkingZone.find({ lotId }).sort({ name: 1 }).lean();
+    }
     if (role === "owner" && String(lot.ownerId) !== String(userId)) {
       throw new ParkingError("Only the lot owner can list zones for this lot.", 403);
     }
     if (role !== "owner" && role !== "admin") {
-      throw new ParkingError("Only owners and admins can list zones.", 403);
+      throw new ParkingError("Only owners, admins, and drivers can list zones.", 403);
     }
 
     return ParkingZone.find({ lotId }).sort({ name: 1 }).lean();
@@ -202,6 +208,9 @@ class ParkingService {
 
   async listSpots({ role, userId, zoneId }) {
     if (!zoneId) {
+      if (role === "admin" || role === "driver") {
+        return ParkingSpot.find({}).sort({ spotCode: 1 }).lean();
+      }
       throw new ValidationError("zoneId is required.");
     }
 
@@ -214,8 +223,8 @@ class ParkingService {
     if (role === "owner" && String(lot.ownerId) !== String(userId)) {
       throw new ParkingError("Only the lot owner can list spots for this zone.", 403);
     }
-    if (role !== "owner" && role !== "admin") {
-      throw new ParkingError("Only owners and admins can list spots.", 403);
+    if (role !== "owner" && role !== "admin" && role !== "driver") {
+      throw new ParkingError("Only owners, admins, and drivers can list spots.", 403);
     }
 
     return ParkingSpot.find({ zoneId }).sort({ spotCode: 1 }).lean();

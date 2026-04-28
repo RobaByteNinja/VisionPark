@@ -1,18 +1,23 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Navigation, MapPin, Car, CheckCircle, X, AlertTriangle, Clock, ExternalLink } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { StatusBadge } from "../../components/ui/StatusBadge";
+import { apiClient } from "../../api/apiClient";
 
 const DRIVER_LOC = [8.9850, 38.7500];
 
 export default function ActiveSession() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const navState = location.state || {};
+  const initialSession = navState.session || null;
+  const [session, setSession] = useState(initialSession);
 
-  const [sessionState, setSessionState] = useState(() => localStorage.getItem("vp_session_state") || "Discovery");
-  const [receiptTimestamp, setReceiptTimestamp] = useState(() => localStorage.getItem("vp_payment_timestamp") || "");
-  const [spotData, setSpotData] = useState(() => JSON.parse(localStorage.getItem("vp_selected_spot")) || { id: "--", floor: "--", deposit: 100 });
-  const [areaData, setAreaData] = useState(() => JSON.parse(localStorage.getItem("vp_selected_area")) || { name: "--", lat: 0, lon: 0 });
-  const driverPayment = localStorage.getItem("vp_driver_payment") || "Telebirr";
+  const [sessionState, setSessionState] = useState(() => String(initialSession?.state || "Discovery").replace(/^./, (c) => c.toUpperCase()));
+  const [receiptTimestamp, setReceiptTimestamp] = useState(() => navState.paymentTimestamp || "");
+  const [spotData, setSpotData] = useState(() => navState.spotData || { id: "--", floor: "--", deposit: 100 });
+  const [areaData, setAreaData] = useState(() => navState.areaData || { name: "--", lat: 0, lon: 0 });
+  const driverPayment = navState.paymentMethod || "Telebirr";
 
   const [pendingMapRoute, setPendingMapRoute] = useState(null);
 
@@ -21,29 +26,26 @@ export default function ActiveSession() {
 
   // --- TIMERS & TRACKING STATE ---
   const [secondsLeft, setSecondsLeft] = useState(() => {
-    if (localStorage.getItem("vp_session_state") === "Reserved") {
-      const endTimeStr = localStorage.getItem("vp_session_end_time");
-      if (endTimeStr) {
-        const remaining = Math.floor((parseInt(endTimeStr, 10) - Date.now()) / 1000);
-        return remaining > 0 ? remaining : 0;
-      }
+    if (initialSession?.state === "reserved" && initialSession?.expiresAt) {
+      const remaining = Math.floor((new Date(initialSession.expiresAt).getTime() - Date.now()) / 1000);
+      return remaining > 0 ? remaining : 0;
     }
     return 900; // 15 mins default
   });
 
   const [parkedSeconds, setParkedSeconds] = useState(() => {
-    if (localStorage.getItem("vp_session_state") === "SystemReceipt") {
-      return parseInt(localStorage.getItem("vp_final_parked_seconds") || "0", 10);
+    if (initialSession?.state === "closed" && initialSession?.securedAt && initialSession?.closedAt) {
+      return Math.max(0, Math.floor((new Date(initialSession.closedAt).getTime() - new Date(initialSession.securedAt).getTime()) / 1000));
     }
     return 0;
   });
 
   const [entryTimeStr, setEntryTimeStr] = useState(() => {
-    const startTs = localStorage.getItem("vp_session_start_time");
-    return startTs ? new Date(parseInt(startTs, 10)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "--:--";
+    const start = initialSession?.securedAt || initialSession?.createdAt;
+    return start ? new Date(start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "--:--";
   });
 
-  const [exitTimeStr, setExitTimeStr] = useState(() => localStorage.getItem("vp_session_exit_time") || "--:--");
+  const [exitTimeStr, setExitTimeStr] = useState(() => initialSession?.closedAt ? new Date(initialSession.closedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "--:--");
 
   // --- NATIVE OS NOTIFICATION HELPER ---
   const sendOSNotification = (title, body) => {
@@ -66,11 +68,9 @@ export default function ActiveSession() {
   // --- RESERVED COUNTDOWN TIMER & GLOBAL ALERTS ---
   useEffect(() => {
     let timer;
-    if (sessionState === "Reserved") {
+    if (sessionState === "Reserved" && session?.expiresAt) {
       timer = setInterval(() => {
-        const endTimeStr = localStorage.getItem("vp_session_end_time");
-        if (endTimeStr) {
-          const remaining = Math.floor((parseInt(endTimeStr, 10) - Date.now()) / 1000);
+        const remaining = Math.floor((new Date(session.expiresAt).getTime() - Date.now()) / 1000);
 
           // MILESTONES: 5m (300s), 3m (180s), 2m (120s), 1m (60s)
           const milestones = [
@@ -92,24 +92,21 @@ export default function ActiveSession() {
             clearInterval(timer);
             setSessionState("Expired");
             setSecondsLeft(0);
-            localStorage.setItem("vp_session_state", "Expired");
-            window.dispatchEvent(new Event("vp_session_changed"));
           } else {
             setSecondsLeft(remaining);
           }
-        }
       }, 1000);
     }
     return () => clearInterval(timer);
-  }, [sessionState, areaData.name, spotData.id]);
+  }, [sessionState, session, areaData.name, spotData.id]);
 
   // --- SECURED (LIVE PARKING) TIMER ---
   useEffect(() => {
     let timer;
     if (sessionState === "Secured") {
-      const startTs = localStorage.getItem("vp_session_start_time");
+      const startTs = session?.securedAt || session?.createdAt;
       if (startTs) {
-        const startTime = parseInt(startTs, 10);
+        const startTime = new Date(startTs).getTime();
         setEntryTimeStr(new Date(startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
 
         // Tick up every second
@@ -122,33 +119,36 @@ export default function ActiveSession() {
   }, [sessionState]);
 
   // --- DEV TRIGGERS ---
-  const handleSimulateArrival = () => {
-    const now = Date.now();
-    localStorage.setItem("vp_session_start_time", now);
-    localStorage.setItem("vp_session_state", "Secured");
-    setSessionState("Secured");
-    window.dispatchEvent(new Event("vp_session_changed"));
+  const handleSimulateArrival = async () => {
+    if (!session?._id) return;
+    try {
+      const next = await apiClient.post(`/sessions/${session._id}/secure`, {});
+      setSession(next);
+      setSessionState("Secured");
+    } catch (error) {
+      // keep UI stable
+    }
   };
 
-  const handleSystemTriggeredExit = () => {
-    const now = Date.now();
-    const exitTime = new Date(now).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const ts = new Date(now).toLocaleString();
-
-    const startTs = localStorage.getItem("vp_session_start_time");
-    const finalSecs = startTs ? Math.floor((now - parseInt(startTs, 10)) / 1000) : 0;
-
-    setReceiptTimestamp(ts);
-    setExitTimeStr(exitTime);
-    setParkedSeconds(finalSecs);
-
-    localStorage.setItem("vp_session_exit_time", exitTime);
-    localStorage.setItem("vp_final_parked_seconds", finalSecs);
-    localStorage.setItem("vp_session_state", "SystemReceipt");
-    localStorage.setItem("vp_payment_timestamp", ts);
-
-    setSessionState("SystemReceipt");
-    window.dispatchEvent(new Event("vp_session_changed"));
+  const handleSystemTriggeredExit = async () => {
+    if (!session?._id) return;
+    try {
+      const next = await apiClient.post(`/sessions/${session._id}/close`, {});
+      const now = Date.now();
+      const exitTime = next?.closedAt
+        ? new Date(next.closedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+        : new Date(now).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      const ts = new Date().toLocaleString();
+      const start = next?.securedAt ? new Date(next.securedAt).getTime() : now;
+      const finalSecs = Math.max(0, Math.floor((now - start) / 1000));
+      setSession(next);
+      setReceiptTimestamp(ts);
+      setExitTimeStr(exitTime);
+      setParkedSeconds(finalSecs);
+      setSessionState("SystemReceipt");
+    } catch (error) {
+      // keep UI stable
+    }
   };
 
   // --- FORMATTERS & CALCULATORS ---
@@ -186,14 +186,6 @@ export default function ActiveSession() {
   };
 
   const closeSession = () => {
-    localStorage.removeItem("vp_session_state");
-    localStorage.removeItem("vp_session_end_time");
-    localStorage.removeItem("vp_session_start_time");
-    localStorage.removeItem("vp_session_exit_time");
-    localStorage.removeItem("vp_final_parked_seconds");
-    localStorage.removeItem("vp_selected_area");
-    localStorage.removeItem("vp_selected_spot");
-    window.dispatchEvent(new Event("vp_session_changed"));
     navigate("/driver/map");
   };
 
