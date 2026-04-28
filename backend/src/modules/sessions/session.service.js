@@ -227,7 +227,7 @@ class SessionService {
 
     const session = await ParkingSession.findOne(query)
       .sort({ updatedAt: -1, _id: -1 })
-      .populate({ path: "spotId", select: "spotCode" })
+      .populate({ path: "spotId", select: "spotCode paymentRate" })
       .populate({ path: "lotId", select: "name location" });
     if (!session) {
       throw new NotFoundError("No active session found.");

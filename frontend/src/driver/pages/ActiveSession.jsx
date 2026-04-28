@@ -15,7 +15,7 @@ export default function ActiveSession() {
 
   const [sessionState, setSessionState] = useState(() => String(initialSession?.state || "Discovery").replace(/^./, (c) => c.toUpperCase()));
   const [receiptTimestamp, setReceiptTimestamp] = useState(() => navState.paymentTimestamp || "");
-  const [spotData, setSpotData] = useState(() => navState.spotData || { id: "--", floor: "--", deposit: 100 });
+  const [spotData, setSpotData] = useState(() => navState.spotData || { id: "--", floor: "--", deposit: 100, paymentRate: 0 });
   const [areaData, setAreaData] = useState(() => navState.areaData || { name: "--", lat: 0, lon: 0 });
   const driverPayment = navState.paymentMethod || "Telebirr";
 
@@ -49,10 +49,10 @@ export default function ActiveSession() {
   });
 
   const [exitTimeStr, setExitTimeStr] = useState(() => initialSession?.closedAt ? new Date(initialSession.closedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "--:--");
+  const [accruedFee, setAccruedFee] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
-    if (session) return () => {};
 
     (async () => {
       try {
@@ -65,6 +65,7 @@ export default function ActiveSession() {
           id: String(active?.spotId?.spotCode || prev.id || "--"),
           floor: prev.floor || "Ground",
           deposit: prev.deposit || 100,
+          paymentRate: Number(active?.spotId?.paymentRate ?? prev.paymentRate ?? 0),
         }));
         setAreaData((prev) => ({
           ...prev,
@@ -80,7 +81,10 @@ export default function ActiveSession() {
         }));
 
         try {
-          const resolvedSpotId = typeof active?.spotId === "object" ? active?.spotId?._id : active?.spotId;
+          const resolvedSpotId =
+            typeof active?.spotId === "object"
+              ? active?.spotId?._id || active?.spotId?.id
+              : active?.spotId;
           const spot = resolvedSpotId ? await apiClient.get(`/parking/spots/${resolvedSpotId}`) : null;
           if (!cancelled && spot) {
             setSpotData((prev) => ({
@@ -88,6 +92,7 @@ export default function ActiveSession() {
               id: String(spot.spotCode || spot._id || prev.id),
               floor: prev.floor || "Ground",
               deposit: prev.deposit || 100,
+              paymentRate: Number(spot?.paymentRate ?? prev.paymentRate ?? 0),
             }));
           }
           const lots = await apiClient.get("/parking/lots");
@@ -115,7 +120,7 @@ export default function ActiveSession() {
     return () => {
       cancelled = true;
     };
-  }, [session]);
+  }, []);
 
   // --- NATIVE OS NOTIFICATION HELPER ---
   const sendOSNotification = (title, body) => {
@@ -187,6 +192,28 @@ export default function ActiveSession() {
     }
     return () => clearInterval(timer);
   }, [sessionState]);
+
+  // Refresh accrued fee every 5 minutes while secured.
+  useEffect(() => {
+    if (sessionState !== "Secured") return () => {};
+    const startTs = session?.parkedAt || session?.securedAt || session?.createdAt;
+    const ratePerHour = Number(spotData?.paymentRate || 0);
+    if (!startTs || Number.isNaN(ratePerHour) || ratePerHour <= 0) {
+      setAccruedFee(0);
+      return () => {};
+    }
+
+    const updateAccruedFee = () => {
+      const elapsedMs = Math.max(0, Date.now() - new Date(startTs).getTime());
+      const elapsedHours = elapsedMs / (1000 * 60 * 60);
+      const fee = Number((elapsedHours * ratePerHour).toFixed(2));
+      setAccruedFee(fee);
+    };
+
+    updateAccruedFee();
+    const feeTimer = setInterval(updateAccruedFee, 5 * 60 * 1000);
+    return () => clearInterval(feeTimer);
+  }, [sessionState, session?.parkedAt, session?.securedAt, session?.createdAt, spotData?.paymentRate]);
 
   // --- DEV TRIGGERS ---
   const refreshCurrentSession = async (sessionId) => {
@@ -376,11 +403,11 @@ export default function ActiveSession() {
                 </div>
                 <div className="border-l border-r border-zinc-200 dark:border-white/5 px-1">
                   <p className="text-[10px] md:text-xs lg:text-sm text-zinc-500 dark:text-zinc-400 uppercase font-bold tracking-wider mb-1">Current Rate</p>
-                  <p className="text-zinc-900 dark:text-white font-bold text-sm sm:text-base md:text-xl">1 ETB<span className="text-[9px] md:text-[10px] lg:text-xs font-normal text-zinc-500">/min</span></p>
+                  <p className="text-zinc-900 dark:text-white font-bold text-sm sm:text-base md:text-xl">{Number(spotData.paymentRate || 0)} ETB<span className="text-[9px] md:text-[10px] lg:text-xs font-normal text-zinc-500">/hour</span></p>
                 </div>
                 <div>
                   <p className="text-[10px] md:text-xs lg:text-sm text-emerald-600 dark:text-emerald-500 uppercase font-bold tracking-wider mb-1">Accrued Fee</p>
-                  <p className="text-emerald-600 dark:text-emerald-400 font-bold text-sm sm:text-base md:text-xl">{calculateLiveCost(parkedSeconds)} ETB</p>
+                  <p className="text-emerald-600 dark:text-emerald-400 font-bold text-sm sm:text-base md:text-xl">{accruedFee} ETB</p>
                 </div>
               </div>
             </div>
