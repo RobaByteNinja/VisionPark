@@ -50,6 +50,24 @@ class ParkingService {
     });
   }
 
+  async listZones({ role, userId, lotId }) {
+    if (!lotId) {
+      throw new ValidationError("lotId is required.");
+    }
+
+    const lot = await ParkingLot.findById(lotId).select("ownerId");
+    if (!lot) throw new NotFoundError("Lot not found.");
+
+    if (role === "owner" && String(lot.ownerId) !== String(userId)) {
+      throw new ParkingError("Only the lot owner can list zones for this lot.", 403);
+    }
+    if (role !== "owner" && role !== "admin") {
+      throw new ParkingError("Only owners and admins can list zones.", 403);
+    }
+
+    return ParkingZone.find({ lotId }).sort({ name: 1 }).lean();
+  }
+
   async createZone(payload) {
     const { lotId, name, category = null } = payload;
     if (!lotId || !name) {
@@ -92,6 +110,27 @@ class ParkingService {
     });
 
     return this.updateSpotStatus(spot._id);
+  }
+
+  async listSpots({ role, userId, zoneId }) {
+    if (!zoneId) {
+      throw new ValidationError("zoneId is required.");
+    }
+
+    const zone = await ParkingZone.findById(zoneId).select("lotId");
+    if (!zone) throw new NotFoundError("Zone not found.");
+
+    const lot = await ParkingLot.findById(zone.lotId).select("ownerId");
+    if (!lot) throw new NotFoundError("Lot not found.");
+
+    if (role === "owner" && String(lot.ownerId) !== String(userId)) {
+      throw new ParkingError("Only the lot owner can list spots for this zone.", 403);
+    }
+    if (role !== "owner" && role !== "admin") {
+      throw new ParkingError("Only owners and admins can list spots.", 403);
+    }
+
+    return ParkingSpot.find({ zoneId }).sort({ spotCode: 1 }).lean();
   }
 
   async setSpotBlocked(spotId, isBlocked) {

@@ -10,6 +10,8 @@ const {
 const router = express.Router();
 
 router.get("/lots", authenticate, authorize("owner", "admin"), controller.listLots);
+router.get("/zones", authenticate, authorize("owner", "admin"), controller.listZones);
+router.get("/spots", authenticate, authorize("owner", "admin"), controller.listSpots);
 router.post(
   "/lots",
   authenticate,

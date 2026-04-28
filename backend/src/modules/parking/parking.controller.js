@@ -14,6 +14,32 @@ const listLots = async (req, res, next) => {
   }
 };
 
+const listZones = async (req, res, next) => {
+  try {
+    const zones = await parkingService.listZones({
+      role: req.user.role,
+      userId: req.user.userId,
+      lotId: req.query.lotId,
+    });
+    return res.status(200).json(zones);
+  } catch (error) {
+    return next(error);
+  }
+};
+
+const listSpots = async (req, res, next) => {
+  try {
+    const spots = await parkingService.listSpots({
+      role: req.user.role,
+      userId: req.user.userId,
+      zoneId: req.query.zoneId,
+    });
+    return res.status(200).json(spots);
+  } catch (error) {
+    return next(error);
+  }
+};
+
 const createLot = async (req, res, next) => {
   try {
     const lot = await parkingService.createLot({
@@ -96,6 +122,8 @@ const deriveSpotStatus = async (req, res, next) => {
 
 module.exports = {
   listLots,
+  listZones,
+  listSpots,
   createLot,
   createZone,
   createSpot,
