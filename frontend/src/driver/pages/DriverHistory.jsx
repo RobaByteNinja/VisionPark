@@ -4,68 +4,52 @@ import {
   X, Wallet, PlusCircle, Loader2, Download, ExternalLink
 } from "lucide-react";
 import { useScroll } from "../../context/ScrollContext";
+import { apiClient } from "../../api/apiClient";
 
 const DRIVER_LOC = [8.9850, 38.7500];
 
-// ✅ FULLY UPDATED MOCK DATA: Matches the new Active Session data structure
-const MOCK_HISTORY = [
-  {
-    id: "REC-0982",
-    spotId: "V-08",
-    location: "Bole Premium Lot",
-    lat: 8.9806,
-    lon: 38.7578,
-    date: "Oct 24, 2026",
-    startTime: "09:14 AM",
-    endTime: "11:28 AM",
-    status: "Completed",
-    hours: 2,
-    minutes: 14,
-    seconds: 45,
-    deposit: 100,
-    cost: 60,
-    walletRefund: 40,
-    paymentMethod: "Telebirr via Chapa"
-  },
-  {
-    id: "REC-0981",
-    spotId: "A-12",
-    location: "Piassa City Center",
-    lat: 9.0400,
-    lon: 38.7469,
-    date: "Oct 21, 2026",
-    startTime: "02:00 PM",
-    endTime: "--:--", // Never arrived
-    status: "Expired",
-    hours: 0,
-    minutes: 15,
-    seconds: 0,
-    deposit: 100,
-    cost: 50, // 🚨 The No-Show Penalty
-    walletRefund: 50, // 🚨 50 ETB refunded to Wallet
-    paymentMethod: "CBE via Chapa"
-  },
-  {
-    id: "REC-0975",
-    spotId: "B-01",
-    location: "Bole Premium Lot",
-    lat: 8.9806,
-    lon: 38.7578,
-    date: "Oct 15, 2026",
-    startTime: "10:30 AM",
-    endTime: "01:30 PM",
-    status: "Completed",
-    hours: 3,
-    minutes: 0,
-    seconds: 12,
-    deposit: 100,
-    cost: 90,
-    walletRefund: 10,
-    paymentMethod: "COOP via Chapa"
-  }
-];
+const formatDate = (value) => {
+  if (!value) return "--";
+  const dt = new Date(value);
+  if (Number.isNaN(dt.getTime())) return "--";
+  return dt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+};
+
+const formatTime = (value) => {
+  if (!value) return "--:--";
+  const dt = new Date(value);
+  if (Number.isNaN(dt.getTime())) return "--:--";
+  return dt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+};
+
+function mapSessionToUI(session) {
+  const durationSeconds = Number(session?.durationSeconds || 0);
+  const depositAmount = Number(session?.depositAmount || 0);
+  const parkingAmount = Number(session?.parkingAmount || 0);
+  return {
+    id: session?._id,
+    spotId: session?.spotCode,
+    location: session?.branchName,
+    lat: 0,
+    lon: 0,
+    date: formatDate(session?.reservedAt),
+    startTime: formatTime(session?.parkedAt),
+    endTime: session?.exitedAt ? formatTime(session?.exitedAt) : "--:--",
+    status: session?.state === "closed" ? "Completed" : "Expired",
+    hours: Math.floor(durationSeconds / 3600),
+    minutes: Math.floor((durationSeconds % 3600) / 60),
+    seconds: durationSeconds % 60,
+    deposit: depositAmount,
+    cost: parkingAmount,
+    walletRefund: depositAmount - parkingAmount,
+    paymentMethod: session?.paymentMethod || "N/A",
+  };
+}
 
 export default function DriverHistory() {
+  const [history, setHistory] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
   const [selectedReceipt, setSelectedReceipt] = useState(null);
   const [downloadStatus, setDownloadStatus] = useState(null); // null | 'downloading' | 'success'
   const [pendingMapRoute, setPendingMapRoute] = useState(null); // Controls the external navigation modal
@@ -74,6 +58,29 @@ export default function DriverHistory() {
   const handleScroll = (e) => setScrolled(e.target.scrollTop > 10);
 
   useEffect(() => () => setScrolled(false), [setScrolled]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setErrorMessage("");
+      try {
+        const response = await apiClient.get("/sessions/my");
+        const sessions = Array.isArray(response?.data) ? response.data : [];
+        if (!cancelled) setHistory(sessions.map(mapSessionToUI));
+      } catch (error) {
+        if (!cancelled) {
+          setHistory([]);
+          setErrorMessage(error?.message || "Failed to load session history.");
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     document.body.style.overflow = selectedReceipt || downloadStatus || pendingMapRoute ? "hidden" : "unset";
@@ -108,6 +115,18 @@ export default function DriverHistory() {
     return `${h.toString().padStart(2, "0")} : ${m.toString().padStart(2, "0")} : ${s.toString().padStart(2, "0")}`;
   };
 
+  const totalSpent = history.reduce((sum, session) => sum + Number(session.cost || 0), 0);
+  const totalParkedSeconds = history.reduce(
+    (sum, session) =>
+      sum +
+      (Number(session.hours || 0) * 3600 +
+        Number(session.minutes || 0) * 60 +
+        Number(session.seconds || 0)),
+    0
+  );
+  const totalHours = Math.floor(totalParkedSeconds / 3600);
+  const totalMinutes = Math.floor((totalParkedSeconds % 3600) / 60);
+
   return (
     <div className="relative h-[100dvh] w-full flex flex-col overflow-hidden bg-[#f4f4f5] dark:bg-[#09090b]">
 
@@ -129,23 +148,34 @@ export default function DriverHistory() {
             <div className="grid grid-cols-2 gap-6">
               <div>
                 <p className="text-[10px] md:text-xs lg:text-sm text-zinc-500 dark:text-zinc-400 uppercase font-bold tracking-wider mb-1 flex items-center gap-1.5"><Wallet className="h-3.5 w-3.5 md:h-4 md:w-4" /> Total Spent</p>
-                <p className="text-zinc-900 dark:text-white font-bold text-3xl md:text-4xl lg:text-5xl">350 <span className="text-sm md:text-base lg:text-lg text-zinc-500 font-normal">ETB</span></p>
+                <p className="text-zinc-900 dark:text-white font-bold text-3xl md:text-4xl lg:text-5xl">{totalSpent} <span className="text-sm md:text-base lg:text-lg text-zinc-500 font-normal">ETB</span></p>
               </div>
               <div>
                 <p className="text-[10px] md:text-xs lg:text-sm text-zinc-500 dark:text-zinc-400 uppercase font-bold tracking-wider mb-1 flex items-center gap-1.5"><Clock className="h-3.5 w-3.5 md:h-4 md:w-4" /> Time Parked</p>
-                <p className="text-zinc-900 dark:text-white font-bold text-3xl md:text-4xl lg:text-5xl">5<span className="text-sm md:text-base lg:text-lg text-zinc-500 font-normal">h</span> 14<span className="text-sm md:text-base lg:text-lg text-zinc-500 font-normal">m</span></p>
+                <p className="text-zinc-900 dark:text-white font-bold text-3xl md:text-4xl lg:text-5xl">{totalHours}<span className="text-sm md:text-base lg:text-lg text-zinc-500 font-normal">h</span> {totalMinutes}<span className="text-sm md:text-base lg:text-lg text-zinc-500 font-normal">m</span></p>
               </div>
-            </div>
-            <div className="mt-8 pt-5 border-t border-zinc-100 dark:border-white/5">
-              <p className="text-[10px] md:text-xs lg:text-sm text-zinc-500 dark:text-zinc-400 uppercase font-bold tracking-wider mb-1.5">Favorite Lot</p>
-              <p className="text-zinc-900 dark:text-white font-bold text-sm md:text-base lg:text-lg flex items-center gap-1.5"><MapPin className="h-4 w-4 md:h-5 md:w-5 text-emerald-500" /> Bole Premium Lot</p>
             </div>
           </div>
 
           {/* Recent Sessions List */}
           <div className="flex flex-col gap-4 lg:gap-5">
             <h2 className="text-xs md:text-sm lg:text-base font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mt-2 ml-2">Recent Sessions</h2>
-            {MOCK_HISTORY.map((session) => (
+            {loading && (
+              <div className="w-full text-center text-zinc-500 dark:text-zinc-400 text-sm font-medium py-6">
+                Loading session history...
+              </div>
+            )}
+            {!loading && errorMessage && (
+              <div className="w-full text-center text-red-600 dark:text-red-400 text-sm font-medium py-6">
+                {errorMessage}
+              </div>
+            )}
+            {!loading && !errorMessage && history.length === 0 && (
+              <div className="w-full text-center text-zinc-500 dark:text-zinc-400 text-sm font-medium py-6">
+                No session history found.
+              </div>
+            )}
+            {history.map((session) => (
               <button
                 key={session.id}
                 type="button"

@@ -1,4 +1,5 @@
 const { ParkingSession } = require("./models/parking-session.model");
+const { Transaction } = require("../operations/models/transaction.model");
 const { ParkingService } = require("../parking/parking.service");
 const { TransactionService } = require("../operations/transactions/transaction.service");
 const { domainEventBus, DOMAIN_EVENTS } = require("../operations/shared/domain-events");
@@ -229,6 +230,67 @@ class SessionService {
       throw new NotFoundError("No active session found.");
     }
     return session;
+  }
+
+  async getMySessions(driverId) {
+    if (!driverId) {
+      throw new ValidationError("driverId is required.");
+    }
+
+    const sessions = await ParkingSession.find({ driverId })
+      .sort({ createdAt: -1 })
+      .populate({ path: "spotId", select: "spotCode" })
+      .populate({ path: "lotId", select: "name" })
+      .lean();
+
+    const sessionIds = sessions.map((s) => s._id);
+    const transactions = await Transaction.find({ sessionId: { $in: sessionIds }, status: "success" })
+      .sort({ createdAt: -1 })
+      .lean();
+    const txBySessionId = new Map();
+    for (const tx of transactions) {
+      const key = String(tx.sessionId);
+      if (!txBySessionId.has(key)) txBySessionId.set(key, tx);
+    }
+
+    return sessions.map((s) => {
+      const tx = txBySessionId.get(String(s._id));
+      const parkedAt = s.securedAt || null;
+      const exitedAt = s.closedAt || s.expiredAt || null;
+      const durationSeconds =
+        parkedAt && exitedAt
+          ? Math.max(0, Math.floor((new Date(exitedAt).getTime() - new Date(parkedAt).getTime()) / 1000))
+          : null;
+
+      const depositAmount =
+        tx?.metadata?.depositAmount ??
+        tx?.metadata?.reservationFee ??
+        null;
+      const parkingAmount =
+        tx?.metadata?.parkingAmount ??
+        tx?.metadata?.usageFee ??
+        null;
+      const totalAmount =
+        tx?.amount ??
+        (depositAmount != null || parkingAmount != null
+          ? (Number(depositAmount || 0) + Number(parkingAmount || 0))
+          : null);
+
+      return {
+        _id: s._id,
+        spotCode: s?.spotId?.spotCode ?? null,
+        branchName: s?.lotId?.name ?? null,
+        state: s.state,
+        reservedAt: s.reservedAt ?? null,
+        parkedAt,
+        exitedAt,
+        durationSeconds,
+        depositAmount,
+        parkingAmount,
+        totalAmount,
+        paymentMethod: tx?.method ?? null,
+      };
+    });
   }
 
   async #transitionSession({

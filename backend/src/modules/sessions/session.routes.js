@@ -42,6 +42,12 @@ router.get(
   controller.getMyActiveSession
 );
 router.get(
+  "/my",
+  authenticate,
+  authorize("driver"),
+  controller.getMySessions
+);
+router.get(
   "/:sessionId",
   authenticate,
   requireSessionReadAccess,

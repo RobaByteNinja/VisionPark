@@ -78,6 +78,18 @@ const getMyActiveSession = async (req, res, next) => {
   }
 };
 
+const getMySessions = async (req, res, next) => {
+  try {
+    const sessions = await sessionService.getMySessions(req.user.userId);
+    return res.status(200).json({
+      success: true,
+      data: sessions,
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
 module.exports = {
   createReservation,
   secureSession,
@@ -85,4 +97,5 @@ module.exports = {
   closeSession,
   getSessionById,
   getMyActiveSession,
+  getMySessions,
 };
