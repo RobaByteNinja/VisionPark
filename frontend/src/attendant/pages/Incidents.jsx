@@ -1,55 +1,14 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
     ShieldAlert, AlertTriangle, FileText,
     CarFront, Banknote, Camera, Video, Edit3,
     CheckCircle, Globe, Hash, Send, Clock,
     Plus, Trash2, X, RefreshCcw
 } from "lucide-react";
-
-// --- MOCK RECENT INCIDENTS ---
-const INITIAL_INCIDENTS = [
-    {
-        id: "INC-992",
-        plate: "UNKNOWN",
-        type: "Property Damage",
-        details: "Hit AA 11223 while backing out",
-        amount: null,
-        time: "2 hours ago",
-        status: "Admin CCTV Review Needed",
-        destination: "owner"
-    },
-    {
-        id: "INC-991",
-        plate: "UN 90112",
-        type: "Customer Dispute",
-        details: "Driver argued aggressively about overstay penalty fee.",
-        amount: null,
-        time: "Yesterday",
-        status: "Report Filed",
-        destination: "owner"
-    }
-];
+import { apiClient } from "../../api/apiClient";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 const isFleeingType = (t) => t === "Fled Without Payment";
-
-const pushToOwnerIncidents = (incident) => {
-    try {
-        const existing = JSON.parse(localStorage.getItem("vp_owner_incidents") || "[]");
-        localStorage.setItem("vp_owner_incidents", JSON.stringify([incident, ...existing]));
-        return true;
-    } catch (e) {
-        console.error("Local Storage Error:", e);
-        return false;
-    }
-};
-
-const pushToDebtRadar = (incident) => {
-    try {
-        const existing = JSON.parse(localStorage.getItem("vp_debt_radar") || "[]");
-        localStorage.setItem("vp_debt_radar", JSON.stringify([incident, ...existing]));
-    } catch (_) { }
-};
 
 export default function IncidentLogger() {
     const [incidentType, setIncidentType] = useState("Fled Without Payment");
@@ -59,12 +18,19 @@ export default function IncidentLogger() {
     const [damagedPlates, setDamagedPlates] = useState([""]);
     const [mediaFiles, setMediaFiles] = useState([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [incidents, setIncidents] = useState(INITIAL_INCIDENTS);
+    const [incidents, setIncidents] = useState([]);
     const [toastMessage, setToastMessage] = useState("");
     const [toastType, setToastType] = useState("success");
+    const [loadingIncidents, setLoadingIncidents] = useState(true);
+    const [error, setError] = useState(null);
 
     const photoInputRef = useRef(null);
     const videoInputRef = useRef(null);
+    const cancelledRef = useRef(false);
+
+    // Optional state placeholders to keep UX unchanged.
+    void loadingIncidents;
+    void error;
 
     const showToast = (msg, type = "success") => {
         setToastMessage(msg);
@@ -118,7 +84,34 @@ export default function IncidentLogger() {
         setMediaFiles([]);
     };
 
-    const handleSubmit = (e) => {
+    const fetchRecentIncidents = async () => {
+        try {
+            const rows = await apiClient.get("/attendant/incidents/recent");
+            if (cancelledRef.current) return;
+            setIncidents(Array.isArray(rows) ? rows : []);
+            setError(null);
+        } catch (e) {
+            if (!cancelledRef.current) {
+                console.error("IncidentLogger recent fetch failed:", e);
+                setError(e);
+                setIncidents([]);
+            }
+        } finally {
+            if (!cancelledRef.current) {
+                setLoadingIncidents(false);
+            }
+        }
+    };
+
+    useEffect(() => {
+        cancelledRef.current = false;
+        fetchRecentIncidents();
+        return () => {
+            cancelledRef.current = true;
+        };
+    }, []);
+
+    const handleSubmit = async (e) => {
         e.preventDefault();
         const isDamage = incidentType === "Property Damage";
 
@@ -130,65 +123,31 @@ export default function IncidentLogger() {
         }
 
         setIsSubmitting(true);
-        setTimeout(() => {
+        try {
             const finalPlate = offenderPlate.trim() ? offenderPlate.toUpperCase() : "UNKNOWN";
             const isUnknown = finalPlate === "UNKNOWN";
 
             let detailsText = description;
+            const validDamagedPlates = damagedPlates.filter(p => p.trim());
             if (incidentType === "Property Damage") {
-                const valid = damagedPlates.filter(p => p.trim());
-                detailsText = valid.length ? `Hit: ${valid.join(", ")}. ${description}` : description || "Property Damage";
+                detailsText = validDamagedPlates.length ? `Hit: ${validDamagedPlates.join(", ")}. ${description}` : description || "Property Damage";
             }
 
-            const destination = isFleeingType(incidentType) ? "debt_radar" : "owner";
-
-            const status = isUnknown
-                ? "Admin CCTV Review Needed"
-                : isFleeingType(incidentType)
-                    ? "Global Watchlist Active"
-                    : "Pending";
-
-            const newIncident = {
-                id: `INC-${Math.floor(100 + Math.random() * 900)}`,
-                plate: finalPlate,
-                type: incidentType,
-                details: detailsText,
+            const payload = {
+                incidentType,
+                offenderPlate: finalPlate,
                 amount: isFleeingType(incidentType) ? parseFloat(amount) || 0 : null,
-                time: "Just Now",
-                status,
-                destination,
-                branch: "Bole Premium Lot",
-                zone: "Main Gate",
-                spot: "N/A",
-                date: new Date().toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }),
-                plates: isDamage
-                    ? damagedPlates.filter(p => p.trim())
-                    : finalPlate !== "UNKNOWN" ? [finalPlate] : [],
-                category: incidentType,
                 description: detailsText,
-                hasVideo: mediaFiles.some(m => m.type === "video"),
-                hasPhoto: mediaFiles.some(m => m.type === "photo"),
-                file: mediaFiles.length > 0 ? mediaFiles[0].data : null,
-                attendantName: "Kebede Alemu",
-                attendantId: "1234 5678 9012 3456"
+                damagedPlates: isDamage ? validDamagedPlates : [],
+                media: mediaFiles.map((m) => ({
+                    type: m.type,
+                    name: m.name,
+                    data: m.data,
+                })),
             };
 
-            // Route to Owner's main incident list
-            const saveSuccess = pushToOwnerIncidents(newIncident);
-
-            if (!saveSuccess) {
-                showToast("CRITICAL ERROR: Browser storage is full. Please clear cache or upload a smaller file.", "error");
-                setIsSubmitting(false);
-                return;
-            }
-
-            // Route to Debt Radar if applicable
-            if (isFleeingType(incidentType)) {
-                pushToDebtRadar(newIncident);
-            }
-
-            setIncidents(prev => [newIncident, ...prev]);
-            setIsSubmitting(false);
+            const created = await apiClient.post("/attendant/incidents", payload);
+            setIncidents((prev) => [created, ...prev]);
 
             if (isUnknown) {
                 showToast("Report logged. Admin notified to pull CCTV for hit-and-run.");
@@ -199,7 +158,12 @@ export default function IncidentLogger() {
             }
 
             clearForm();
-        }, 1200);
+        } catch (err) {
+            console.error("IncidentLogger create failed:", err);
+            showToast("Failed to submit incident report. Please try again.", "error");
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const glassGreenInputStyles = "w-full bg-white dark:bg-black/40 border border-zinc-200 dark:border-white/10 text-zinc-900 dark:text-white outline-none focus:bg-emerald-50 dark:focus:bg-emerald-500/10 focus:border-emerald-500 focus:shadow-[0_0_15px_rgba(16,185,129,0.15)] transition-all rounded-xl";

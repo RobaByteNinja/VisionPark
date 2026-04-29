@@ -18,6 +18,7 @@ const { financeRoutes } = require("../modules/finance");
 const { attendantRoutes } = require("../modules/attendantLiveGrid");
 const { attendantAIExceptionRoutes } = require("../modules/attendantAIExceptions");
 const { attendantWalkupRoutes } = require("../modules/attendantWalkup");
+const { attendantIncidentRoutes } = require("../modules/attendantIncidents");
 const { ParkingSession } = require("../modules/sessions/models/parking-session.model");
 const { ParkingSpot } = require("../modules/parking/models/parking-spot.model");
 const { Incident } = require("../modules/operations/models/incident.model");
@@ -153,6 +154,7 @@ const createApp = () => {
   app.use("/api/attendant", attendantRoutes);
   app.use("/api/attendant", attendantAIExceptionRoutes);
   app.use("/api/attendant", attendantWalkupRoutes);
+  app.use("/api/attendant", attendantIncidentRoutes);
   app.use("/api", financeRoutes);
 
   app.use(notFoundHandler);
