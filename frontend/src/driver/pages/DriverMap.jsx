@@ -439,22 +439,6 @@ export default function DriverMap() {
     if (d < -50) handlePrev();
   };
 
-  const updateSpotStatus = (areaId, spotId, newStatus) => {
-    setAllAreas((prev) =>
-      prev.map((area) =>
-        area.id !== areaId
-          ? area
-          : {
-              ...area,
-              spots: area.spots.map((s) => (s.id === spotId ? { ...s, status: newStatus } : s)),
-              availableSpaces: area.spots
-                .map((s) => (s.id === spotId ? { ...s, status: newStatus } : s))
-                .filter((s) => s.status === "free").length,
-            }
-      )
-    );
-  };
-
   const handleProcessPayment = async () => {
     if (!user?._id || !selectedSpot?._id) {
       showToast("Missing driver or selected spot.", "error");
@@ -477,11 +461,16 @@ export default function DriverMap() {
           expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
         });
       }
+      await apiClient.post("/operations/transactions", {
+        sessionId: session?._id,
+        amount: 100,
+        method: paymentMethod,
+        paymentMethod,
+        status: "completed",
+        type: "reservation_fee",
+      });
       setPaymentTimestamp(timestamp);
       setUiState("PaymentSuccess");
-
-      // Backend confirmed reservation; reflect it in-memory until next refetch.
-      updateSpotStatus(selectedArea.id, selectedSpot.id, "reserved");
 
       setTimeout(
         () =>
@@ -803,13 +792,13 @@ export default function DriverMap() {
                   <p className="text-[10px] text-zinc-500 uppercase font-bold tracking-wider mb-1">Deposit</p>
                   <p className="text-zinc-900 dark:text-white font-bold text-lg">{selectedSpot.deposit} ETB</p>
                 </div>
-                <div className="bg-zinc-100 dark:bg-black/40 rounded-xl p-4 border border-zinc-200 dark:border-white/5">
-                  <p className="text-[10px] text-zinc-500 uppercase font-bold tracking-wider mb-1">Floor</p>
-                  <p className="text-zinc-900 dark:text-white font-bold text-lg">{selectedSpot.floor}</p>
-                </div>
               </div>
               <p className="text-xs text-zinc-600 dark:text-zinc-400 border-b border-zinc-200 dark:border-white/10 pb-6">
-                <span className="font-bold text-zinc-900 dark:text-zinc-300">Vehicle Type:</span> {selectedSpot.vehicleType}
+                <span className="font-bold text-zinc-900 dark:text-zinc-300">Vehicle Types:</span>{" "}
+                {(Array.isArray(selectedSpot.allowedCategories) && selectedSpot.allowedCategories.length > 0
+                  ? selectedSpot.allowedCategories
+                  : [selectedSpot.vehicleType]
+                ).join(", ")}
               </p>
               <div className="flex items-center justify-between p-4 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20">
                 <div>

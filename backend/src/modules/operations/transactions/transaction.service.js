@@ -19,6 +19,7 @@ class TransactionService {
     const amount = Number(payload?.amount);
     const paymentMethod = String(payload?.paymentMethod || payload?.method || "").trim();
     const requestedStatus = String(payload?.status || "completed").toLowerCase();
+    const transactionType = String(payload?.type || "general").trim().toLowerCase();
     const idempotencyKey = String(
       payload?.idempotencyKey || `driver-manual:${user.userId}:${sessionId || "unknown"}`
     );
@@ -32,13 +33,23 @@ class TransactionService {
     if (String(session.driverId) !== String(user.userId)) {
       throw new TransactionError("You can only create transactions for your own sessions.", 403);
     }
-    if (session.state !== "closed") {
+    const isReservationFee = transactionType === "reservation_fee";
+    if (isReservationFee) {
+      if (!["reserved", "secured", "closed"].includes(session.state)) {
+        throw new ConflictError(
+          "Reservation fee can only be paid for reserved, secured, or closed sessions."
+        );
+      }
+    } else if (session.state !== "closed") {
       throw new ConflictError("Transaction can only be created after session is closed.");
     }
 
     const normalizedStatus = requestedStatus === "completed" ? "success" : requestedStatus;
     if (normalizedStatus !== "success") {
       throw new ValidationError("status must be 'completed' or 'success'.");
+    }
+    if (isReservationFee && amount !== 100) {
+      throw new ValidationError("Reservation fee transaction amount must be exactly 100 ETB.");
     }
 
     const existing = await Transaction.findOne({ sessionId, idempotencyKey });
@@ -59,6 +70,7 @@ class TransactionService {
         status: "success",
         providerRef: null,
         idempotencyKey,
+        metadata: isReservationFee ? { type: "reservation_fee" } : {},
         completedAt: now,
       });
 
