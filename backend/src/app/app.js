@@ -15,6 +15,7 @@ const { userRoutes } = require("../modules/users");
 const { authRoutes } = require("../modules/auth");
 const { analyticsRoutes } = require("../modules/analytics");
 const { financeRoutes } = require("../modules/finance");
+const { attendantRoutes } = require("../modules/attendantLiveGrid");
 const { ParkingSession } = require("../modules/sessions/models/parking-session.model");
 const { ParkingSpot } = require("../modules/parking/models/parking-spot.model");
 const { Incident } = require("../modules/operations/models/incident.model");
@@ -147,6 +148,7 @@ const createApp = () => {
   app.use("/api/ai", aiRoutes);
   app.use("/api/users", userRoutes);
   app.use("/api/analytics", analyticsRoutes);
+  app.use("/api/attendant", attendantRoutes);
   app.use("/api", financeRoutes);
 
   app.use(notFoundHandler);
