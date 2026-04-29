@@ -6,6 +6,9 @@ const router = express.Router();
 
 router.post("/owners", authenticate, authorize("admin"), controller.createOwner);
 router.post("/attendants", authenticate, authorize("owner"), controller.createAttendant);
+router.get("/attendants/mine", authenticate, authorize("owner"), controller.listMyAttendants);
+router.patch("/attendants/:attendantId", authenticate, authorize("owner"), controller.updateAttendant);
+router.delete("/attendants/:attendantId", authenticate, authorize("owner"), controller.deleteAttendant);
 router.get("/:id", authenticate, requireUserSelfOrAdmin, controller.getUserById);
 
 module.exports = router;

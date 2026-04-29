@@ -213,6 +213,164 @@ class UserService {
     return toSafeUser(user);
   }
 
+  async listAttendantsByOwner(ownerUser) {
+    if (!ownerUser || ownerUser.role !== "owner") {
+      throw new ForbiddenError("Only owner can view attendants.");
+    }
+
+    const ownerUserId = ownerUser.userId || ownerUser.id || ownerUser._id;
+    const attendants = await User.find({
+      role: "attendant",
+      "attendant.ownerId": ownerUserId,
+    }).sort({ createdAt: -1 });
+
+    return attendants.map((attendant) => toSafeUser(attendant));
+  }
+
+  async updateAttendantByOwner(ownerUser, attendantId, payload = {}) {
+    if (!ownerUser || ownerUser.role !== "owner") {
+      throw new ForbiddenError("Only owner can update attendants.");
+    }
+    if (!attendantId) {
+      throw new ValidationError("attendantId is required.");
+    }
+
+    const ownerUserId = ownerUser.userId || ownerUser.id || ownerUser._id;
+
+    const existing = await User.findById(attendantId).select(
+      "name email avatarUrl role status attendant"
+    );
+    if (!existing || existing.role !== "attendant" || !existing.attendant) {
+      throw new NotFoundError("Attendant not found.");
+    }
+
+    if (String(existing.attendant.ownerId) !== String(ownerUserId)) {
+      throw new ForbiddenError("You can only update your own attendants.");
+    }
+
+    const next = {};
+
+    if (payload?.name !== undefined) {
+      if (typeof payload.name !== "string") {
+        throw new ValidationError("name must be a string.");
+      }
+      next.name = payload.name.trim();
+    }
+
+    if (payload?.email !== undefined) {
+      if (typeof payload.email !== "string") {
+        throw new ValidationError("email must be a string.");
+      }
+      const normalizedEmail = String(payload.email).trim().toLowerCase();
+      if (!EMAIL_REGEX.test(normalizedEmail)) {
+        throw new ValidationError("email must be a valid email address.");
+      }
+      next.email = normalizedEmail;
+    }
+
+    if (payload?.avatarUrl !== undefined) {
+      // Allow clearing avatar by passing null
+      if (payload.avatarUrl !== null && typeof payload.avatarUrl !== "string") {
+        throw new ValidationError("avatarUrl must be a string or null.");
+      }
+      next.avatarUrl = payload.avatarUrl ? String(payload.avatarUrl).trim() : null;
+    }
+
+    if (payload?.attendant && typeof payload.attendant === "object") {
+      const attendantPatch = {};
+
+      const attendantInput = payload.attendant;
+
+      if (attendantInput?.lotId !== undefined) {
+        if (!hasValue(attendantInput.lotId)) {
+          throw new ValidationError("attendant.lotId is required.");
+        }
+
+        const lot = await ParkingLot.findById(attendantInput.lotId).select(
+          "ownerId"
+        );
+        if (!lot) {
+          throw new NotFoundError("Lot not found.");
+        }
+        if (String(lot.ownerId) !== String(ownerUserId)) {
+          throw new ForbiddenError(
+            "attendant.lotId must belong to the authenticated owner."
+          );
+        }
+
+        attendantPatch.lotId = attendantInput.lotId;
+        attendantPatch.ownerId = String(ownerUserId); // keep consistent
+      }
+
+      if (attendantInput?.phone !== undefined) {
+        attendantPatch.phone = hasValue(attendantInput.phone)
+          ? String(attendantInput.phone).trim()
+          : null;
+      }
+
+      if (attendantInput?.faydaId !== undefined) {
+        attendantPatch.faydaId = hasValue(attendantInput.faydaId)
+          ? String(attendantInput.faydaId).trim()
+          : null;
+      }
+
+      if (attendantInput?.shiftStart !== undefined) {
+        attendantPatch.shiftStart = hasValue(attendantInput.shiftStart)
+          ? String(attendantInput.shiftStart).trim()
+          : null;
+      }
+
+      if (attendantInput?.shiftEnd !== undefined) {
+        attendantPatch.shiftEnd = hasValue(attendantInput.shiftEnd)
+          ? String(attendantInput.shiftEnd).trim()
+          : null;
+      }
+
+      if (attendantInput?.address !== undefined) {
+        attendantPatch.address = hasValue(attendantInput.address)
+          ? String(attendantInput.address).trim()
+          : null;
+      }
+
+      if (Object.keys(attendantPatch).length > 0) {
+        existing.attendant = {
+          ...existing.attendant,
+          ...attendantPatch,
+        };
+      }
+    }
+
+    if (Object.keys(next).length > 0) {
+      existing.set(next);
+    }
+
+    await existing.save();
+    return toSafeUser(existing);
+  }
+
+  async deleteAttendantByOwner(ownerUser, attendantId) {
+    if (!ownerUser || ownerUser.role !== "owner") {
+      throw new ForbiddenError("Only owner can delete attendants.");
+    }
+    if (!attendantId) {
+      throw new ValidationError("attendantId is required.");
+    }
+
+    const ownerUserId = ownerUser.userId || ownerUser.id || ownerUser._id;
+
+    const deleted = await User.findOneAndDelete({
+      _id: attendantId,
+      role: "attendant",
+      "attendant.ownerId": ownerUserId,
+    });
+
+    if (!deleted) {
+      throw new NotFoundError("Attendant not found.");
+    }
+
+    return true;
+  }
+
   async createOwnerByAdmin(adminUser, payload) {
     if (!adminUser || adminUser.role !== "admin") {
       throw new ForbiddenError("Only admin can create owners.");
