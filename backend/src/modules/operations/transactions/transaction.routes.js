@@ -3,7 +3,6 @@ const controller = require("./transaction.controller");
 const {
   authenticate,
   authorize,
-  requireBodyDriverIdMatchesAuthUser,
   requireTransactionAccess,
 } = require("../../auth/auth.middleware");
 
@@ -12,9 +11,8 @@ const router = express.Router();
 router.post(
   "/",
   authenticate,
-  authorize("driver", "admin"),
-  requireBodyDriverIdMatchesAuthUser,
-  controller.createPendingTransaction
+  authorize("driver"),
+  controller.createTransaction
 );
 router.patch(
   "/:transactionId/complete",

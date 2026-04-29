@@ -10,6 +10,85 @@ class TransactionError extends AppError {
 }
 
 class TransactionService {
+  async createTransactionForDriver(user, payload) {
+    if (!user || user.role !== "driver") {
+      throw new TransactionError("Only drivers can create transactions.", 403);
+    }
+
+    const sessionId = payload?.sessionId;
+    const amount = Number(payload?.amount);
+    const paymentMethod = String(payload?.paymentMethod || payload?.method || "").trim();
+    const requestedStatus = String(payload?.status || "completed").toLowerCase();
+    const idempotencyKey = String(
+      payload?.idempotencyKey || `driver-manual:${user.userId}:${sessionId || "unknown"}`
+    );
+
+    if (!sessionId || Number.isNaN(amount) || amount < 0 || !paymentMethod) {
+      throw new ValidationError("sessionId, amount, and paymentMethod are required.");
+    }
+
+    const session = await ParkingSession.findById(sessionId).select("driverId state");
+    if (!session) throw new NotFoundError("Session not found.");
+    if (String(session.driverId) !== String(user.userId)) {
+      throw new TransactionError("You can only create transactions for your own sessions.", 403);
+    }
+    if (session.state !== "closed") {
+      throw new ConflictError("Transaction can only be created after session is closed.");
+    }
+
+    const normalizedStatus = requestedStatus === "completed" ? "success" : requestedStatus;
+    if (normalizedStatus !== "success") {
+      throw new ValidationError("status must be 'completed' or 'success'.");
+    }
+
+    const existing = await Transaction.findOne({ sessionId, idempotencyKey });
+    if (existing) return existing;
+
+    const alreadySuccessful = await Transaction.findOne({ sessionId, status: "success" });
+    if (alreadySuccessful) {
+      return alreadySuccessful;
+    }
+
+    const now = new Date();
+    try {
+      const created = await Transaction.create({
+        sessionId,
+        driverId: user.userId,
+        amount,
+        method: paymentMethod,
+        status: "success",
+        providerRef: null,
+        idempotencyKey,
+        completedAt: now,
+      });
+
+      domainEventBus.emitEvent(
+        DOMAIN_EVENTS.TRANSACTION_COMPLETED,
+        {
+          transactionId: created._id,
+          sessionId: created.sessionId,
+          driverId: created.driverId,
+          amount: created.amount,
+          method: created.method,
+          completedAt: created.completedAt,
+        },
+        {
+          eventId: `transaction-completed:${String(created._id)}:${created.__v}`,
+        }
+      );
+
+      return created;
+    } catch (error) {
+      if (error && error.code === 11000) {
+        const recovered =
+          (await Transaction.findOne({ sessionId, idempotencyKey })) ||
+          (await Transaction.findOne({ sessionId, status: "success" }));
+        if (recovered) return recovered;
+      }
+      throw error;
+    }
+  }
+
   async getPaymentStabilityForSession(sessionId) {
     const [successfulCount, pendingCount] = await Promise.all([
       Transaction.countDocuments({ sessionId, status: "success" }),

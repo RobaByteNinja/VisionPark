@@ -2,6 +2,18 @@ const { TransactionService } = require("./transaction.service");
 
 const transactionService = new TransactionService();
 
+const createTransaction = async (req, res, next) => {
+  try {
+    const transaction = await transactionService.createTransactionForDriver(req.user, req.body);
+    return res.status(201).json({
+      success: true,
+      data: transaction,
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
 const createPendingTransaction = async (req, res, next) => {
   try {
     const transaction = await transactionService.createPendingTransaction(req.body);
@@ -35,6 +47,7 @@ const getTransactionById = async (req, res, next) => {
 };
 
 module.exports = {
+  createTransaction,
   createPendingTransaction,
   completeTransaction,
   getTransactionById,

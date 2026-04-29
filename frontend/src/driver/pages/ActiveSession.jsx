@@ -14,15 +14,17 @@ export default function ActiveSession() {
   const [session, setSession] = useState(initialSession);
 
   const [sessionState, setSessionState] = useState(() => String(initialSession?.state || "Discovery").replace(/^./, (c) => c.toUpperCase()));
-  const [receiptTimestamp, setReceiptTimestamp] = useState(() => navState.paymentTimestamp || "");
   const [spotData, setSpotData] = useState(() => navState.spotData || { id: "--", floor: "--", deposit: 100, paymentRate: 0 });
   const [areaData, setAreaData] = useState(() => navState.areaData || { name: "--", lat: 0, lon: 0 });
-  const driverPayment = navState.paymentMethod || "Telebirr";
 
   const [pendingMapRoute, setPendingMapRoute] = useState(null);
   const [actionError, setActionError] = useState("");
   const [isSimulatingArrival, setIsSimulatingArrival] = useState(false);
   const [isSimulatingExit, setIsSimulatingExit] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentData, setPaymentData] = useState(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("Telebirr");
+  const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
 
   // Track which notifications have already been sent to prevent spamming
   const notifiedMilestones = useRef(new Set());
@@ -243,13 +245,52 @@ export default function ActiveSession() {
     setActionError("");
     setIsSimulatingExit(true);
     try {
-      await apiClient.post(`/sessions/${session._id}/close`, {});
-      localStorage.removeItem("activeSessionId");
-      navigate("/driver/history");
+      const closedSession = await apiClient.post(`/sessions/${session._id}/close`, {});
+      setSession(closedSession);
+      setSessionState(String(closedSession?.state || "Closed").replace(/^./, (c) => c.toUpperCase()));
+
+      const entryIso = closedSession?.securedAt || session?.securedAt || session?.createdAt || null;
+      const exitIso = closedSession?.closedAt || new Date().toISOString();
+      const durationSeconds = entryIso
+        ? Math.max(0, Math.floor((new Date(exitIso).getTime() - new Date(entryIso).getTime()) / 1000))
+        : 0;
+      const ratePerHour = Number(
+        spotData?.paymentRate || closedSession?.spotId?.paymentRate || 0
+      );
+      const totalAmount = Number(((durationSeconds / 3600) * Math.max(0, ratePerHour)).toFixed(2));
+
+      setPaymentData({
+        sessionId: String(closedSession?._id || session._id),
+        durationSeconds,
+        totalAmount,
+        ratePerHour,
+      });
+      setShowPaymentModal(true);
     } catch (error) {
       setActionError(error?.message || "Failed to close session.");
     } finally {
       setIsSimulatingExit(false);
+    }
+  };
+
+  const handleSubmitPayment = async () => {
+    if (!paymentData?.sessionId || isSubmittingPayment) return;
+    setActionError("");
+    setIsSubmittingPayment(true);
+    try {
+      await apiClient.post("/operations/transactions", {
+        sessionId: paymentData.sessionId,
+        amount: paymentData.totalAmount,
+        paymentMethod: selectedPaymentMethod,
+        status: "completed",
+      });
+      setShowPaymentModal(false);
+      localStorage.removeItem("activeSessionId");
+      navigate("/driver/history");
+    } catch (error) {
+      setActionError(error?.message || "Payment failed.");
+    } finally {
+      setIsSubmittingPayment(false);
     }
   };
 
@@ -265,10 +306,6 @@ export default function ActiveSession() {
     const m = Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, "0");
     const s = (totalSeconds % 60).toString().padStart(2, "0");
     return `${h} : ${m} : ${s}`;
-  };
-
-  const calculateLiveCost = (seconds) => {
-    return Math.max(10, Math.ceil(seconds / 60) * 1);
   };
 
   // Ask for notification permissions when they attempt to navigate away
@@ -434,32 +471,28 @@ export default function ActiveSession() {
       </div>
 
       {/* --- 4. DIGITAL RECEIPT MODAL --- */}
-      {sessionState === "SystemReceipt" && (
+      {showPaymentModal && paymentData && (
         <div className="fixed inset-0 z-[6000] bg-zinc-900/60 dark:bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="relative w-full max-w-md md:max-w-lg bg-white dark:bg-[#121214] border border-zinc-200 dark:border-white/10 rounded-3xl shadow-2xl max-h-[85vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-300">
 
             <div className="flex justify-between items-center p-6 md:p-8 pb-4 border-b border-zinc-200 dark:border-white/10 shrink-0">
               <h2 className="text-xl md:text-2xl lg:text-3xl font-bold text-zinc-900 dark:text-white flex items-center gap-2">
                 <CheckCircle className="h-6 w-6 md:h-8 md:w-8 text-emerald-500" />
-                Digital Receipt
+                Complete Payment
               </h2>
-              <button type="button" onClick={closeSession} className="h-8 w-8 md:h-10 md:w-10 flex items-center justify-center rounded-full bg-zinc-100 dark:bg-white/5 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-white/10 hover:text-zinc-900 dark:hover:text-white cursor-pointer outline-none active:scale-90 transition-transform"><X className="h-5 w-5 md:h-6 md:w-6" /></button>
+              <button type="button" onClick={() => setShowPaymentModal(false)} className="h-8 w-8 md:h-10 md:w-10 flex items-center justify-center rounded-full bg-zinc-100 dark:bg-white/5 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-white/10 hover:text-zinc-900 dark:hover:text-white cursor-pointer outline-none active:scale-90 transition-transform"><X className="h-5 w-5 md:h-6 md:w-6" /></button>
             </div>
 
             <div className="overflow-y-auto p-6 md:p-8 flex-1 overscroll-contain custom-scrollbar">
               <div className="flex justify-center mb-4"><CheckCircle className="h-16 w-16 md:h-20 md:w-20 text-emerald-500 drop-shadow-[0_0_15px_rgba(16,185,129,0.5)]" /></div>
-              <h2 className="text-xl md:text-2xl lg:text-3xl font-bold text-zinc-900 dark:text-white text-center mb-8">Payment sent successfully</h2>
+              <h2 className="text-xl md:text-2xl lg:text-3xl font-bold text-zinc-900 dark:text-white text-center mb-8">Session Closed - Payment Required</h2>
 
               <div className="space-y-4 md:space-y-5">
-                <div className="flex justify-between text-sm md:text-base lg:text-lg"><span className="text-zinc-500 dark:text-zinc-400">Entry Time</span><span className="font-bold text-zinc-900 dark:text-white">{entryTimeStr}</span></div>
-                <div className="flex justify-between text-sm md:text-base lg:text-lg"><span className="text-zinc-500 dark:text-zinc-400">Exit Time</span><span className="font-bold text-zinc-900 dark:text-white">{exitTimeStr}</span></div>
-
-                <div className="pt-3 border-t border-zinc-200 dark:border-white/10 flex justify-between items-center text-sm md:text-base lg:text-lg"><span className="text-zinc-500 dark:text-zinc-400">Total Duration</span><span className="font-bold text-zinc-900 dark:text-white font-mono tracking-wider">{formatParkedTime(parkedSeconds)}</span></div>
-
-                <div className="pt-3 border-t border-zinc-200 dark:border-white/10 flex justify-between text-sm md:text-base lg:text-lg"><span className="text-zinc-500 dark:text-zinc-400">Reservation fee</span><span className="font-bold text-zinc-900 dark:text-white">{spotData.deposit} ETB</span></div>
-                <div className="flex justify-between text-sm md:text-base lg:text-lg"><span className="text-zinc-500 dark:text-zinc-400">Parking fee</span><span className="font-bold text-zinc-900 dark:text-white">{calculateLiveCost(parkedSeconds)} ETB</span></div>
-
-                <div className="pt-4 border-t border-zinc-200 dark:border-white/10 flex justify-between items-center text-lg md:text-xl lg:text-2xl mt-2"><span className="font-bold text-zinc-900 dark:text-white">Total Paid</span><span className="font-bold text-emerald-600 dark:text-emerald-400">{spotData.deposit + calculateLiveCost(parkedSeconds)} ETB</span></div>
+                <div className="flex justify-between text-sm md:text-base lg:text-lg"><span className="text-zinc-500 dark:text-zinc-400">Spot</span><span className="font-bold text-zinc-900 dark:text-white">{spotData.id}</span></div>
+                <div className="flex justify-between text-sm md:text-base lg:text-lg"><span className="text-zinc-500 dark:text-zinc-400">Location</span><span className="font-bold text-zinc-900 dark:text-white">{areaData.name}</span></div>
+                <div className="pt-3 border-t border-zinc-200 dark:border-white/10 flex justify-between items-center text-sm md:text-base lg:text-lg"><span className="text-zinc-500 dark:text-zinc-400">Total Duration</span><span className="font-bold text-zinc-900 dark:text-white font-mono tracking-wider">{formatParkedTime(paymentData.durationSeconds)}</span></div>
+                <div className="flex justify-between text-sm md:text-base lg:text-lg"><span className="text-zinc-500 dark:text-zinc-400">Current Rate</span><span className="font-bold text-zinc-900 dark:text-white">{paymentData.ratePerHour} ETB/hour</span></div>
+                <div className="pt-4 border-t border-zinc-200 dark:border-white/10 flex justify-between items-center text-lg md:text-xl lg:text-2xl mt-2"><span className="font-bold text-zinc-900 dark:text-white">Total Amount</span><span className="font-bold text-emerald-600 dark:text-emerald-400">{paymentData.totalAmount} ETB</span></div>
               </div>
 
               <div className="flex flex-col gap-3 mt-6 lg:mt-8">
@@ -472,18 +505,22 @@ export default function ActiveSession() {
                 </div>
 
                 <div className="bg-zinc-50 dark:bg-black/40 rounded-xl p-4 md:p-5 text-left border border-zinc-200 dark:border-white/5">
-                  <p className="text-sm md:text-base lg:text-lg text-zinc-500 dark:text-zinc-400 mb-1 flex justify-between gap-4">
-                    <span className="shrink-0">Paid From:</span> <span className="text-zinc-900 dark:text-white font-bold text-right truncate pl-2">{driverPayment} via Chapa</span>
-                  </p>
-                  <p className="text-sm md:text-base lg:text-lg text-zinc-500 dark:text-zinc-400 flex justify-between gap-4">
-                    <span className="shrink-0">Time:</span> <span className="text-zinc-900 dark:text-white font-bold text-right truncate pl-2">{receiptTimestamp}</span>
-                  </p>
+                  <p className="text-sm md:text-base lg:text-lg text-zinc-500 dark:text-zinc-400 mb-2">Payment Method</p>
+                  <select
+                    value={selectedPaymentMethod}
+                    onChange={(e) => setSelectedPaymentMethod(e.target.value)}
+                    className="w-full bg-white dark:bg-[#121214] border border-zinc-200 dark:border-white/10 text-zinc-900 dark:text-white text-sm rounded-xl px-3 py-2.5 outline-none"
+                  >
+                    <option value="Telebirr">Telebirr</option>
+                    <option value="CBE">CBE</option>
+                    <option value="Chapa">Chapa</option>
+                  </select>
                 </div>
               </div>
             </div>
 
             <div className="p-6 md:p-8 pt-4 border-t border-zinc-200 dark:border-white/10 shrink-0">
-              <button type="button" onClick={closeSession} className="w-full h-12 md:h-14 lg:h-16 flex items-center justify-center rounded-xl bg-zinc-100 dark:bg-white/10 text-zinc-900 dark:text-white font-bold text-sm md:text-base tracking-wide uppercase hover:bg-zinc-200 dark:hover:bg-white/20 transition-colors outline-none cursor-pointer">Done</button>
+              <button type="button" onClick={handleSubmitPayment} disabled={isSubmittingPayment} className="w-full h-12 md:h-14 lg:h-16 flex items-center justify-center rounded-xl bg-emerald-500 text-zinc-950 font-bold text-sm md:text-base tracking-wide uppercase hover:bg-emerald-400 transition-colors outline-none cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed">{isSubmittingPayment ? "Processing..." : `Pay ${paymentData.totalAmount} ETB`}</button>
             </div>
 
           </div>
