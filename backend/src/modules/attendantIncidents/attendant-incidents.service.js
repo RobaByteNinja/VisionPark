@@ -131,6 +131,7 @@ class AttendantIncidentsService {
       damagedPlates,
       media,
       destination,
+      status: "pending",
       statusLabel,
     });
 

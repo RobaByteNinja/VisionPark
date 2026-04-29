@@ -6,6 +6,7 @@ const ATTENDANT_INCIDENT_TYPES = [
   "Customer Dispute",
   "Other",
 ];
+const ATTENDANT_INCIDENT_STATUSES = ["pending", "resolved", "forwarded"];
 
 const attendantIncidentMediaSchema = new mongoose.Schema(
   {
@@ -44,6 +45,13 @@ const attendantIncidentSchema = new mongoose.Schema(
     damagedPlates: { type: [String], default: [] },
     media: { type: [attendantIncidentMediaSchema], default: [] },
     destination: { type: String, enum: ["owner", "debt_radar"], required: true, index: true },
+    status: {
+      type: String,
+      enum: ATTENDANT_INCIDENT_STATUSES,
+      required: true,
+      default: "pending",
+      index: true,
+    },
     statusLabel: { type: String, trim: true, required: true },
   },
   { timestamps: true, versionKey: "__v" }
@@ -59,5 +67,6 @@ const AttendantIncident = mongoose.model("AttendantIncident", attendantIncidentS
 module.exports = {
   AttendantIncident,
   ATTENDANT_INCIDENT_TYPES,
+  ATTENDANT_INCIDENT_STATUSES,
 };
 
