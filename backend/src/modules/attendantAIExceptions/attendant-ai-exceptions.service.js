@@ -1,6 +1,7 @@
 const { AIException, AI_EXCEPTION_STATUSES } = require("./models/ai-exception.model");
 const { User } = require("../users/models/user.model");
 const { NotFoundError, ValidationError, ConflictError } = require("../../common/errors");
+const mongoose = require("mongoose");
 
 const isPlateType = (type) => type === "UNREADABLE_PLATE" || type === "EXIT_MISMATCH";
 const PENDING_STATUSES = ["PENDING", "pending"];
@@ -29,6 +30,12 @@ const formatConfidence = (value) => {
 };
 
 class AttendantAIExceptionsService {
+  #buildExceptionLookupQuery(exceptionId) {
+    const id = String(exceptionId || "").trim();
+    const isObjectId = mongoose.Types.ObjectId.isValid(id);
+    return isObjectId ? { $or: [{ _id: id }, { exceptionCode: id }] } : { exceptionCode: id };
+  }
+
   async #getAttendantScope(userId) {
     const user = await User.findById(userId).select("role attendant.lotId").lean();
     if (!user) throw new NotFoundError("User not found.");
@@ -90,7 +97,7 @@ class AttendantAIExceptionsService {
     const { lotId } = await this.#getAttendantScope(userId);
     const doc = await AIException.findOne({
       lotId,
-      $or: [{ _id: exceptionId }, { exceptionCode: exceptionId }],
+      ...this.#buildExceptionLookupQuery(exceptionId),
     }).lean();
     if (!doc) throw new NotFoundError("AI exception not found.");
     return this.#toUiRow(doc);
@@ -100,7 +107,7 @@ class AttendantAIExceptionsService {
     const { lotId } = await this.#getAttendantScope(userId);
     const doc = await AIException.findOne({
       lotId,
-      $or: [{ _id: exceptionId }, { exceptionCode: exceptionId }],
+      ...this.#buildExceptionLookupQuery(exceptionId),
     });
     if (!doc) throw new NotFoundError("AI exception not found.");
     if (!PENDING_STATUSES.includes(String(doc.status))) {
