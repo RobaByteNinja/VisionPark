@@ -60,6 +60,15 @@ const deleteAttendant = async (req, res, next) => {
   }
 };
 
+const updateMyOwnerProfile = async (req, res, next) => {
+  try {
+    const updated = await userService.updateOwnerSelf(req.user, req.body);
+    return res.status(200).json(updated);
+  } catch (error) {
+    return next(error);
+  }
+};
+
 const getUserById = async (req, res, next) => {
   try {
     const user = await userService.getUserById(req.params.id);
@@ -76,5 +85,6 @@ module.exports = {
   listMyAttendants,
   updateAttendant,
   deleteAttendant,
+  updateMyOwnerProfile,
   getUserById,
 };

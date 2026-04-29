@@ -9,6 +9,8 @@ import {
   Shield, Bell, Key, Save, CheckCircle,
   Camera, Upload, Eye, EyeOff, RefreshCw, X
 } from "lucide-react";
+import { apiClient } from "../../api/apiClient";
+import { useAuth } from "../../context/AuthContext";
 
 // --- INITIALIZATION HELPER ---
 const getInitialProfile = () => {
@@ -23,12 +25,12 @@ const getInitialProfile = () => {
   }
 
   return {
-    name: parsedData.name || "Kebede Alemu",
-    email: parsedData.email || "kebede.visionpark@gmail.com",
-    phone: parsedData.phone || "+251 911 234 567",
-    companyName: parsedData.companyName || "Alemu Parking Solutions PLC",
-    tinNumber: parsedData.tinNumber || "0012345678",
-    avatar: parsedData.avatar || "https://i.pravatar.cc/150?u=kebede"
+    name: parsedData.name || "Not available",
+    email: parsedData.email || "Not available",
+    phone: parsedData.phone || "Not available",
+    companyName: parsedData.companyName || "Not available",
+    tinNumber: parsedData.tinNumber || "Not available",
+    avatar: parsedData.avatar || null
   };
 };
 
@@ -65,6 +67,7 @@ const getPasswordStrength = (pass) => {
 };
 
 export default function OwnerProfile() {
+  const auth = useAuth();
   const [profile, setProfile] = useState(getInitialProfile);
   const [passwords, setPasswords] = useState({ current: "", new: "", confirm: "" });
 
@@ -143,6 +146,54 @@ export default function OwnerProfile() {
   }, []);
   // -----------------------------
 
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchOwnerProfile = async () => {
+      try {
+        const me = await apiClient.get("/auth/me");
+        const ownerProfile = me?.ownerProfile || me?.owner || {};
+        const backendProfile = {
+          name: me?.name || "Not available",
+          email: me?.email || "Not available",
+          phone: ownerProfile?.phone || "Not available",
+          companyName: ownerProfile?.companyName || "Not available",
+          tinNumber: ownerProfile?.tinNumber || "Not available",
+          avatar: me?.avatarUrl || null,
+        };
+
+        if (!isMounted) return;
+        setProfile((prev) => {
+          const savedData = localStorage.getItem("vp_owner_data");
+          let parsedData = {};
+          if (savedData) {
+            try {
+              parsedData = JSON.parse(savedData) || {};
+            } catch {
+              parsedData = {};
+            }
+          }
+
+          const merged = {
+            ...backendProfile,
+            ...parsedData,
+          };
+
+          saveToLocalAndDispatch(merged);
+          return { ...prev, ...merged };
+        });
+      } catch (error) {
+        console.error("OwnerProfile fetch failed:", error);
+      }
+    };
+
+    fetchOwnerProfile();
+    return () => {
+      isMounted = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleProfileChange = (field, value) => {
     setProfile(prev => ({ ...prev, [field]: value }));
   };
@@ -204,17 +255,45 @@ export default function OwnerProfile() {
     setShowPasswords(prev => ({ ...prev, new: true, confirm: true }));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setIsSaving(true);
-    setTimeout(() => {
-      saveToLocalAndDispatch(profile); // Sync all text changes to the sidebar
+    try {
+      const payload = {
+        name: profile.name,
+        email: profile.email,
+        avatarUrl: profile.avatar || null,
+        owner: {
+          phone: profile.phone,
+          companyName: profile.companyName,
+          tinNumber: profile.tinNumber,
+        },
+      };
 
+      const updated = await apiClient.patch("/users/owners/me", payload);
+      const updatedOwnerProfile = updated?.ownerProfile || updated?.owner || {};
+      const nextProfile = {
+        name: updated?.name || "Not available",
+        email: updated?.email || "Not available",
+        phone: updatedOwnerProfile?.phone || "Not available",
+        companyName: updatedOwnerProfile?.companyName || "Not available",
+        tinNumber: updatedOwnerProfile?.tinNumber || "Not available",
+        avatar: updated?.avatarUrl || null,
+      };
+
+      setProfile(nextProfile);
+      saveToLocalAndDispatch(nextProfile);
+      if (typeof auth.refreshMe === "function") {
+        await auth.refreshMe();
+      }
       setIsSaving(false);
       setSaveSuccess(true);
       setPasswords({ current: "", new: "", confirm: "" });
       setShowPasswords({ current: false, new: false, confirm: false });
       setTimeout(() => setSaveSuccess(false), 3000);
-    }, 800);
+    } catch (error) {
+      console.error("Owner profile save failed:", error);
+      setIsSaving(false);
+    }
   };
 
   const passStrength = getPasswordStrength(passwords.new);

@@ -6,6 +6,7 @@ const AuthContext = createContext({
   token: null,
   isAuthenticated: false,
   login: async () => {},
+  refreshMe: async () => {},
   logout: () => {},
 });
 
@@ -36,6 +37,13 @@ export function AuthProvider({ children }) {
     return nextUser;
   }, []);
 
+  const refreshMe = useCallback(async () => {
+    const me = await apiClient.get("/auth/me");
+    setUser(me);
+    localStorage.setItem("user", JSON.stringify(me));
+    return me;
+  }, []);
+
   useEffect(() => {
     const bootstrapAuth = async () => {
       const storedToken = localStorage.getItem("accessToken");
@@ -45,16 +53,14 @@ export function AuthProvider({ children }) {
 
       setToken(storedToken);
       try {
-        const me = await apiClient.get("/auth/me");
-        setUser(me);
-        localStorage.setItem("user", JSON.stringify(me));
+        await refreshMe();
       } catch {
         logout();
       }
     };
 
     bootstrapAuth();
-  }, [logout]);
+  }, [logout, refreshMe]);
 
   const value = useMemo(
     () => ({
@@ -62,9 +68,10 @@ export function AuthProvider({ children }) {
       token,
       isAuthenticated: Boolean(token && user),
       login,
+      refreshMe,
       logout,
     }),
-    [user, token, login, logout]
+    [user, token, login, refreshMe, logout]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

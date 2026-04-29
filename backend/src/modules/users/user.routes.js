@@ -5,6 +5,7 @@ const { authenticate, authorize, requireUserSelfOrAdmin } = require("../auth/aut
 const router = express.Router();
 
 router.post("/owners", authenticate, authorize("admin"), controller.createOwner);
+router.patch("/owners/me", authenticate, authorize("owner"), controller.updateMyOwnerProfile);
 router.post("/attendants", authenticate, authorize("owner"), controller.createAttendant);
 router.get("/attendants/mine", authenticate, authorize("owner"), controller.listMyAttendants);
 router.patch("/attendants/:attendantId", authenticate, authorize("owner"), controller.updateAttendant);

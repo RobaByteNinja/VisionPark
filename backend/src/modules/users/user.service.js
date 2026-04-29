@@ -371,6 +371,93 @@ class UserService {
     return true;
   }
 
+  async updateOwnerSelf(ownerUser, payload = {}) {
+    if (!ownerUser || ownerUser.role !== "owner") {
+      throw new ForbiddenError("Only owner can update owner profile.");
+    }
+
+    const ownerUserId = ownerUser.userId || ownerUser.id || ownerUser._id;
+    const existing = await User.findById(ownerUserId).select(
+      "name email avatarUrl role status owner"
+    );
+
+    if (!existing || existing.role !== "owner") {
+      throw new NotFoundError("Owner not found.");
+    }
+
+    const next = {};
+
+    if (payload?.name !== undefined) {
+      if (typeof payload.name !== "string") {
+        throw new ValidationError("name must be a string.");
+      }
+      next.name = payload.name.trim();
+    }
+
+    if (payload?.email !== undefined) {
+      if (typeof payload.email !== "string") {
+        throw new ValidationError("email must be a string.");
+      }
+      const normalizedEmail = String(payload.email).trim().toLowerCase();
+      if (!EMAIL_REGEX.test(normalizedEmail)) {
+        throw new ValidationError("email must be a valid email address.");
+      }
+      next.email = normalizedEmail;
+    }
+
+    if (payload?.avatarUrl !== undefined) {
+      if (payload.avatarUrl !== null && typeof payload.avatarUrl !== "string") {
+        throw new ValidationError("avatarUrl must be a string or null.");
+      }
+      next.avatarUrl = payload.avatarUrl ? String(payload.avatarUrl).trim() : null;
+    }
+
+    if (payload?.owner && typeof payload.owner === "object") {
+      const ownerPatch = {};
+      const ownerInput = payload.owner;
+
+      if (ownerInput?.phone !== undefined) {
+        ownerPatch.phone = hasValue(ownerInput.phone)
+          ? String(ownerInput.phone).trim()
+          : null;
+      }
+
+      if (ownerInput?.companyName !== undefined) {
+        ownerPatch.companyName = hasValue(ownerInput.companyName)
+          ? String(ownerInput.companyName).trim()
+          : null;
+      }
+
+      if (ownerInput?.tinNumber !== undefined) {
+        ownerPatch.tinNumber = hasValue(ownerInput.tinNumber)
+          ? String(ownerInput.tinNumber).trim()
+          : null;
+      }
+
+      if (Object.keys(ownerPatch).length > 0) {
+        existing.owner = {
+          ...(existing.owner || {}),
+          ...ownerPatch,
+        };
+      }
+    }
+
+    if (Object.keys(next).length > 0) {
+      existing.set(next);
+    }
+
+    try {
+      await existing.save();
+    } catch (error) {
+      if (error && error.code === 11000) {
+        throw new ConflictError("A user with this email already exists.");
+      }
+      throw error;
+    }
+
+    return toSafeUser(existing);
+  }
+
   async createOwnerByAdmin(adminUser, payload) {
     if (!adminUser || adminUser.role !== "admin") {
       throw new ForbiddenError("Only admin can create owners.");
