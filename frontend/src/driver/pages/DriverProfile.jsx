@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Header } from "../../components/layout/Header";
 import { useTheme } from "../../context/ThemeContext";
 import { useScroll } from "../../context/ScrollContext";
+import { useAuth } from "../../context/AuthContext";
 import {
   User, Car, CreditCard, Building2, Bell, HelpCircle,
   LogOut, Camera, ChevronRight, ChevronLeft, Fingerprint,
@@ -13,6 +14,7 @@ const PAYMENT_OPTIONS = ["Telebirr", "CBE", "COOP", "Bank of Abyssinia"];
 
 export default function DriverProfile() {
   const navigate = useNavigate();
+  const auth = useAuth();
   const { setScrolled } = useScroll();
 
   const galleryInputRef = useRef(null);
@@ -283,6 +285,7 @@ export default function DriverProfile() {
   };
 
   const handleLogout = () => {
+    auth.logout();
     Object.keys(localStorage).forEach(key => {
       const persistentKeys = [
         "vp_theme", "vp_driver_photo", "vp_driver_name", "vp_driver_email", "vp_driver_phone",
@@ -366,16 +369,6 @@ export default function DriverProfile() {
           <div className="flex flex-col gap-6 md:gap-8">
 
             {/* VISIONPARK WALLET CARD */}
-            <div className="w-full bg-gradient-to-br from-emerald-400 to-emerald-600 dark:from-emerald-500 dark:to-emerald-700 rounded-2xl md:rounded-3xl p-6 md:p-8 shadow-lg shadow-emerald-500/20 text-white flex justify-between items-center transform transition-transform hover:scale-[1.02]">
-              <div>
-                <p className="text-emerald-50 dark:text-emerald-100 text-[10px] md:text-xs lg:text-sm font-bold uppercase tracking-widest mb-1 md:mb-2">VisionPark Wallet</p>
-                <p className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight">40.00 <span className="text-base md:text-lg lg:text-xl font-medium opacity-80">ETB</span></p>
-              </div>
-              <div className="h-12 w-12 md:h-14 md:w-14 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-md shadow-inner">
-                <CreditCard className="h-6 w-6 md:h-7 md:w-7 text-white" />
-              </div>
-            </div>
-
             <div className="w-full bg-white dark:bg-[#121214]/95 rounded-2xl md:rounded-3xl shadow-sm border border-zinc-200 dark:border-white/5 overflow-hidden">
               <div className="flex items-center justify-between p-4 md:p-6 border-b border-zinc-100 dark:border-white/5">
                 <div className="flex items-center gap-4">
