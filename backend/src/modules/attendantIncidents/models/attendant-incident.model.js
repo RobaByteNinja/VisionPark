@@ -13,6 +13,8 @@ const attendantIncidentMediaSchema = new mongoose.Schema(
     type: { type: String, enum: ["photo", "video"], required: true },
     name: { type: String, trim: true, default: null },
     data: { type: String, default: null },
+    url: { type: String, trim: true, default: null },
+    publicId: { type: String, trim: true, default: null },
   },
   { _id: false }
 );

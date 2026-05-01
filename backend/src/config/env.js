@@ -5,7 +5,11 @@ const loadEnv = () => {
   // Optional dotenv support if installed; keeps bootstrap flexible.
   try {
     // eslint-disable-next-line global-require, import/no-extraneous-dependencies
-    require("dotenv").config({ path: path.resolve(process.cwd(), ".env") });
+    const dotenv = require("dotenv");
+    // Prefer backend/.env regardless of process.cwd() (e.g. dev from monorepo root or frontend/).
+    const backendRootEnv = path.resolve(__dirname, "../../.env");
+    dotenv.config({ path: backendRootEnv });
+    dotenv.config({ path: path.resolve(process.cwd(), ".env") });
   } catch (_error) {
     // No-op when dotenv is not present.
   }
@@ -94,6 +98,9 @@ const env = {
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || "1d",
   aiApiKey: requireString(rawAiApiKey, "AI_API_KEY"),
   corsAllowedOrigins,
+  cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME?.trim() || null,
+  cloudinaryApiKey: process.env.CLOUDINARY_API_KEY?.trim() || null,
+  cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET?.trim() || null,
 };
 
 module.exports = { env };

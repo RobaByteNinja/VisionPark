@@ -51,6 +51,8 @@ const userSchema = new mongoose.Schema(
     name: { type: String, required: true, trim: true },
     email: { type: String, required: true, trim: true, lowercase: true },
     avatarUrl: { type: String, trim: true, default: null },
+    profileImageUrl: { type: String, trim: true, default: null },
+    profileImagePublicId: { type: String, trim: true, default: null },
     passwordHash: { type: String, required: true, select: false },
     role: { type: String, required: true, enum: USER_ROLES, index: true },
     driver: { type: driverSchema, default: null },

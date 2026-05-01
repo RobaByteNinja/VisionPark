@@ -5,6 +5,7 @@ const INCIDENT_STATUSES = ["pending", "under_review", "resolved", "escalated"];
 const evidenceItemSchema = new mongoose.Schema(
   {
     url: { type: String, required: true, trim: true },
+    publicId: { type: String, trim: true, default: null },
     type: { type: String, trim: true, default: "image" },
     source: { type: String, trim: true, default: "manual" },
     metadata: { type: mongoose.Schema.Types.Mixed, default: {} },

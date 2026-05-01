@@ -51,6 +51,7 @@ class AttendantIncidentsService {
   #toUiRow(doc, lotName) {
     return {
       id: doc.incidentCode,
+      attendantIncidentId: doc._id ? String(doc._id) : null,
       plate: doc.offenderPlate,
       type: doc.incidentType,
       details: doc.description,
@@ -146,8 +147,9 @@ class AttendantIncidentsService {
       plate: normalizedPlate,
       evidence: media
         .map((m) => ({
-          url: m?.data || m?.name || "attendant-logger-evidence",
-          type: m?.type || "image",
+          url: m?.url || m?.data || m?.name || "attendant-logger-evidence",
+          publicId: m?.publicId || null,
+          type: m?.type === "video" ? "video" : "image",
           source: "attendant_logger",
           metadata: {
             incidentCode,

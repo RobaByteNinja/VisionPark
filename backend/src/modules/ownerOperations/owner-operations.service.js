@@ -36,7 +36,9 @@ class OwnerOperationsService {
     const attendant = attendantById.get(String(doc.attendantId));
     const hasVideo = (doc.media || []).some((m) => m.type === "video");
     const hasPhoto = (doc.media || []).some((m) => m.type === "photo");
-    const firstFile = (doc.media || [])[0]?.data || null;
+    const firstWithUrl = (doc.media || []).find((m) => m.url);
+    const firstFile =
+      firstWithUrl?.url || (doc.media || []).find((m) => m.data)?.data || (doc.media || [])[0]?.data || null;
     const plates =
       doc.incidentType === "Property Damage"
         ? (doc.damagedPlates && doc.damagedPlates.length ? doc.damagedPlates : [doc.offenderPlate])
