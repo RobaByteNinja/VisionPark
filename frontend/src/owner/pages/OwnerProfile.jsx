@@ -30,7 +30,8 @@ const getInitialProfile = () => {
     phone: parsedData.phone || "Not available",
     companyName: parsedData.companyName || "Not available",
     tinNumber: parsedData.tinNumber || "Not available",
-    avatar: parsedData.avatar || null
+    avatar: parsedData.avatar || null,
+    profileImagePublicId: parsedData.profileImagePublicId || null,
   };
 };
 
@@ -128,15 +129,35 @@ export default function OwnerProfile() {
       const context = canvas.getContext('2d');
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-      const imageUrl = canvas.toDataURL('image/png');
-
-      setProfile(prev => {
-        const updated = { ...prev, avatar: imageUrl };
-        saveToLocalAndDispatch(updated); // Sync immediately
-        return updated;
-      });
-
-      stopCamera();
+      canvas.toBlob(
+        async (blob) => {
+          if (!blob) return;
+          try {
+            const fd = new FormData();
+            fd.append("image", new File([blob], "camera-capture.jpg", { type: "image/jpeg" }));
+            const res = await apiClient.postFormData("/uploads/profile-image", fd);
+            setProfile((prev) => {
+              const updated = {
+                ...prev,
+                avatar: res?.url || prev.avatar,
+                profileImagePublicId: res?.publicId || null,
+              };
+              saveToLocalAndDispatch(updated);
+              return updated;
+            });
+            if (typeof auth.refreshMe === "function") {
+              await auth.refreshMe();
+            }
+          } catch (err) {
+            console.error("Camera upload failed:", err);
+            alert(err?.message || "Upload failed.");
+          } finally {
+            stopCamera();
+          }
+        },
+        "image/jpeg",
+        0.92
+      );
     }
   };
 
@@ -159,7 +180,8 @@ export default function OwnerProfile() {
           phone: ownerProfile?.phone || "Not available",
           companyName: ownerProfile?.companyName || "Not available",
           tinNumber: ownerProfile?.tinNumber || "Not available",
-          avatar: me?.avatarUrl || null,
+          avatar: me?.avatarUrl || me?.profileImageUrl || null,
+          profileImagePublicId: me?.profileImagePublicId || null,
         };
 
         if (!isMounted) return;
@@ -198,30 +220,62 @@ export default function OwnerProfile() {
     setProfile(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleFileUpload = (e) => {
+  const handleFileUpload = async (e) => {
     const file = e.target.files && e.target.files[0];
     if (file) {
-      // Use FileReader to get base64 so it can be saved to localStorage
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfile(prev => {
-          const updated = { ...prev, avatar: reader.result };
-          saveToLocalAndDispatch(updated); // Sync immediately
+      const max = 10 * 1024 * 1024;
+      if (file.size > max) {
+        alert("Image must be 10MB or smaller.");
+        setPhotoMenuOpen(false);
+        e.target.value = null;
+        return;
+      }
+      try {
+        const fd = new FormData();
+        fd.append("image", file);
+        const res = await apiClient.postFormData("/uploads/profile-image", fd);
+        setProfile((prev) => {
+          const updated = {
+            ...prev,
+            avatar: res?.url || prev.avatar,
+            profileImagePublicId: res?.publicId || null,
+          };
+          saveToLocalAndDispatch(updated);
           return updated;
         });
-      };
-      reader.readAsDataURL(file);
+        if (typeof auth.refreshMe === "function") {
+          await auth.refreshMe();
+        }
+      } catch (err) {
+        console.error("Profile image upload failed:", err);
+        alert(err?.message || "Upload failed. Check Cloudinary configuration and try again.");
+      }
     }
     setPhotoMenuOpen(false);
     e.target.value = null;
   };
 
-  const removePhoto = () => {
-    setProfile(prev => {
-      const updated = { ...prev, avatar: null };
-      saveToLocalAndDispatch(updated); // Sync immediately
+  const removePhoto = async () => {
+    const pid = profile.profileImagePublicId;
+    if (pid) {
+      try {
+        await apiClient.deleteWithBody("/uploads", { publicId: pid });
+      } catch (err) {
+        console.error("Remove cloud photo failed:", err);
+      }
+    }
+    setProfile((prev) => {
+      const updated = { ...prev, avatar: null, profileImagePublicId: null };
+      saveToLocalAndDispatch(updated);
       return updated;
     });
+    if (typeof auth.refreshMe === "function") {
+      try {
+        await auth.refreshMe();
+      } catch {
+        /* ignore */
+      }
+    }
     setPhotoMenuOpen(false);
   };
 
@@ -277,7 +331,8 @@ export default function OwnerProfile() {
         phone: updatedOwnerProfile?.phone || "Not available",
         companyName: updatedOwnerProfile?.companyName || "Not available",
         tinNumber: updatedOwnerProfile?.tinNumber || "Not available",
-        avatar: updated?.avatarUrl || null,
+        avatar: updated?.avatarUrl || updated?.profileImageUrl || null,
+        profileImagePublicId: updated?.profileImagePublicId || null,
       };
 
       setProfile(nextProfile);

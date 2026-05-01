@@ -1,6 +1,7 @@
 const multer = require("multer");
 const {
   uploadProfileImage,
+  uploadUserProfileImageByActor,
   uploadIncidentEvidence,
   deleteCloudinaryByPublicId,
   IMAGE_MIMES,
@@ -83,6 +84,22 @@ const uploadIncidentEvidenceHandler = async (req, res, next) => {
   }
 };
 
+const uploadUserProfileImageHandler = async (req, res, next) => {
+  try {
+    if (!req.file) {
+      return next(new ValidationError('Missing file field "image".'));
+    }
+    const data = await uploadUserProfileImageByActor({
+      actor: req.user,
+      targetUserId: req.params.userId,
+      file: req.file,
+    });
+    return res.status(200).json(data);
+  } catch (e) {
+    return next(e);
+  }
+};
+
 const deleteMediaHandler = async (req, res, next) => {
   try {
     const publicId = req.body?.publicId;
@@ -98,6 +115,7 @@ module.exports = {
   incidentUpload,
   handleMulterError,
   uploadProfileImageHandler,
+  uploadUserProfileImageHandler,
   uploadIncidentEvidenceHandler,
   deleteMediaHandler,
 };

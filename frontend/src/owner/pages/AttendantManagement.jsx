@@ -147,7 +147,7 @@ export default function AttendantManagement() {
 
   const [errors, setErrors] = useState({});
   const [avatarPreview, setAvatarPreview] = useState(null);
-  const [avatarUrl, setAvatarUrl] = useState(null);
+  const [avatarFile, setAvatarFile] = useState(null);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -220,16 +220,19 @@ export default function AttendantManagement() {
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      alert("Profile image must be 10MB or smaller.");
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
     setAvatarPreview(URL.createObjectURL(file));
-    const reader = new FileReader();
-    reader.onload = () => setAvatarUrl(typeof reader.result === "string" ? reader.result : null);
-    reader.readAsDataURL(file);
+    setAvatarFile(file);
   };
 
   const handleRemoveImage = (e) => {
     e.preventDefault();
     setAvatarPreview(null);
-    setAvatarUrl(null);
+    setAvatarFile(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -482,15 +485,31 @@ export default function AttendantManagement() {
         address: formData.address.trim(),
       },
     };
-    if (avatarUrl) payload.avatarUrl = avatarUrl;
-
     setSubmitting(true);
     try {
       const created = await apiClient.post("/users/attendants", payload);
+      const createdUserId = created?._id || created?.id || null;
+      let uploadedAvatarUrl = created?.avatarUrl || null;
+      if (avatarFile && createdUserId) {
+        try {
+          const fd = new FormData();
+          fd.append("image", avatarFile);
+          const uploaded = await apiClient.postFormData(
+            `/uploads/users/${createdUserId}/profile-image`,
+            fd
+          );
+          uploadedAvatarUrl = uploaded?.url || uploadedAvatarUrl;
+        } catch (uploadErr) {
+          console.error("Attendant profile upload failed:", uploadErr);
+          alert(
+            "Attendant was created, but profile image upload failed. You can upload it later from profile settings."
+          );
+        }
+      }
       const lot = ownerLots.find((l) => String(l._id) === String(created?.attendant?.lotId ?? formData.lotId));
       const displayBranch = lot?.name || formData.branch;
       const avatar =
-        created?.avatarUrl ||
+        uploadedAvatarUrl ||
         avatarPreview ||
         `https://i.pravatar.cc/150?u=${encodeURIComponent(formData.name.replace(/\s/g, "") || "user")}`;
 
@@ -536,7 +555,7 @@ export default function AttendantManagement() {
       shiftEnd: "02:00 PM",
     });
     setAvatarPreview(null);
-    setAvatarUrl(null);
+    setAvatarFile(null);
     setErrors({});
     if (fileInputRef.current) fileInputRef.current.value = "";
   };

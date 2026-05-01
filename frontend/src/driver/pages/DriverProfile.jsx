@@ -4,6 +4,7 @@ import { Header } from "../../components/layout/Header";
 import { useTheme } from "../../context/ThemeContext";
 import { useScroll } from "../../context/ScrollContext";
 import { useAuth } from "../../context/AuthContext";
+import { apiClient } from "../../api/apiClient";
 import {
   User, Car, CreditCard, Building2, Bell, HelpCircle,
   LogOut, Camera, ChevronRight, ChevronLeft, Fingerprint,
@@ -22,6 +23,13 @@ export default function DriverProfile() {
 
   useEffect(() => () => setScrolled(false), [setScrolled]);
   const handleScroll = (e) => setScrolled(e.target.scrollTop > 10);
+
+  useEffect(() => {
+    if (auth.isAuthenticated && auth.user?.role === "driver") {
+      const url = auth.user.avatarUrl || auth.user.profileImageUrl;
+      if (url) setProfilePhoto(url);
+    }
+  }, [auth.isAuthenticated, auth.user]);
 
   const [activeView, setActiveView] = useState("main");
   const [showPhotoModal, setShowPhotoModal] = useState(false);
@@ -237,40 +245,80 @@ export default function DriverProfile() {
   }, []);
 
   // --- GALLERY UPLOAD LOGIC ---
-  const handleGalleryUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const img = new Image();
-        img.src = reader.result;
-        img.onload = () => {
-          const canvas = document.createElement("canvas");
-          const MAX_WIDTH = 800;
-          const scaleSize = MAX_WIDTH / img.width;
-          canvas.width = MAX_WIDTH;
-          canvas.height = img.height * scaleSize;
+  const handleGalleryUpload = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = null;
+    if (!file) return;
 
-          const ctx = canvas.getContext("2d");
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-          const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.7);
-
-          try {
-            localStorage.setItem("vp_driver_photo", compressedDataUrl);
-            setProfilePhoto(compressedDataUrl);
-            window.dispatchEvent(new Event("vp_photo_updated"));
-          } catch (err) {
-            alert("File is too large to save.");
-          }
-          setShowPhotoModal(false);
+    if (auth.isAuthenticated && auth.user?.role === "driver") {
+      const max = 10 * 1024 * 1024;
+      if (file.size > max) {
+        alert("Image must be 10MB or smaller.");
+        setShowPhotoModal(false);
+        return;
+      }
+      try {
+        const fd = new FormData();
+        fd.append("image", file);
+        const res = await apiClient.postFormData("/uploads/profile-image", fd);
+        const url = res?.url || null;
+        setProfilePhoto(url);
+        try {
+          if (url) localStorage.setItem("vp_driver_photo", url);
+        } catch {
+          /* storage quota — cloud URL still set in UI */
         }
-      };
-      reader.readAsDataURL(file);
+        window.dispatchEvent(new Event("vp_photo_updated"));
+        if (typeof auth.refreshMe === "function") {
+          await auth.refreshMe();
+        }
+      } catch (err) {
+        alert(err?.message || "Upload failed.");
+      }
+      setShowPhotoModal(false);
+      return;
     }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const img = new Image();
+      img.src = reader.result;
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const MAX_WIDTH = 800;
+        const scaleSize = MAX_WIDTH / img.width;
+        canvas.width = MAX_WIDTH;
+        canvas.height = img.height * scaleSize;
+
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.7);
+
+        try {
+          localStorage.setItem("vp_driver_photo", compressedDataUrl);
+          setProfilePhoto(compressedDataUrl);
+          window.dispatchEvent(new Event("vp_photo_updated"));
+        } catch {
+          alert("File is too large to save.");
+        }
+        setShowPhotoModal(false);
+      };
+    };
+    reader.readAsDataURL(file);
   };
 
-  const handleRemovePhoto = () => {
+  const handleRemovePhoto = async () => {
+    if (auth.isAuthenticated && auth.user?.role === "driver" && auth.user?.profileImagePublicId) {
+      try {
+        await apiClient.deleteWithBody("/uploads", { publicId: auth.user.profileImagePublicId });
+        if (typeof auth.refreshMe === "function") {
+          await auth.refreshMe();
+        }
+      } catch {
+        /* still clear local UI */
+      }
+    }
     setProfilePhoto(null);
     localStorage.removeItem("vp_driver_photo");
     window.dispatchEvent(new Event("vp_photo_updated"));

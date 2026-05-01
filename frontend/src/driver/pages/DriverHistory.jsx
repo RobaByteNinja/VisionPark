@@ -22,6 +22,16 @@ const formatTime = (value) => {
   return dt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 };
 
+/** ETB amounts: cap fractional digits so summary values do not overflow adjacent columns. */
+const formatEtb = (value) => {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return "0";
+  return new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(n);
+};
+
 function mapSessionToUI(session) {
   const durationSeconds = Number(session?.durationSeconds || 0);
   const depositAmount = Number(session?.depositAmount || 0);
@@ -145,14 +155,21 @@ export default function DriverHistory() {
           {/* Top Summary Card */}
           <div className="w-full bg-white dark:bg-[#121214]/95 border border-zinc-200 dark:border-white/5 rounded-3xl p-6 md:p-8 lg:p-10 shadow-sm">
             <h2 className="text-xs md:text-sm lg:text-base font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-6 border-b border-zinc-100 dark:border-white/5 pb-4">This Month</h2>
-            <div className="grid grid-cols-2 gap-6">
-              <div>
-                <p className="text-[10px] md:text-xs lg:text-sm text-zinc-500 dark:text-zinc-400 uppercase font-bold tracking-wider mb-1 flex items-center gap-1.5"><Wallet className="h-3.5 w-3.5 md:h-4 md:w-4" /> Total Spent</p>
-                <p className="text-zinc-900 dark:text-white font-bold text-3xl md:text-4xl lg:text-5xl">{totalSpent} <span className="text-sm md:text-base lg:text-lg text-zinc-500 font-normal">ETB</span></p>
+            <div className="grid grid-cols-2 gap-4 md:gap-6">
+              <div className="min-w-0">
+                <p className="text-[10px] md:text-xs lg:text-sm text-zinc-500 dark:text-zinc-400 uppercase font-bold tracking-wider mb-1 flex items-center gap-1.5"><Wallet className="h-3.5 w-3.5 md:h-4 md:w-4 shrink-0" /> Total Spent</p>
+                <p
+                  className="text-zinc-900 dark:text-white font-bold text-2xl sm:text-3xl md:text-4xl lg:text-5xl tabular-nums truncate"
+                  title={`${formatEtb(totalSpent)} ETB`}
+                >
+                  {formatEtb(totalSpent)} <span className="text-sm md:text-base lg:text-lg text-zinc-500 font-normal">ETB</span>
+                </p>
               </div>
-              <div>
-                <p className="text-[10px] md:text-xs lg:text-sm text-zinc-500 dark:text-zinc-400 uppercase font-bold tracking-wider mb-1 flex items-center gap-1.5"><Clock className="h-3.5 w-3.5 md:h-4 md:w-4" /> Time Parked</p>
-                <p className="text-zinc-900 dark:text-white font-bold text-3xl md:text-4xl lg:text-5xl">{totalHours}<span className="text-sm md:text-base lg:text-lg text-zinc-500 font-normal">h</span> {totalMinutes}<span className="text-sm md:text-base lg:text-lg text-zinc-500 font-normal">m</span></p>
+              <div className="min-w-0">
+                <p className="text-[10px] md:text-xs lg:text-sm text-zinc-500 dark:text-zinc-400 uppercase font-bold tracking-wider mb-1 flex items-center gap-1.5"><Clock className="h-3.5 w-3.5 md:h-4 md:w-4 shrink-0" /> Time Parked</p>
+                <p className="text-zinc-900 dark:text-white font-bold text-2xl sm:text-3xl md:text-4xl lg:text-5xl tabular-nums truncate">
+                  {totalHours}<span className="text-sm md:text-base lg:text-lg text-zinc-500 font-normal">h</span> {totalMinutes}<span className="text-sm md:text-base lg:text-lg text-zinc-500 font-normal">m</span>
+                </p>
               </div>
             </div>
           </div>
@@ -204,9 +221,9 @@ export default function DriverHistory() {
                   </div>
                   <div>
                     {session.status === "Completed" ? (
-                      <p className="text-emerald-600 dark:text-emerald-400 font-bold text-lg md:text-xl lg:text-2xl">{session.cost} ETB</p>
+                      <p className="text-emerald-600 dark:text-emerald-400 font-bold text-lg md:text-xl lg:text-2xl tabular-nums">{formatEtb(session.cost)} ETB</p>
                     ) : (
-                      <p className="text-amber-600 dark:text-amber-400 font-bold text-lg md:text-xl lg:text-2xl">{session.cost} ETB</p>
+                      <p className="text-amber-600 dark:text-amber-400 font-bold text-lg md:text-xl lg:text-2xl tabular-nums">{formatEtb(session.cost)} ETB</p>
                     )}
                   </div>
                 </div>
@@ -259,14 +276,14 @@ export default function DriverHistory() {
                 <div className="pt-4 border-t border-zinc-200 dark:border-white/10">
                   <div className="flex justify-between text-sm md:text-base lg:text-lg">
                     <span className="text-zinc-500 dark:text-zinc-400">Upfront Deposit</span>
-                    <span className="font-bold text-zinc-900 dark:text-white">{selectedReceipt.deposit} ETB</span>
+                    <span className="font-bold text-zinc-900 dark:text-white tabular-nums">{formatEtb(selectedReceipt.deposit)} ETB</span>
                   </div>
                   <div className="flex justify-between text-sm md:text-base lg:text-lg mt-2">
                     <span className="text-zinc-500 dark:text-zinc-400">
                       {selectedReceipt.status === "Completed" ? "Total Parking Cost" : "No-Show Penalty"}
                     </span>
                     <span className={`font-bold ${selectedReceipt.status === "Completed" ? "text-zinc-900 dark:text-white" : "text-amber-600 dark:text-amber-500"}`}>
-                      - {selectedReceipt.cost} ETB
+                      - {formatEtb(selectedReceipt.cost)} ETB
                     </span>
                   </div>
                 </div>
@@ -274,7 +291,7 @@ export default function DriverHistory() {
                 <div className="pt-4 border-t border-zinc-200 dark:border-white/10 flex justify-between items-center mt-2">
                   <span className="font-bold text-zinc-900 dark:text-white text-base md:text-lg">Refunded to Wallet</span>
                   <span className="font-bold text-emerald-600 dark:text-emerald-400 text-xl md:text-2xl flex items-center gap-1">
-                    <PlusCircle className="h-5 w-5" /> {selectedReceipt.walletRefund} ETB
+                    <PlusCircle className="h-5 w-5" /> {formatEtb(selectedReceipt.walletRefund)} ETB
                   </span>
                 </div>
               </div>

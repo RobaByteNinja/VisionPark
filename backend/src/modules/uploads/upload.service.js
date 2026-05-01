@@ -176,6 +176,37 @@ async function uploadProfileImage({ userId, file }) {
   return { url: displayUrl, publicId: uploaded.public_id };
 }
 
+async function uploadUserProfileImageByActor({ actor, targetUserId, file }) {
+  if (!actor || !actor.userId || !actor.role) {
+    throw new ForbiddenError("Authentication required.");
+  }
+  const target = await User.findById(targetUserId).select("role attendant.ownerId");
+  if (!target) {
+    throw new NotFoundError("User not found.");
+  }
+
+  const actorId = String(actor.userId);
+  const targetId = String(targetUserId);
+
+  if (actor.role === "admin") {
+    return uploadProfileImage({ userId: targetId, file });
+  }
+  if (actor.role === "owner") {
+    if (target.role !== "attendant") {
+      throw new ForbiddenError("Owners may only upload profile images for attendants.");
+    }
+    if (String(target?.attendant?.ownerId || "") !== actorId) {
+      throw new ForbiddenError("You can only upload profile images for your attendants.");
+    }
+    return uploadProfileImage({ userId: targetId, file });
+  }
+  if (actorId === targetId) {
+    return uploadProfileImage({ userId: targetId, file });
+  }
+
+  throw new ForbiddenError("You are not allowed to upload this user's profile image.");
+}
+
 async function uploadIncidentEvidence({ user, incidentParam, files }) {
   assertCloudinary();
   const resolved = await resolveAttendantOrOpsIncident(incidentParam);
@@ -327,6 +358,7 @@ async function deleteCloudinaryByPublicId({ user, publicId }) {
 
 module.exports = {
   uploadProfileImage,
+  uploadUserProfileImageByActor,
   uploadIncidentEvidence,
   deleteCloudinaryByPublicId,
   classifyKind,

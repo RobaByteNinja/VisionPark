@@ -44,6 +44,23 @@ const safeJson = async (response) => {
   }
 };
 
+const parseResponsePayload = async (response) => {
+  const payload = await safeJson(response);
+
+  if (payload && typeof payload.success === "boolean") {
+    if (payload.success) {
+      return { ok: true, payload, data: payload.data };
+    }
+    throw normalizeBackendError(payload, "Request failed");
+  }
+
+  if (response.ok) {
+    return { ok: true, payload, data: payload };
+  }
+
+  throw normalizeBackendError(payload, `HTTP ${response.status}`);
+};
+
 const request = async (method, url, body) => {
   const fullUrl = `${BASE_URL}${url}`;
   const hasBody = body !== undefined && body !== null;
@@ -59,22 +76,51 @@ const request = async (method, url, body) => {
     throw new Error("Network error");
   }
 
-  const payload = await safeJson(response);
+  const { data } = await parseResponsePayload(response);
+  return data;
+};
 
-  // Preferred backend contract: { success, data, error }
-  if (payload && typeof payload.success === "boolean") {
-    if (payload.success) {
-      return payload.data;
-    }
-    throw normalizeBackendError(payload, "Request failed");
+/** multipart/form-data (do not set Content-Type; browser sets boundary) */
+const postFormData = async (url, formData) => {
+  const fullUrl = `${BASE_URL}${url}`;
+  const headers = {};
+  const token = getAccessToken();
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
   }
 
-  // Backward compatibility: if endpoint still returns raw JSON on success.
-  if (response.ok) {
-    return payload;
+  let response;
+  try {
+    response = await fetch(fullUrl, {
+      method: "POST",
+      headers,
+      body: formData,
+    });
+  } catch {
+    throw new Error("Network error");
   }
 
-  throw normalizeBackendError(payload, `HTTP ${response.status}`);
+  const { data } = await parseResponsePayload(response);
+  return data;
+};
+
+const deleteWithBody = async (url, body) => {
+  const fullUrl = `${BASE_URL}${url}`;
+  const headers = buildHeaders(true);
+
+  let response;
+  try {
+    response = await fetch(fullUrl, {
+      method: "DELETE",
+      headers,
+      body: JSON.stringify(body),
+    });
+  } catch {
+    throw new Error("Network error");
+  }
+
+  const { data } = await parseResponsePayload(response);
+  return data;
 };
 
 const get = (url) => request("GET", url);
@@ -87,6 +133,8 @@ export const apiClient = {
   post,
   patch,
   delete: del,
+  postFormData,
+  deleteWithBody,
 };
 
 export { get, post, patch, del as deleteRequest };

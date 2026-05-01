@@ -5,6 +5,7 @@ const {
   incidentUpload,
   handleMulterError,
   uploadProfileImageHandler,
+  uploadUserProfileImageHandler,
   uploadIncidentEvidenceHandler,
   deleteMediaHandler,
 } = require("./upload.controller");
@@ -17,6 +18,14 @@ router.post(
   profileUpload.single("image"),
   handleMulterError,
   uploadProfileImageHandler
+);
+
+router.post(
+  "/users/:userId/profile-image",
+  authenticate,
+  profileUpload.single("image"),
+  handleMulterError,
+  uploadUserProfileImageHandler
 );
 
 router.post(

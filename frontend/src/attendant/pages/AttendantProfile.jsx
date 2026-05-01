@@ -1,17 +1,21 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
     User, Mail, Phone, MapPin,
     ShieldCheck, Clock, Building,
-    Lock, AlertCircle, Key, FileText
+    Lock, AlertCircle, Key, FileText, Camera
 } from "lucide-react";
 import { apiClient } from "../../api/apiClient";
+import { useAuth } from "../../context/AuthContext";
 
 const FALLBACK_AVATAR = "https://i.pravatar.cc/150?u=attendant";
 const PLACEHOLDER = "Not available";
 
 export default function AttendantProfile() {
+    const auth = useAuth();
+    const avatarInputRef = useRef(null);
     const [toastMessage, setToastMessage] = useState("");
     const [profile, setProfile] = useState(null);
+    const [avatarUploading, setAvatarUploading] = useState(false);
 
     const showToast = () => {
         setToastMessage("Please contact your Parking Lot Owner to request changes to your profile.");
@@ -49,7 +53,8 @@ export default function AttendantProfile() {
                     shiftStart: attendantProfile?.shiftStart || PLACEHOLDER,
                     shiftEnd: attendantProfile?.shiftEnd || PLACEHOLDER,
                     status: me?.status ? String(me.status).replace(/^./, (m) => m.toUpperCase()) : "Active",
-                    avatar: me?.avatarUrl || FALLBACK_AVATAR,
+                    avatar: me?.avatarUrl || me?.profileImageUrl || FALLBACK_AVATAR,
+                    profileImagePublicId: me?.profileImagePublicId || null,
                 };
 
                 if (isMounted) {
@@ -94,9 +99,45 @@ export default function AttendantProfile() {
                 shiftEnd: PLACEHOLDER,
                 status: "Active",
                 avatar: FALLBACK_AVATAR,
+                profileImagePublicId: null,
             },
         [profile]
     );
+
+    const handleAvatarSelected = async (e) => {
+        const file = e.target.files?.[0];
+        e.target.value = null;
+        if (!file) return;
+        const max = 10 * 1024 * 1024;
+        if (file.size > max) {
+            setToastMessage("Photo must be 10MB or smaller (JPEG, PNG, or WebP).");
+            setTimeout(() => setToastMessage(""), 5000);
+            return;
+        }
+        setAvatarUploading(true);
+        try {
+            const fd = new FormData();
+            fd.append("image", file);
+            const res = await apiClient.postFormData("/uploads/profile-image", fd);
+            if (typeof auth.refreshMe === "function") {
+                await auth.refreshMe();
+            }
+            setProfile((prev) =>
+                prev
+                    ? {
+                        ...prev,
+                        avatar: res?.url || prev.avatar,
+                        profileImagePublicId: res?.publicId || null,
+                    }
+                    : prev
+            );
+        } catch {
+            setToastMessage("Photo upload failed. Try again or contact your owner.");
+            setTimeout(() => setToastMessage(""), 5000);
+        } finally {
+            setAvatarUploading(false);
+        }
+    };
 
     // --- REUSABLE READ-ONLY FIELD (Fully Responsive, No Truncation) ---
     const ReadOnlyField = ({ icon: Icon, label, value, isMono = false }) => (
@@ -131,8 +172,10 @@ export default function AttendantProfile() {
                     <h1 className="text-2xl md:text-3xl font-black text-zinc-900 dark:text-white tracking-tight">My Profile</h1>
                     <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1 break-words">View your assigned identity, contact details, and shift schedule.</p>
                 </div>
-                <div className="flex items-center gap-2 px-4 py-2 bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-xl text-zinc-600 dark:text-zinc-400 font-bold text-xs md:text-sm shrink-0 w-fit">
-                    <Lock className="h-4 w-4 shrink-0" /> <span className="break-words">Profile is Read-Only</span>
+                <div className="flex flex-col items-end gap-2 shrink-0">
+                    <div className="flex items-center gap-2 px-4 py-2 bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-xl text-zinc-600 dark:text-zinc-400 font-bold text-xs md:text-sm w-fit">
+                        <Lock className="h-4 w-4 shrink-0" /> <span className="break-words">Details read-only</span>
+                    </div>
                 </div>
             </div>
 
@@ -146,9 +189,25 @@ export default function AttendantProfile() {
 
                             {/* Avatar & Status */}
                             <div className="flex flex-col items-center gap-4 shrink-0 w-full lg:w-auto">
+                                <input
+                                    ref={avatarInputRef}
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/webp"
+                                    className="hidden"
+                                    onChange={handleAvatarSelected}
+                                />
                                 <div className="h-32 w-32 rounded-full overflow-hidden border-4 border-emerald-50 dark:border-emerald-500/20 shadow-xl bg-zinc-100 dark:bg-white/5 relative shrink-0">
                                     <img src={attendantData.avatar} alt="Profile" className="h-full w-full object-cover" />
                                 </div>
+                                <button
+                                    type="button"
+                                    disabled={avatarUploading}
+                                    onClick={() => avatarInputRef.current?.click()}
+                                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 text-white text-xs font-black uppercase tracking-widest shadow-sm outline-none cursor-pointer"
+                                >
+                                    <Camera className="h-4 w-4 shrink-0" />
+                                    {avatarUploading ? "Uploading…" : "Update photo"}
+                                </button>
                                 <div className="flex flex-col items-center text-center">
                                     <span className="text-xl font-black text-zinc-900 dark:text-white break-words px-2">{attendantData.name}</span>
                                     <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest mt-1">ID: {attendantData.id}</span>
