@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { apiClient } from "../api/apiClient";
+import { resolveDriverProfilePhoto } from "../utils/resolveDriverProfilePhoto";
 
 const AuthContext = createContext({
   user: null,
@@ -19,6 +20,15 @@ export function AuthProvider({ children }) {
   const logout = useCallback(() => {
     localStorage.removeItem("accessToken");
     localStorage.removeItem("user");
+    try {
+      Object.keys(localStorage).forEach((key) => {
+        if (key.startsWith("vp_") && key !== "vp_theme") {
+          localStorage.removeItem(key);
+        }
+      });
+    } catch {
+      /* ignore */
+    }
     setToken(null);
     setUser(null);
   }, []);
@@ -34,6 +44,13 @@ export function AuthProvider({ children }) {
 
     localStorage.setItem("accessToken", nextToken);
     localStorage.setItem("user", JSON.stringify(nextUser));
+    if (nextUser.role === "driver") {
+      try {
+        localStorage.removeItem("vp_driver_photo");
+      } catch {
+        /* ignore */
+      }
+    }
     setToken(nextToken);
     setUser(nextUser);
     return nextUser;
@@ -41,6 +58,13 @@ export function AuthProvider({ children }) {
 
   const refreshMe = useCallback(async () => {
     const me = await apiClient.get("/auth/me");
+    if (me?.role === "driver") {
+      try {
+        resolveDriverProfilePhoto(me, localStorage.getItem("vp_driver_photo"));
+      } catch {
+        /* ignore */
+      }
+    }
     setUser(me);
     localStorage.setItem("user", JSON.stringify(me));
     return me;

@@ -2,6 +2,9 @@ const { ParkingSession } = require("./models/parking-session.model");
 const { Transaction } = require("../operations/models/transaction.model");
 const { ParkingService } = require("../parking/parking.service");
 const { TransactionService } = require("../operations/transactions/transaction.service");
+const { User } = require("../users/models/user.model");
+const { LotPricing } = require("../pricing/models/lot-pricing.model");
+const { DEFAULT_HOURLY_RATE_ETB } = require("../pricing/pricing.constants");
 const { domainEventBus, DOMAIN_EVENTS } = require("../operations/shared/domain-events");
 const { AppError, ValidationError, ConflictError, NotFoundError } = require("../../common/errors");
 
@@ -43,6 +46,26 @@ class SessionService {
         eventId: `session-state:${String(sessionDoc._id)}:${sessionDoc.state}:${sessionDoc.__v}`,
       }
     );
+  }
+
+  async #resolveRatePerHour({ driverId, lotId }) {
+    const [driver, lotPricing] = await Promise.all([
+      User.findById(driverId).select("driver.vehicleType").lean(),
+      LotPricing.findOne({ lotId }).select("rates").lean(),
+    ]);
+
+    const vehicleCategory = String(driver?.driver?.vehicleType || "").trim();
+    const ratesObj = lotPricing?.rates || {};
+
+    const raw = vehicleCategory ? ratesObj?.[vehicleCategory] : undefined;
+    const n = Number(raw);
+    const ratePerHour = Number.isFinite(n) && n >= 0 ? n : DEFAULT_HOURLY_RATE_ETB;
+
+    return {
+      vehicleCategory: vehicleCategory || null,
+      ratePerHour,
+      source: vehicleCategory && Number.isFinite(n) ? "lot_pricing" : "default",
+    };
   }
 
   async createReservation(payload) {
@@ -232,7 +255,13 @@ class SessionService {
     if (!session) {
       throw new NotFoundError("No active session found.");
     }
-    return session;
+    const pricing = await this.#resolveRatePerHour({
+      driverId: session.driverId,
+      lotId: session.lotId?._id || session.lotId,
+    });
+    const out = session.toObject();
+    out.pricing = pricing;
+    return out;
   }
 
   async getMySessions(driverId) {

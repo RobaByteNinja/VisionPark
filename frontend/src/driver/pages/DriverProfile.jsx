@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Header } from "../../components/layout/Header";
-import { useTheme } from "../../context/ThemeContext";
 import { useScroll } from "../../context/ScrollContext";
 import { useAuth } from "../../context/AuthContext";
 import { apiClient } from "../../api/apiClient";
+import { resolveDriverProfilePhoto } from "../../utils/resolveDriverProfilePhoto";
 import {
   User, Car, CreditCard, Building2, Bell, HelpCircle,
   LogOut, Camera, ChevronRight, ChevronLeft, Fingerprint,
@@ -24,36 +24,72 @@ export default function DriverProfile() {
   useEffect(() => () => setScrolled(false), [setScrolled]);
   const handleScroll = (e) => setScrolled(e.target.scrollTop > 10);
 
-  useEffect(() => {
-    if (auth.isAuthenticated && auth.user?.role === "driver") {
-      const url = auth.user.avatarUrl || auth.user.profileImageUrl;
-      if (url) setProfilePhoto(url);
-    }
-  }, [auth.isAuthenticated, auth.user]);
-
   const [activeView, setActiveView] = useState("main");
   const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [showLiveCamera, setShowLiveCamera] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
 
-  // Data pulls from LocalStorage on mount
-  const [userName, setUserName] = useState(() => localStorage.getItem("vp_driver_name") || "Abebe Kebede");
-  const [userEmail, setUserEmail] = useState(() => localStorage.getItem("vp_driver_email") || "abebe.k@example.com");
-  const [userPhone, setUserPhone] = useState(() => localStorage.getItem("vp_driver_phone") || "+251 91 123 4567");
-  const [profilePhoto, setProfilePhoto] = useState(() => localStorage.getItem("vp_driver_photo") || null);
-  const [vehicleType] = useState(() => localStorage.getItem("vp_driver_vehicle") || "Public Transport Vehicles | Upto 12 Seats");
-  const [licensePlate] = useState(() => localStorage.getItem("vp_driver_license_plate") || "AA 0123456");
+  const [userName, setUserName] = useState("");
+  const [userEmail, setUserEmail] = useState("");
+  const [userPhone, setUserPhone] = useState("");
+  const [profilePhoto, setProfilePhoto] = useState(null);
+  const [vehicleType, setVehicleType] = useState("");
+  const [licensePlate, setLicensePlate] = useState("");
   const [paymentMethod, setPaymentMethod] = useState(() => localStorage.getItem("vp_driver_payment") || "Telebirr");
   const [accountNumber, setAccountNumber] = useState(() => localStorage.getItem("vp_driver_account") || "");
   const [notifications, setNotifications] = useState(true);
 
-  // Editable Form State
-  const [editForm, setEditForm] = useState({ name: userName, email: userEmail, phone: userPhone });
+  const [editForm, setEditForm] = useState({ name: "", email: "", phone: "" });
 
-  // Isolated Error States for perfect typing experience
   const [editNameError, setEditNameError] = useState("");
   const [editEmailError, setEditEmailError] = useState("");
   const [editPhoneError, setEditPhoneError] = useState("");
+
+  useEffect(() => {
+    if (!auth.isAuthenticated || auth.user?.role !== "driver") return;
+
+    const user = auth.user;
+    const showEdit = showEditProfile;
+    queueMicrotask(() => {
+      const d = user.driverProfile || user.driver;
+      const lsPhoto = localStorage.getItem("vp_driver_photo");
+      setProfilePhoto(resolveDriverProfilePhoto(user, lsPhoto));
+
+      setUserName(user.name || "");
+      setUserEmail(user.email || "");
+      setUserPhone((d?.phone && String(d.phone).trim()) || "");
+
+      setLicensePlate(
+        (d?.licensePlate && String(d.licensePlate).trim()) ||
+          localStorage.getItem("vp_driver_license_plate") ||
+          ""
+      );
+      setVehicleType(
+        (d?.vehicleType && String(d.vehicleType).trim()) ||
+          localStorage.getItem("vp_driver_vehicle") ||
+          ""
+      );
+
+      const pm =
+        (d?.paymentMethod && String(d.paymentMethod).trim()) ||
+        localStorage.getItem("vp_driver_payment") ||
+        "Telebirr";
+      setPaymentMethod(pm);
+      setAccountNumber(
+        d?.paymentAccount != null && String(d.paymentAccount).trim() !== ""
+          ? String(d.paymentAccount).trim()
+          : localStorage.getItem("vp_driver_account") || ""
+      );
+
+      if (!showEdit) {
+        setEditForm({
+          name: user.name || "",
+          email: user.email || "",
+          phone: (d?.phone && String(d.phone).trim()) || "",
+        });
+      }
+    });
+  }, [auth.isAuthenticated, auth.user, showEditProfile]);
 
   // --- 1. SMART NAME VALIDATION ---
   useEffect(() => {
@@ -228,7 +264,7 @@ export default function DriverProfile() {
         localStorage.setItem("vp_driver_photo", dataUrl);
         setProfilePhoto(dataUrl);
         window.dispatchEvent(new Event("vp_photo_updated"));
-      } catch (e) {
+      } catch {
         alert("Photo is too large to save in local demo storage.");
       }
 
@@ -334,15 +370,6 @@ export default function DriverProfile() {
 
   const handleLogout = () => {
     auth.logout();
-    Object.keys(localStorage).forEach(key => {
-      const persistentKeys = [
-        "vp_theme", "vp_driver_photo", "vp_driver_name", "vp_driver_email", "vp_driver_phone",
-        "vp_driver_vehicle", "vp_driver_license_plate", "vp_driver_payment", "vp_driver_account"
-      ];
-      if (key.startsWith("vp_") && !persistentKeys.includes(key)) {
-        localStorage.removeItem(key);
-      }
-    });
     window.dispatchEvent(new Event("vp_photo_updated"));
     window.dispatchEvent(new Event("vp_profile_updated"));
     navigate("/login", { replace: true });
@@ -411,7 +438,9 @@ export default function DriverProfile() {
                 <Edit2 className="h-4 w-4 md:h-5 md:w-5" />
               </button>
             </div>
-            <p className="text-sm md:text-base lg:text-lg text-zinc-500 dark:text-zinc-400 font-medium mt-1 md:mt-2 tracking-wide">{userPhone} • {userEmail}</p>
+            <p className="text-sm md:text-base lg:text-lg text-zinc-500 dark:text-zinc-400 font-medium mt-1 md:mt-2 tracking-wide">
+              {[userPhone, userEmail].filter(Boolean).join(" • ")}
+            </p>
           </div>
 
           <div className="flex flex-col gap-6 md:gap-8">

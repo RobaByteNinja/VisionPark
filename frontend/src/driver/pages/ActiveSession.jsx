@@ -71,7 +71,7 @@ export default function ActiveSession() {
           id: String(active?.spotId?.spotCode || prev.id || "--"),
           floor: prev.floor || "Ground",
           deposit: prev.deposit || 100,
-          paymentRate: Number(active?.spotId?.paymentRate ?? prev.paymentRate ?? 0),
+          paymentRate: Number(active?.pricing?.ratePerHour ?? prev.paymentRate ?? 0),
         }));
         setAreaData((prev) => ({
           ...prev,
@@ -98,7 +98,8 @@ export default function ActiveSession() {
               id: String(spot.spotCode || spot._id || prev.id),
               floor: prev.floor || "Ground",
               deposit: prev.deposit || 100,
-              paymentRate: Number(spot?.paymentRate ?? prev.paymentRate ?? 0),
+              // Keep rate from lot-pricing/vehicle-category; spot endpoint is used only for metadata.
+              paymentRate: Number(prev.paymentRate ?? 0),
             }));
           }
           const lots = await apiClient.get("/parking/lots");
