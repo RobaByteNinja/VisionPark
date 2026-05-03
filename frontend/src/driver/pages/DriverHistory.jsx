@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { useScroll } from "../../context/ScrollContext";
 import { apiClient } from "../../api/apiClient";
+import { generateDriverReceiptPdf } from "../utils/generateDriverReceiptPdf";
 
 const DRIVER_LOC = [8.9850, 38.7500];
 
@@ -57,6 +58,9 @@ function mapSessionToUI(session) {
     (session?.depositAmount ?? (hasReservationPayment ? reservation : 0)) || 0
   );
 
+  const merchantRaw =
+    (session?.receiptMerchantName && String(session.receiptMerchantName).trim()) || "";
+
   return {
     id: session?._id,
     spotId: session?.spotCode,
@@ -85,6 +89,14 @@ function mapSessionToUI(session) {
       Math.abs(sessionBillingTotal - totalPaid) > 0.01,
     walletRefund: depositBasis - totalPaid,
     paymentMethod: session?.payment?.paymentMethod || session?.paymentMethod || "N/A",
+    merchantName: merchantRaw || "Parking facility",
+    lotAddress: session?.lotAddress ?? "",
+    lotCity: session?.lotCity ?? "",
+    lotRegion: session?.lotRegion ?? "",
+    reservedAtIso: session?.reservedAt ?? null,
+    parkedAtIso: session?.parkedAt ?? null,
+    exitedAtIso: session?.exitedAt ?? null,
+    stateRaw: session?.state ?? null,
   };
 }
 
@@ -94,6 +106,7 @@ export default function DriverHistory() {
   const [errorMessage, setErrorMessage] = useState("");
   const [selectedReceipt, setSelectedReceipt] = useState(null);
   const [downloadStatus, setDownloadStatus] = useState(null); // null | 'downloading' | 'success'
+  const [receiptPdfError, setReceiptPdfError] = useState("");
   const [pendingMapRoute, setPendingMapRoute] = useState(null); // Controls the external navigation modal
   const { setScrolled } = useScroll();
 
@@ -129,6 +142,10 @@ export default function DriverHistory() {
     return () => { document.body.style.overflow = "unset"; };
   }, [selectedReceipt, downloadStatus, pendingMapRoute]);
 
+  useEffect(() => {
+    if (selectedReceipt) setReceiptPdfError("");
+  }, [selectedReceipt]);
+
   const confirmOpenGoogleMaps = () => {
     if (pendingMapRoute) {
       const deepLink = `https://www.google.com/maps/dir/?api=1&origin=$$${DRIVER_LOC[0]},${DRIVER_LOC[1]}&destination=${pendingMapRoute.lat},${pendingMapRoute.lon}&travelmode=driving`;
@@ -137,19 +154,21 @@ export default function DriverHistory() {
     }
   };
 
-  // ✅ PREMIUM DOWNLOAD SIMULATION
-  const handleDownload = () => {
+  const handleDownload = async () => {
+    if (!selectedReceipt) return;
+    setReceiptPdfError("");
     setDownloadStatus("downloading");
-
-    // Simulate network delay
-    setTimeout(() => {
+    try {
+      await new Promise((r) => requestAnimationFrame(r));
+      await generateDriverReceiptPdf(selectedReceipt);
       setDownloadStatus("success");
-
-      // Auto-hide the success message after 2 seconds
-      setTimeout(() => {
-        setDownloadStatus(null);
-      }, 2000);
-    }, 2500);
+      setTimeout(() => setDownloadStatus(null), 2000);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error(err);
+      setDownloadStatus(null);
+      setReceiptPdfError(err?.message || "Could not generate PDF. Try again.");
+    }
   };
 
   // Helper to format duration like the Active Session screen (02 : 14 : 45)
@@ -395,11 +414,14 @@ export default function DriverHistory() {
 
               <div className="flex flex-col gap-3 mt-6 lg:mt-8">
                 <div className="flex items-center justify-between p-4 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20">
-                  <div className="flex flex-col">
-                    <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-500">Billed To Merchant</span>
-                    <span className="text-sm md:text-base lg:text-lg font-bold text-zinc-900 dark:text-white">VisionPark System</span>
+                  <div className="flex flex-col min-w-0 pr-2">
+                    <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-500">Facility operator</span>
+                    <span className="text-sm md:text-base lg:text-lg font-bold text-zinc-900 dark:text-white truncate" title={selectedReceipt.merchantName}>
+                      {selectedReceipt.merchantName}
+                    </span>
+                    <span className="text-[10px] md:text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Platform: VisionPark</span>
                   </div>
-                  <CheckCircle className="h-5 w-5 md:h-6 md:w-6 text-emerald-500" />
+                  <CheckCircle className="h-5 w-5 md:h-6 md:w-6 text-emerald-500 shrink-0" />
                 </div>
 
                 <div className="bg-zinc-50 dark:bg-black/40 rounded-xl p-4 md:p-5 text-left border border-zinc-200 dark:border-white/5">
@@ -415,11 +437,15 @@ export default function DriverHistory() {
             </div>
 
             <div className="p-6 md:p-8 pt-2 border-t border-zinc-200 dark:border-white/10 shrink-0">
+              {receiptPdfError ? (
+                <p className="text-sm text-red-600 dark:text-red-400 mb-3 text-center">{receiptPdfError}</p>
+              ) : null}
               <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
                 <button
                   type="button"
                   onClick={(e) => { e.preventDefault(); handleDownload(); }}
-                  className="w-full sm:flex-1 h-12 md:h-14 flex items-center justify-center gap-2 rounded-xl border border-zinc-300 dark:border-white/10 text-zinc-700 dark:text-white font-bold text-sm md:text-base hover:bg-zinc-100 dark:hover:bg-white/5 active:scale-95 transition-all outline-none cursor-pointer"
+                  disabled={downloadStatus === "downloading"}
+                  className="w-full sm:flex-1 h-12 md:h-14 flex items-center justify-center gap-2 rounded-xl border border-zinc-300 dark:border-white/10 text-zinc-700 dark:text-white font-bold text-sm md:text-base hover:bg-zinc-100 dark:hover:bg-white/5 active:scale-95 transition-all outline-none cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
                 >
                   <FileText className="h-4 w-4 md:h-5 md:w-5" /> E-Receipt
                 </button>

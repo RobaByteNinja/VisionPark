@@ -298,7 +298,11 @@ class SessionService {
     })
       .sort({ createdAt: -1 })
       .populate({ path: "spotId", select: "spotCode" })
-      .populate({ path: "lotId", select: "name" })
+      .populate({
+        path: "lotId",
+        select: "name address city region ownerId",
+        populate: { path: "ownerId", select: "name owner" },
+      })
       .lean();
 
     const sessionIds = sessions.map((s) => s._id);
@@ -388,11 +392,20 @@ class SessionService {
           tx?.metadata?.reservationFee ??
           null;
 
+        const ownerDoc = s.lotId?.ownerId;
+        const company = ownerDoc?.owner?.companyName != null ? String(ownerDoc.owner.companyName).trim() : "";
+        const ownerLegalName = ownerDoc?.name != null ? String(ownerDoc.name).trim() : "";
+        const receiptMerchantName = company || ownerLegalName || null;
+
         return {
           _id: s._id,
           spotCode: s?.spotId?.spotCode ?? null,
           branchName: s?.lotId?.name ?? null,
           lotName: s?.lotId?.name ?? null,
+          lotAddress: s?.lotId?.address ?? null,
+          lotCity: s?.lotId?.city ?? null,
+          lotRegion: s?.lotId?.region ?? null,
+          receiptMerchantName,
           state: s.state,
           reservedAt: s.reservedAt ?? null,
           parkedAt,
