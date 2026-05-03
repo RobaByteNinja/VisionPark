@@ -51,6 +51,10 @@ const parkingSessionSchema = new mongoose.Schema(
     expiresAt: { type: Date, required: true, index: true },
     paymentRequired: { type: Boolean, default: false, index: true },
     closeReason: { type: String, trim: true, default: null },
+    /** Usage fee at close (ETB), from lot pricing + parked duration — not zone/spot paymentRate. */
+    parkingFeeEtb: { type: Number, default: null },
+    appliedHourlyRateEtb: { type: Number, default: null },
+    pricingRateSource: { type: String, trim: true, default: null },
     idempotencyLog: { type: [idempotencyLogSchema], default: [] },
   },
   {

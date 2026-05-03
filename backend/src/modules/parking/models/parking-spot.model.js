@@ -17,7 +17,8 @@ const parkingSpotSchema = new mongoose.Schema(
       ref: "ParkingZone",
     },
     spotCode: { type: String, required: true, trim: true },
-    paymentRate: { type: Number, required: true, min: 0 },
+    /** Legacy display field; live pricing comes from LotPricing + driver vehicle category. */
+    paymentRate: { type: Number, default: 0, min: 0 },
     isBlocked: { type: Boolean, default: false, index: true },
     allowedCategories: { type: [String], default: [] },
     status: {

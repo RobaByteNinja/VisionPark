@@ -263,10 +263,20 @@ export default function ActiveSession() {
       const durationSeconds = entryIso
         ? Math.max(0, Math.floor((new Date(exitIso).getTime() - new Date(entryIso).getTime()) / 1000))
         : 0;
+      const storedFee =
+        closedSession?.parkingFeeEtb != null && Number.isFinite(Number(closedSession.parkingFeeEtb))
+          ? Number(closedSession.parkingFeeEtb)
+          : null;
       const ratePerHour = Number(
-        spotData?.paymentRate || closedSession?.spotId?.paymentRate || 0
+        closedSession?.appliedHourlyRateEtb ??
+          spotData?.paymentRate ??
+          closedSession?.spotId?.paymentRate ??
+          0
       );
-      const totalAmount = Number(((durationSeconds / 3600) * Math.max(0, ratePerHour)).toFixed(2));
+      const totalAmount =
+        storedFee != null
+          ? storedFee
+          : Number(((durationSeconds / 3600) * Math.max(0, ratePerHour)).toFixed(2));
 
       setPaymentData({
         sessionId: String(closedSession?._id || session._id),

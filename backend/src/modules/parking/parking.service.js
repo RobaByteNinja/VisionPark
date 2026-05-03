@@ -2,6 +2,7 @@ const { ParkingLot } = require("./models/parking-lot.model");
 const { ParkingZone } = require("./models/parking-zone.model");
 const { ParkingSpot } = require("./models/parking-spot.model");
 const { ParkingSession } = require("../sessions/models/parking-session.model");
+const { LotPricing } = require("../pricing/models/lot-pricing.model");
 const { User } = require("../users/models/user.model");
 const { domainEventBus, DOMAIN_EVENTS } = require("../operations/shared/domain-events");
 const { AppError, ValidationError, NotFoundError, ConflictError } = require("../../common/errors");
@@ -70,8 +71,27 @@ class ParkingService {
     ]);
 
     const statsByLotId = new Map(spotStats.map((row) => [String(row._id), row]));
+
+    const pricings = await LotPricing.find({ lotId: { $in: lotIds } }).select("lotId rates").lean();
+    const lotPricingMinByLotId = new Map();
+    for (const doc of pricings) {
+      const raw = doc.rates;
+      const obj =
+        raw && typeof raw.get === "function"
+          ? Object.fromEntries(raw)
+          : { ...(raw || {}) };
+      const nums = Object.values(obj)
+        .map((v) => Number(v))
+        .filter((n) => Number.isFinite(n) && n >= 0);
+      if (nums.length) lotPricingMinByLotId.set(String(doc.lotId), Math.min(...nums));
+    }
+
     return lots.map((lot) => {
       const stats = statsByLotId.get(String(lot._id));
+      const spotMin = Number.isFinite(Number(stats?.minRate)) ? Number(stats.minRate) : 0;
+      const lpMin = lotPricingMinByLotId.get(String(lot._id));
+      const price =
+        lpMin != null && Number.isFinite(lpMin) ? lpMin : spotMin;
       return {
         _id: lot._id,
         name: lot.name,
@@ -81,7 +101,7 @@ class ParkingService {
         location: lot.location,
         availableSpaces: Number(stats?.availableSpaces || 0),
         totalSpots: Number(stats?.totalSpots || 0),
-        price: Number.isFinite(Number(stats?.minRate)) ? Number(stats.minRate) : 0,
+        price,
       };
     });
   }
@@ -175,10 +195,6 @@ class ParkingService {
     if (!lotId || !name) {
       throw new ValidationError("lotId and name are required.");
     }
-    const paymentRate = Number(payload?.paymentRate);
-    if (payload?.paymentRate === undefined || Number.isNaN(paymentRate) || paymentRate < 0) {
-      throw new ValidationError("paymentRate is required and must be a non-negative number.");
-    }
     const allowedCategories = Array.isArray(payload?.allowedCategories)
       ? payload.allowedCategories.filter((item) => typeof item === "string" && item.trim())
       : category
@@ -189,7 +205,6 @@ class ParkingService {
       name,
       category,
       allowedCategories,
-      paymentRate,
       isActive: payload?.isActive !== false,
     });
   }
@@ -245,13 +260,9 @@ class ParkingService {
       : category
         ? [String(category).trim()]
         : [];
-    const zone = await ParkingZone.findById(zoneId).select("paymentRate");
+    const zone = await ParkingZone.findById(zoneId).select("_id");
     if (!zone) {
       throw new NotFoundError("Zone not found.");
-    }
-    const zonePaymentRate = Number(zone.paymentRate);
-    if (Number.isNaN(zonePaymentRate) || zonePaymentRate < 0) {
-      throw new ValidationError("Zone paymentRate is invalid. Update zone configuration first.");
     }
 
     let spot;
@@ -260,7 +271,7 @@ class ParkingService {
         lotId,
         zoneId,
         spotCode,
-        paymentRate: zonePaymentRate,
+        paymentRate: 0,
         allowedCategories,
         status: "free",
         derivationVersion: 0,
