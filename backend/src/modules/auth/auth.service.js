@@ -12,6 +12,13 @@ const { hashPassword, comparePassword, toSafeUser } = require("./auth.utils");
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+const DRIVER_PAYMENT_METHODS = new Set([
+  "Telebirr",
+  "CBE",
+  "COOP",
+  "Bank of Abyssinia",
+]);
+
 const hasValue = (value) =>
   value !== undefined && value !== null && String(value).trim().length > 0;
 
@@ -49,6 +56,17 @@ const sanitizeRoleProfiles = (role, data = {}) => {
     if (hasOwner || hasAttendant) {
       throw new ValidationError("Only driver is allowed when role is driver.");
     }
+    const pm = hasValue(data.driver.paymentMethod)
+      ? String(data.driver.paymentMethod).trim()
+      : "Telebirr";
+    if (!DRIVER_PAYMENT_METHODS.has(pm)) {
+      throw new ValidationError(
+        `driver.paymentMethod must be one of: ${Array.from(DRIVER_PAYMENT_METHODS).join(", ")}.`
+      );
+    }
+    const paymentAccountRaw = hasValue(data.driver.paymentAccount)
+      ? String(data.driver.paymentAccount).trim()
+      : null;
     return {
       driver: {
         phone: hasValue(data.driver.phone) ? String(data.driver.phone).trim() : null,
@@ -58,12 +76,8 @@ const sanitizeRoleProfiles = (role, data = {}) => {
           : null,
         region: hasValue(data.driver.region) ? String(data.driver.region).trim() : null,
         country: hasValue(data.driver.country) ? String(data.driver.country).trim() : null,
-        paymentMethod: hasValue(data.driver.paymentMethod)
-          ? String(data.driver.paymentMethod).trim()
-          : null,
-        paymentAccount: hasValue(data.driver.paymentAccount)
-          ? String(data.driver.paymentAccount).trim()
-          : null,
+        paymentMethod: pm,
+        paymentAccount: pm === "Telebirr" ? null : paymentAccountRaw,
       },
       owner: null,
       attendant: null,

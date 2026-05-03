@@ -235,6 +235,7 @@ export default function DriverSignUp() {
         licenceType: formData.licenceType,
         licensePlate: fullPlate.trim(),
         vehicleType: formData.vehicleType,
+        paymentMethod: "Telebirr",
       },
     };
 

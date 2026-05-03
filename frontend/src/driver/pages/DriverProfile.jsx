@@ -35,8 +35,10 @@ export default function DriverProfile() {
   const [profilePhoto, setProfilePhoto] = useState(null);
   const [vehicleType, setVehicleType] = useState("");
   const [licensePlate, setLicensePlate] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState(() => localStorage.getItem("vp_driver_payment") || "Telebirr");
-  const [accountNumber, setAccountNumber] = useState(() => localStorage.getItem("vp_driver_account") || "");
+  const [paymentMethod, setPaymentMethod] = useState("Telebirr");
+  const [accountNumber, setAccountNumber] = useState("");
+  const [paymentSaveError, setPaymentSaveError] = useState("");
+  const [savingPayment, setSavingPayment] = useState(false);
   const [notifications, setNotifications] = useState(true);
 
   const [editForm, setEditForm] = useState({ name: "", email: "", phone: "" });
@@ -70,16 +72,13 @@ export default function DriverProfile() {
           ""
       );
 
-      const pm =
-        (d?.paymentMethod && String(d.paymentMethod).trim()) ||
-        localStorage.getItem("vp_driver_payment") ||
-        "Telebirr";
-      setPaymentMethod(pm);
-      setAccountNumber(
-        d?.paymentAccount != null && String(d.paymentAccount).trim() !== ""
-          ? String(d.paymentAccount).trim()
-          : localStorage.getItem("vp_driver_account") || ""
-      );
+    const pm = (d?.paymentMethod && String(d.paymentMethod).trim()) || "Telebirr";
+    setPaymentMethod(pm);
+    setAccountNumber(
+      d?.paymentAccount != null && String(d.paymentAccount).trim() !== ""
+        ? String(d.paymentAccount).trim()
+        : ""
+    );
 
       if (!showEdit) {
         setEditForm({
@@ -361,11 +360,34 @@ export default function DriverProfile() {
     setShowPhotoModal(false);
   };
 
-  const handlePaymentSave = () => {
-    localStorage.setItem("vp_driver_payment", paymentMethod);
-    if (paymentMethod !== "Telebirr") localStorage.setItem("vp_driver_account", accountNumber);
-    else { setAccountNumber(""); localStorage.removeItem("vp_driver_account"); }
-    setActiveView("main");
+  const handlePaymentSave = async () => {
+    if (paymentMethod !== "Telebirr" && !String(accountNumber).trim()) {
+      setPaymentSaveError("Enter your account number for this payment method.");
+      return;
+    }
+    if (!auth.isAuthenticated || auth.user?.role !== "driver") {
+      setPaymentSaveError("You must be signed in as a driver to save.");
+      return;
+    }
+    setPaymentSaveError("");
+    setSavingPayment(true);
+    try {
+      await apiClient.patch("/users/drivers/me", {
+        driver: {
+          paymentMethod,
+          paymentAccount: paymentMethod === "Telebirr" ? null : String(accountNumber).trim(),
+        },
+      });
+      if (paymentMethod === "Telebirr") setAccountNumber("");
+      if (typeof auth.refreshMe === "function") {
+        await auth.refreshMe();
+      }
+      setActiveView("main");
+    } catch (err) {
+      setPaymentSaveError(err?.message || "Could not save payment method.");
+    } finally {
+      setSavingPayment(false);
+    }
   };
 
   const handleLogout = () => {
@@ -383,12 +405,31 @@ export default function DriverProfile() {
         <div className="auth-page flex-1 overflow-y-auto pt-24 px-4 md:px-8 pb-32 md:pb-40 transition-colors duration-500 overscroll-contain" onScroll={handleScroll}>
           <div className="w-full max-w-2xl lg:max-w-3xl mx-auto flex flex-col">
             <div className="flex items-center gap-4 mb-6 md:mb-8">
-              <button onClick={() => setActiveView("main")} className="h-10 w-10 md:h-12 md:w-12 flex items-center justify-center rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white hover:bg-zinc-300 dark:hover:bg-zinc-700 transition outline-none cursor-pointer"><ChevronLeft className="h-6 w-6 md:h-7 md:w-7" /></button>
+              <button
+                type="button"
+                onClick={() => { setPaymentSaveError(""); setActiveView("main"); }}
+                className="h-10 w-10 md:h-12 md:w-12 flex items-center justify-center rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white hover:bg-zinc-300 dark:hover:bg-zinc-700 transition outline-none cursor-pointer"
+              >
+                <ChevronLeft className="h-6 w-6 md:h-7 md:w-7" />
+              </button>
               <h2 className="text-2xl md:text-3xl font-bold text-zinc-900 dark:text-white">Payment Method</h2>
             </div>
+            {paymentSaveError ? (
+              <p className="text-sm font-medium text-red-600 dark:text-red-400 mb-4" role="alert">
+                {paymentSaveError}
+              </p>
+            ) : null}
             <div className="w-full bg-white dark:bg-[#121214]/95 rounded-2xl md:rounded-3xl shadow-sm border border-zinc-200 dark:border-white/5 overflow-hidden mb-6 md:mb-8">
               {PAYMENT_OPTIONS.map((method, index) => (
-                <button key={method} onClick={() => setPaymentMethod(method)} className={`w-full flex items-center justify-between p-4 md:p-6 text-left transition-colors outline-none cursor-pointer ${index !== PAYMENT_OPTIONS.length - 1 ? 'border-b border-zinc-100 dark:border-white/5' : ''} ${paymentMethod === method ? 'bg-emerald-50 dark:bg-emerald-500/10' : 'hover:bg-zinc-50 dark:hover:bg-white/5'}`}>
+                <button
+                  key={method}
+                  type="button"
+                  onClick={() => {
+                    setPaymentSaveError("");
+                    setPaymentMethod(method);
+                  }}
+                  className={`w-full flex items-center justify-between p-4 md:p-6 text-left transition-colors outline-none cursor-pointer ${index !== PAYMENT_OPTIONS.length - 1 ? 'border-b border-zinc-100 dark:border-white/5' : ''} ${paymentMethod === method ? 'bg-emerald-50 dark:bg-emerald-500/10' : 'hover:bg-zinc-50 dark:hover:bg-white/5'}`}
+                >
                   <span className={`text-sm md:text-base lg:text-lg ${paymentMethod === method ? 'font-bold text-emerald-600 dark:text-emerald-400' : 'font-medium text-zinc-700 dark:text-zinc-300'}`}>{method} {method === "Telebirr" && "(Default)"}</span>
                   {paymentMethod === method && <Check className="h-5 w-5 md:h-6 md:w-6 text-emerald-500 shrink-0" />}
                 </button>
@@ -400,8 +441,13 @@ export default function DriverProfile() {
                 <input type="text" value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} placeholder="Enter your account number" className="w-full h-14 md:h-16 px-4 md:px-6 rounded-xl md:rounded-2xl bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-white/10 text-zinc-900 dark:text-white outline-none focus:border-emerald-500 focus:shadow-[0_0_15px_rgba(16,185,129,0.2)] transition-all duration-300 text-base md:text-lg lg:text-xl font-mono font-medium" />
               </div>
             )}
-            <button onClick={handlePaymentSave} className="w-full h-14 md:h-16 rounded-xl md:rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-sm md:text-base lg:text-lg tracking-wide uppercase shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_0_30px_rgba(16,185,129,0.5)] active:scale-[0.98] transition-all outline-none cursor-pointer">
-              Save & Return
+            <button
+              type="button"
+              onClick={handlePaymentSave}
+              disabled={savingPayment}
+              className="w-full h-14 md:h-16 rounded-xl md:rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-sm md:text-base lg:text-lg tracking-wide uppercase shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_0_30px_rgba(16,185,129,0.5)] active:scale-[0.98] transition-all outline-none cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {savingPayment ? "Saving…" : "Save & Return"}
             </button>
           </div>
         </div>
@@ -467,7 +513,14 @@ export default function DriverProfile() {
             </div>
 
             <div className="w-full bg-white dark:bg-[#121214]/95 rounded-2xl md:rounded-3xl shadow-sm border border-zinc-200 dark:border-white/5 overflow-hidden">
-              <button onClick={() => setActiveView("payment")} className="w-full flex items-center justify-between p-4 md:p-6 hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors outline-none cursor-pointer">
+              <button
+                type="button"
+                onClick={() => {
+                  setPaymentSaveError("");
+                  setActiveView("payment");
+                }}
+                className="w-full flex items-center justify-between p-4 md:p-6 hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors outline-none cursor-pointer"
+              >
                 <div className="flex items-center gap-4">
                   <div className="h-9 w-9 md:h-12 md:w-12 rounded-xl bg-blue-500 flex items-center justify-center shrink-0 shadow-sm"><CreditCard className="h-5 w-5 md:h-6 md:w-6 text-white" /></div>
                   <span className="font-semibold text-zinc-900 dark:text-white text-sm md:text-base lg:text-lg">Payment Method</span>

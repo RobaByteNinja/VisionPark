@@ -8,6 +8,13 @@ const {
 const { hashPassword, toSafeUser } = require("../auth/auth.utils");
 const { ParkingLot } = require("../parking/models/parking-lot.model");
 
+const DRIVER_PAYMENT_METHODS = new Set([
+  "Telebirr",
+  "CBE",
+  "COOP",
+  "Bank of Abyssinia",
+]);
+
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const hasValue = (value) =>
   value !== undefined && value !== null && String(value).trim().length > 0;
@@ -50,6 +57,17 @@ const sanitizeRoleProfiles = (role, payload = {}) => {
     if (hasOwner || hasAttendant) {
       throw new ValidationError("Only driver is allowed when role is driver.");
     }
+    const pm = hasValue(payload.driver.paymentMethod)
+      ? String(payload.driver.paymentMethod).trim()
+      : "Telebirr";
+    if (!DRIVER_PAYMENT_METHODS.has(pm)) {
+      throw new ValidationError(
+        `driver.paymentMethod must be one of: ${Array.from(DRIVER_PAYMENT_METHODS).join(", ")}.`
+      );
+    }
+    const paymentAccountRaw = hasValue(payload.driver.paymentAccount)
+      ? String(payload.driver.paymentAccount).trim()
+      : null;
     return {
       driver: {
         phone: hasValue(payload.driver.phone)
@@ -65,12 +83,8 @@ const sanitizeRoleProfiles = (role, payload = {}) => {
         country: hasValue(payload.driver.country)
           ? String(payload.driver.country).trim()
           : null,
-        paymentMethod: hasValue(payload.driver.paymentMethod)
-          ? String(payload.driver.paymentMethod).trim()
-          : null,
-        paymentAccount: hasValue(payload.driver.paymentAccount)
-          ? String(payload.driver.paymentAccount).trim()
-          : null,
+        paymentMethod: pm,
+        paymentAccount: pm === "Telebirr" ? null : paymentAccountRaw,
       },
       owner: null,
       attendant: null,
@@ -369,6 +383,61 @@ class UserService {
     }
 
     return true;
+  }
+
+  async updateDriverSelf(driverUser, payload = {}) {
+    if (!driverUser || driverUser.role !== "driver") {
+      throw new ForbiddenError("Only drivers can update driver payment settings.");
+    }
+
+    const driverUserId = driverUser.userId || driverUser.id || driverUser._id;
+    const existing = await User.findById(driverUserId).select(
+      "name email avatarUrl profileImageUrl profileImagePublicId role status driver"
+    );
+
+    if (!existing || existing.role !== "driver" || !existing.driver) {
+      throw new NotFoundError("Driver not found.");
+    }
+
+    const driverInput = payload.driver;
+    if (!driverInput || typeof driverInput !== "object") {
+      throw new ValidationError("driver is required.");
+    }
+
+    if (driverInput.paymentMethod === undefined) {
+      throw new ValidationError("driver.paymentMethod is required.");
+    }
+
+    const pm = String(driverInput.paymentMethod || "").trim();
+    if (!DRIVER_PAYMENT_METHODS.has(pm)) {
+      throw new ValidationError(
+        `driver.paymentMethod must be one of: ${Array.from(DRIVER_PAYMENT_METHODS).join(", ")}.`
+      );
+    }
+
+    const nextDriver = {
+      ...(existing.driver.toObject ? existing.driver.toObject() : { ...existing.driver }),
+    };
+    nextDriver.paymentMethod = pm;
+
+    if (pm === "Telebirr") {
+      nextDriver.paymentAccount = null;
+    } else {
+      const acct =
+        driverInput.paymentAccount !== undefined && driverInput.paymentAccount !== null
+          ? String(driverInput.paymentAccount).trim()
+          : "";
+      if (!hasValue(acct)) {
+        throw new ValidationError(
+          "driver.paymentAccount is required when payment method is not Telebirr."
+        );
+      }
+      nextDriver.paymentAccount = acct;
+    }
+
+    existing.driver = nextDriver;
+    await existing.save();
+    return toSafeUser(existing);
   }
 
   async updateOwnerSelf(ownerUser, payload = {}) {
