@@ -34,8 +34,29 @@ const formatEtb = (value) => {
 
 function mapSessionToUI(session) {
   const durationSeconds = Number(session?.durationSeconds || 0);
-  const depositAmount = Number(session?.depositAmount || 0);
-  const paymentAmount = Number(session?.payment?.amount || 0);
+  const totalPaid = Number(session?.totalPaidAmount ?? session?.payment?.amount ?? 0);
+  const reservation = Number(session?.reservationPaymentAmount ?? session?.payment?.reservationAmount ?? 0);
+  const hasReservationPayment = reservation > 0;
+  const parkingRaw = session?.parkingPaymentAmount ?? session?.payment?.parkingAmount;
+  const parkingCost =
+    parkingRaw !== undefined && parkingRaw !== null && parkingRaw !== ""
+      ? Number(parkingRaw)
+      : null;
+  const parkingCostIsEstimate = Boolean(
+    session?.parkingPaymentIsEstimate ?? session?.payment?.parkingAmountIsEstimate
+  );
+  const sessionBillingTotal =
+    session?.sessionBillingTotal != null && session?.sessionBillingTotal !== ""
+      ? Number(session.sessionBillingTotal)
+      : null;
+  const totalPaymentDisplay =
+    sessionBillingTotal != null && !Number.isNaN(sessionBillingTotal)
+      ? sessionBillingTotal
+      : totalPaid;
+  const depositBasis = Number(
+    (session?.depositAmount ?? (hasReservationPayment ? reservation : 0)) || 0
+  );
+
   return {
     id: session?._id,
     spotId: session?.spotCode,
@@ -49,9 +70,20 @@ function mapSessionToUI(session) {
     hours: Math.floor(durationSeconds / 3600),
     minutes: Math.floor((durationSeconds % 3600) / 60),
     seconds: durationSeconds % 60,
-    deposit: depositAmount,
-    cost: paymentAmount,
-    walletRefund: depositAmount - paymentAmount,
+    deposit: depositBasis,
+    cost: totalPaid,
+    hasReservationPayment,
+    reservationPayment: reservation,
+    parkingCost,
+    parkingCostIsEstimate,
+    totalPaid,
+    sessionBillingTotal,
+    totalPaymentDisplay,
+    paymentMismatch:
+      hasReservationPayment &&
+      sessionBillingTotal != null &&
+      Math.abs(sessionBillingTotal - totalPaid) > 0.01,
+    walletRefund: depositBasis - totalPaid,
     paymentMethod: session?.payment?.paymentMethod || session?.paymentMethod || "N/A",
   };
 }
@@ -76,7 +108,7 @@ export default function DriverHistory() {
       setErrorMessage("");
       try {
         const response = await apiClient.get("/sessions/me");
-        const sessions = Array.isArray(response) ? response : [];
+        const sessions = Array.isArray(response) ? response : response?.data ?? [];
         if (!cancelled) setHistory(sessions.map(mapSessionToUI));
       } catch (error) {
         if (!cancelled) {
@@ -125,7 +157,10 @@ export default function DriverHistory() {
     return `${h.toString().padStart(2, "0")} : ${m.toString().padStart(2, "0")} : ${s.toString().padStart(2, "0")}`;
   };
 
-  const totalSpent = history.reduce((sum, session) => sum + Number(session.cost || 0), 0);
+  const totalSpent = history.reduce(
+    (sum, session) => sum + Number(session.totalPaid ?? session.cost ?? 0),
+    0
+  );
   const totalParkedSeconds = history.reduce(
     (sum, session) =>
       sum +
@@ -219,11 +254,41 @@ export default function DriverHistory() {
                       {session.status === "Completed" ? `${session.startTime} - ${session.endTime}` : session.startTime}
                     </p>
                   </div>
-                  <div>
-                    {session.status === "Completed" ? (
-                      <p className="text-emerald-600 dark:text-emerald-400 font-bold text-lg md:text-xl lg:text-2xl tabular-nums">{formatEtb(session.cost)} ETB</p>
+                  <div className="text-right min-w-0 max-w-[55%]">
+                    {session.hasReservationPayment ? (
+                      <div className="space-y-0.5">
+                        <p className="text-[10px] md:text-xs text-zinc-500 dark:text-zinc-400 tabular-nums">
+                          Reservation: {formatEtb(session.reservationPayment)} ETB
+                        </p>
+                        <p className="text-[10px] md:text-xs text-zinc-500 dark:text-zinc-400 tabular-nums">
+                          Parking:{" "}
+                          {session.parkingCost != null && Number.isFinite(session.parkingCost)
+                            ? `${formatEtb(session.parkingCost)} ETB${session.parkingCostIsEstimate ? " (est.)" : ""}`
+                            : "—"}
+                        </p>
+                        <p
+                          className={`font-bold text-base md:text-lg lg:text-xl tabular-nums ${
+                            session.status === "Completed"
+                              ? "text-emerald-600 dark:text-emerald-400"
+                              : "text-amber-600 dark:text-amber-400"
+                          }`}
+                        >
+                          Total: {formatEtb(session.totalPaymentDisplay)} ETB
+                        </p>
+                        {session.paymentMismatch ? (
+                          <p className="text-[9px] md:text-[10px] text-zinc-400 dark:text-zinc-500 leading-tight">
+                            Charged to date: {formatEtb(session.totalPaid)} ETB
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : session.status === "Completed" ? (
+                      <p className="text-emerald-600 dark:text-emerald-400 font-bold text-lg md:text-xl lg:text-2xl tabular-nums">
+                        {formatEtb(session.cost)} ETB
+                      </p>
                     ) : (
-                      <p className="text-amber-600 dark:text-amber-400 font-bold text-lg md:text-xl lg:text-2xl tabular-nums">{formatEtb(session.cost)} ETB</p>
+                      <p className="text-amber-600 dark:text-amber-400 font-bold text-lg md:text-xl lg:text-2xl tabular-nums">
+                        {formatEtb(session.cost)} ETB
+                      </p>
                     )}
                   </div>
                 </div>
@@ -273,19 +338,51 @@ export default function DriverHistory() {
                   )}
                 </div>
 
-                <div className="pt-4 border-t border-zinc-200 dark:border-white/10">
-                  <div className="flex justify-between text-sm md:text-base lg:text-lg">
-                    <span className="text-zinc-500 dark:text-zinc-400">Upfront Deposit</span>
-                    <span className="font-bold text-zinc-900 dark:text-white tabular-nums">{formatEtb(selectedReceipt.deposit)} ETB</span>
-                  </div>
-                  <div className="flex justify-between text-sm md:text-base lg:text-lg mt-2">
-                    <span className="text-zinc-500 dark:text-zinc-400">
-                      {selectedReceipt.status === "Completed" ? "Total Parking Cost" : "No-Show Penalty"}
-                    </span>
-                    <span className={`font-bold ${selectedReceipt.status === "Completed" ? "text-zinc-900 dark:text-white" : "text-amber-600 dark:text-amber-500"}`}>
-                      - {formatEtb(selectedReceipt.cost)} ETB
-                    </span>
-                  </div>
+                <div className="pt-4 border-t border-zinc-200 dark:border-white/10 space-y-2">
+                  {selectedReceipt.hasReservationPayment ? (
+                    <>
+                      <div className="flex justify-between text-sm md:text-base lg:text-lg gap-3">
+                        <span className="text-zinc-500 dark:text-zinc-400 shrink-0">Reservation payment</span>
+                        <span className="font-bold text-zinc-900 dark:text-white tabular-nums text-right">
+                          {formatEtb(selectedReceipt.reservationPayment)} ETB
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm md:text-base lg:text-lg gap-3">
+                        <span className="text-zinc-500 dark:text-zinc-400 shrink-0">Parking cost</span>
+                        <span className="font-bold text-zinc-900 dark:text-white tabular-nums text-right">
+                          {selectedReceipt.parkingCost != null && Number.isFinite(selectedReceipt.parkingCost)
+                            ? `${formatEtb(selectedReceipt.parkingCost)} ETB${selectedReceipt.parkingCostIsEstimate ? " (est.)" : ""}`
+                            : "—"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm md:text-base lg:text-lg gap-3 pt-1 border-t border-zinc-100 dark:border-white/5">
+                        <span className="text-zinc-500 dark:text-zinc-400 shrink-0 font-semibold">Total payment</span>
+                        <span className="font-bold text-zinc-900 dark:text-white tabular-nums text-right">
+                          {formatEtb(selectedReceipt.totalPaymentDisplay)} ETB
+                        </span>
+                      </div>
+                      {selectedReceipt.paymentMismatch ? (
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-snug">
+                          Recorded charges so far: {formatEtb(selectedReceipt.totalPaid)} ETB (parking may be billed separately once posted).
+                        </p>
+                      ) : null}
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex justify-between text-sm md:text-base lg:text-lg">
+                        <span className="text-zinc-500 dark:text-zinc-400">Upfront Deposit</span>
+                        <span className="font-bold text-zinc-900 dark:text-white tabular-nums">{formatEtb(selectedReceipt.deposit)} ETB</span>
+                      </div>
+                      <div className="flex justify-between text-sm md:text-base lg:text-lg mt-2">
+                        <span className="text-zinc-500 dark:text-zinc-400">
+                          {selectedReceipt.status === "Completed" ? "Total Parking Cost" : "No-Show Penalty"}
+                        </span>
+                        <span className={`font-bold ${selectedReceipt.status === "Completed" ? "text-zinc-900 dark:text-white" : "text-amber-600 dark:text-amber-500"}`}>
+                          - {formatEtb(selectedReceipt.cost)} ETB
+                        </span>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 <div className="pt-4 border-t border-zinc-200 dark:border-white/10 flex justify-between items-center mt-2">

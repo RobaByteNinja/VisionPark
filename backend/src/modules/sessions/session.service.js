@@ -269,20 +269,26 @@ class SessionService {
       throw new ValidationError("driverId is required.");
     }
 
-    const sessions = await ParkingSession.find({ driverId })
+    const sessions = await ParkingSession.find({
+      driverId,
+      state: { $in: ["closed", "expired"] },
+    })
       .sort({ createdAt: -1 })
-      .populate({ path: "spotId", select: "spotCode" })
+      .populate({ path: "spotId", select: "spotCode paymentRate" })
       .populate({ path: "lotId", select: "name" })
       .lean();
 
     const sessionIds = sessions.map((s) => s._id);
-    const transactions = await Transaction.find({ sessionId: { $in: sessionIds }, status: "success" })
-      .sort({ createdAt: -1 })
-      .lean();
+    const transactions =
+      sessionIds.length === 0
+        ? []
+        : await Transaction.find({ sessionId: { $in: sessionIds }, status: "success" })
+            .sort({ createdAt: -1 })
+            .lean();
     const txBySessionId = new Map();
-    for (const tx of transactions) {
-      const key = String(tx.sessionId);
-      if (!txBySessionId.has(key)) txBySessionId.set(key, tx);
+    for (const t of transactions) {
+      const key = String(t.sessionId);
+      if (!txBySessionId.has(key)) txBySessionId.set(key, t);
     }
 
     return sessions.map((s) => {
@@ -294,21 +300,56 @@ class SessionService {
           ? Math.max(0, Math.floor((new Date(exitedAt).getTime() - new Date(parkedAt).getTime()) / 1000))
           : null;
 
+      const paymentMethod = tx?.method ?? null;
+      const metaParkRaw = tx?.metadata?.parkingAmount ?? tx?.metadata?.usageFee;
+      const metaPark =
+        metaParkRaw != null && String(metaParkRaw).trim() !== "" && !Number.isNaN(Number(metaParkRaw))
+          ? Number(metaParkRaw)
+          : null;
+
+      const isReservationTx = tx?.metadata?.type === "reservation_fee";
+      let reservationPaymentAmount = null;
+      let parkingPaymentAmount = null;
+      let parkingPaymentIsEstimate = false;
+
+      if (tx) {
+        if (isReservationTx) {
+          reservationPaymentAmount = Number(tx.amount) || 0;
+          if (metaPark != null) {
+            parkingPaymentAmount = metaPark;
+          } else if ((s.state === "closed" || s.state === "expired") && durationSeconds != null && durationSeconds > 0) {
+            const rate = Number(s.spotId?.paymentRate ?? 0);
+            if (rate > 0) {
+              parkingPaymentAmount = Number(((durationSeconds / 3600) * rate).toFixed(2));
+              parkingPaymentIsEstimate = true;
+            } else {
+              parkingPaymentAmount = 0;
+            }
+          } else {
+            parkingPaymentAmount = 0;
+          }
+        } else {
+          reservationPaymentAmount = null;
+          parkingPaymentAmount = Number(tx.amount) || 0;
+        }
+      }
+
+      const totalPaidAmount = tx ? Number(tx.amount) || 0 : 0;
+
+      let sessionBillingTotal = null;
+      if (tx && isReservationTx && reservationPaymentAmount != null && parkingPaymentAmount != null) {
+        sessionBillingTotal = Number(
+          (Number(reservationPaymentAmount) + Number(parkingPaymentAmount)).toFixed(2)
+        );
+      } else if (tx && !isReservationTx) {
+        sessionBillingTotal = totalPaidAmount;
+      }
+
       const depositAmount =
+        reservationPaymentAmount ??
         tx?.metadata?.depositAmount ??
         tx?.metadata?.reservationFee ??
         null;
-      const parkingAmount =
-        tx?.metadata?.parkingAmount ??
-        tx?.metadata?.usageFee ??
-        null;
-      const totalAmount =
-        tx?.amount ??
-        (depositAmount != null || parkingAmount != null
-          ? (Number(depositAmount || 0) + Number(parkingAmount || 0))
-          : null);
-      const paymentAmount = Number(totalAmount ?? 0);
-      const paymentMethod = tx?.method ?? null;
 
       return {
         _id: s._id,
@@ -322,12 +363,21 @@ class SessionService {
         exitedAt,
         endTime: exitedAt,
         durationSeconds,
+        reservationPaymentAmount,
+        parkingPaymentAmount,
+        parkingPaymentIsEstimate,
+        totalPaidAmount,
+        sessionBillingTotal,
         depositAmount,
-        parkingAmount,
-        totalAmount,
+        parkingAmount: parkingPaymentAmount,
+        totalAmount: sessionBillingTotal ?? totalPaidAmount,
         paymentMethod,
         payment: {
-          amount: paymentAmount,
+          amount: totalPaidAmount,
+          reservationAmount: reservationPaymentAmount,
+          parkingAmount: parkingPaymentAmount,
+          parkingAmountIsEstimate: parkingPaymentIsEstimate,
+          sessionBillingTotal,
           paymentMethod,
         },
       };
