@@ -299,9 +299,12 @@ export default function ActiveSession() {
     try {
       await apiClient.post("/operations/transactions", {
         sessionId: paymentData.sessionId,
-        amount: paymentData.totalAmount,
+        amount: Number(paymentData.totalAmount),
         paymentMethod: selectedPaymentMethod,
         status: "completed",
+        type: "parking_fee",
+        transactionType: "parking_fee",
+        idempotencyKey: `parking-fee:${paymentData.sessionId}`,
       });
       setShowPaymentModal(false);
       localStorage.removeItem("activeSessionId");
